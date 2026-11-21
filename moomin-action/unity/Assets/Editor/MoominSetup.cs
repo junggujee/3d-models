@@ -101,10 +101,20 @@ namespace MoominAction.EditorTools
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.2f; sun.shadows = LightShadows.Soft; sun.transform.rotation = Quaternion.Euler(50, -30, 0);
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane); ground.name = "Ground"; ground.transform.localScale = new Vector3(40, 1, 40);
-            // 도시 배경(Assets/City 아래 첫 프리팹/FBX)
+            // 도시 배경(Assets/City 의 City.fbx 등): 보이는 메시 + 보이지 않는 충돌 메시(City_Collision) + 시작 위치(PlayerSpawn)
+            Vector3 spawn = new Vector3(0, 0.1f, 0);
             var guids = AssetDatabase.FindAssets("t:GameObject", new[] { "Assets/City" });
-            if (guids.Length > 0) { var city = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guids[0]))); city.name = "City"; ground.GetComponent<MeshRenderer>().enabled = false; foreach (var m in city.GetComponentsInChildren<MeshRenderer>()) if (m.GetComponent<Collider>() == null) m.gameObject.AddComponent<MeshCollider>(); }
-            var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Player.prefab")); player.transform.position = new Vector3(0, 0.1f, 0);
+            if (guids.Length > 0)
+            {
+                var city = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guids[0]))); city.name = "City";
+                ground.GetComponent<MeshRenderer>().enabled = false; ground.transform.position = new Vector3(0, -0.05f, 0);   // 도시 밖으로 떨어지지 않게 투명 바닥은 남김
+                var colT = Find(city.transform, "City_Collision");
+                if (colT != null) { var mf = colT.GetComponent<MeshFilter>(); var mc = colT.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = mf.sharedMesh; var mr = colT.GetComponent<MeshRenderer>(); if (mr) mr.enabled = false; }
+                else foreach (var m in city.GetComponentsInChildren<MeshRenderer>()) if (m.GetComponent<Collider>() == null) m.gameObject.AddComponent<MeshCollider>();
+                foreach (var t in city.GetComponentsInChildren<Transform>()) t.gameObject.isStatic = true;
+                var sp = Find(city.transform, "PlayerSpawn"); if (sp != null) spawn = sp.position + Vector3.up * 0.1f;
+            }
+            var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Player.prefab")); player.transform.position = spawn;
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)); camGo.tag = "MainCamera"; var cam = camGo.AddComponent<ThirdPersonCamera>(); cam.target = player.transform;
             player.GetComponent<PlayerController>().cam = camGo.transform;
             var gm = new GameObject("GameManager").AddComponent<GameManager>(); gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<Health>();
