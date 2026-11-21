@@ -9,17 +9,18 @@ namespace MoominAction
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
-        public GameObject enemyPrefab; public Health player; public float spawnRadius = 14f, wavePause = 4f; public int firstWave = 3, perWave = 2, bossEvery = 3;
+        public GameObject enemyPrefab; public CharacterStats player; public float spawnRadius = 14f, wavePause = 4f; public int firstWave = 3, perWave = 2, bossEvery = 3;
         public int Score { get; private set; } public int Wave { get; private set; } public bool IsOver { get; private set; }
         public int EnemiesAlive { get { alive.RemoveAll(g => g == null); return alive.Count; } }
         public event Action<int> WaveStarted, WaveCleared;
-        readonly List<GameObject> alive = new(); float nextWave = 2f; bool waveActive; SanitySystem sanity;
+        readonly List<GameObject> alive = new(); float nextWave = 2f; bool waveActive;
 
         void Awake() { Instance = this; }
         void Start()
         {
-            if (!player) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<Health>(); }
-            if (player) player.Died += () => IsOver = true; sanity = player ? player.GetComponent<SanitySystem>() : null;
+            if (!player) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<CharacterStats>(); }
+            var baker = GetComponent<NavMeshBaker>(); if (baker == null) baker = gameObject.AddComponent<NavMeshBaker>(); baker.Build();
+            if (player) player.Died += () => IsOver = true;
             #if UNITY_2023_1_OR_NEWER
             bool hasUi = FindFirstObjectByType<UI.UIRoot>() != null;
 #else
@@ -33,20 +34,20 @@ namespace MoominAction
         {
             if (IsOver) { if (InputAdapter.RestartPressed()) { UIState.Reset(); SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); } return; }
             if (UIState.Paused) return;
-            if (waveActive && EnemiesAlive == 0) { waveActive = false; if (sanity) sanity.inCombat = false; WaveCleared?.Invoke(Wave); nextWave = Time.time + wavePause; }
+            if (waveActive && EnemiesAlive == 0) { waveActive = false; if (player) player.inCombat = false; WaveCleared?.Invoke(Wave); nextWave = Time.time + wavePause; }
             if (!waveActive && Time.time >= nextWave && enemyPrefab && player) SpawnWave();
         }
 
         void SpawnWave()
         {
-            Wave++; waveActive = true; if (sanity) sanity.inCombat = true; bool boss = bossEvery > 0 && Wave % bossEvery == 0; int n = boss ? Mathf.Max(1, firstWave - 1) + Wave / bossEvery : firstWave + (Wave - 1) * perWave;
+            Wave++; waveActive = true; if (player) player.inCombat = true; bool boss = bossEvery > 0 && Wave % bossEvery == 0; int n = boss ? Mathf.Max(1, firstWave - 1) + Wave / bossEvery : firstWave + (Wave - 1) * perWave;
             for (int i = 0; i < n; i++)
             {
                 float a = UnityEngine.Random.value * Mathf.PI * 2; Vector3 p = player.transform.position + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * (spawnRadius + UnityEngine.Random.value * 4f);
                 if (Physics.Raycast(p + Vector3.up * 30f, Vector3.down, out var h, 80f)) p = h.point + Vector3.up * 0.2f;
                 alive.Add(Instantiate(enemyPrefab, p, Quaternion.identity));
             }
-            if (boss) { Vector3 bp = player.transform.position + player.transform.forward * spawnRadius; var b = Instantiate(enemyPrefab, bp, Quaternion.identity); b.GetComponent<EnemyAI>()?.ConfigureBoss(); alive.Add(b); }
+            if (boss) { Vector3 bp = player.transform.position + player.transform.forward * spawnRadius; var b = Instantiate(enemyPrefab, bp, Quaternion.identity); b.GetComponent<EnemyCombatController>()?.ConfigureBoss(); alive.Add(b); }
             WaveStarted?.Invoke(Wave);
         }
     }

@@ -12,7 +12,7 @@ namespace MoominAction.UI
     /// </summary>
     public class UIRoot : MonoBehaviour
     {
-        public Health player; Canvas canvas; HUD hud; Inventory inventory;
+        public CharacterStats player; Canvas canvas; HUD hud; Inventory inventory;
         public PauseMenu pausePage; public SettingsMenu settingsPage; public InventoryMenu inventoryPage; public InfoPage controlsPage;
         readonly Stack<MenuPage> stack = new(); MenuPage Current => stack.Count > 0 ? stack.Peek() : null;
 
@@ -34,8 +34,8 @@ namespace MoominAction.UI
 
         void Start()
         {
-            if (player == null) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<Health>(); }
-            if (player == null) { Debug.LogError("[UIRoot] Player 태그 오브젝트(Health 포함)를 찾지 못했습니다."); enabled = false; return; }
+            if (player == null) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<CharacterStats>(); }
+            if (player == null) { Debug.LogError("[UIRoot] Player 태그 오브젝트(CharacterStats 포함)를 찾지 못했습니다."); enabled = false; return; }
             inventory = player.GetComponent<Inventory>(); if (inventory == null) inventory = player.gameObject.AddComponent<Inventory>();
             hud = new HUD(); hud.Build(this, canvas.transform);
             pausePage = new PauseMenu(); settingsPage = new SettingsMenu(); inventoryPage = new InventoryMenu();

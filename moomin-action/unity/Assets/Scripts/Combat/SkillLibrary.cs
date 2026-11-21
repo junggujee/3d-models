@@ -3,42 +3,46 @@ using UnityEngine;
 
 namespace MoominAction
 {
-    /// <summary>기본 스킬 목록. Assets/Resources/Skills 에 같은 skillId 의 SkillData 에셋이 있으면 그 값으로 덮어씀(데이터 중심).</summary>
+    /// <summary>
+    /// 기본 스킬 값(코드). 메뉴 Moomin ▸ "스킬 데이터 에셋 만들기" 가 이 값으로 Assets/Data/Skills/*.asset 을 만들고 플레이어·적에 연결함.
+    /// 에셋이 연결돼 있으면 에셋 값을, 없으면 여기 값을 씀.
+    /// </summary>
     public static class SkillLibrary
     {
-        static Dictionary<string, SkillData> map;
-        public static SkillData Get(string id) { Ensure(); return map.TryGetValue(id, out var s) ? s : null; }
-        public static IEnumerable<SkillData> All { get { Ensure(); return map.Values; } }
+        static Dictionary<string, SkillDefinition> map;
+        public static SkillDefinition Get(string id) { Ensure(); return id != null && map.TryGetValue(id, out var s) ? s : null; }
+        public static IEnumerable<SkillDefinition> All { get { Ensure(); return map.Values; } }
 
-        static SkillData Make(string id, string name, SkillSlot slot, int b, int n, int c, CoinMode mode, float dur, float[] hits, string[] anims, float[] animT, float range, float angle, float kb,
-                              float mult = 1f, int sanity = 0, float cd = 0f, CoinEffect fx = CoinEffect.BonusPower, bool special = false, string desc = "")
+        static SkillDefinition S(string id, string name, int b, int c, int n, float mult, float cd, int sanity, float interval, float hit, float recovery, string[] anims,
+                                 float range, float angle, float kb, float windup = 0f, float lunge = 0f, CoinEffect fx = CoinEffect.None, bool unblockable = false, string desc = "")
         {
-            var s = ScriptableObject.CreateInstance<SkillData>(); s.name = id;
-            s.skillId = id; s.skillName = name; s.slot = slot; s.basePower = b; s.coinCount = n; s.coinPower = c; s.mode = mode; s.duration = dur; s.hitTimes = hits; s.animStates = anims; s.animTimes = animT;
-            s.range = range; s.angle = angle; s.knockback = kb; s.damageMultiplier = mult; s.sanityCost = sanity; s.cooldown = cd; s.coinEffect = fx; s.special = special; s.description = desc; return s;
+            var s = ScriptableObject.CreateInstance<SkillDefinition>(); s.name = id;
+            s.skillId = id; s.skillName = name; s.basePower = b; s.coinPower = c; s.coinCount = n; s.damageMultiplier = mult; s.cooldown = cd; s.sanityCost = sanity;
+            s.attackInterval = interval; s.hitTime = hit; s.recovery = recovery; s.attackAnimations = anims; s.range = range; s.angle = angle; s.knockback = kb;
+            s.windup = windup; s.lunge = lunge; s.coinEffect = fx; s.unblockable = unblockable; s.description = desc; return s;
         }
 
         static void Ensure()
         {
-            if (map != null) return; map = new Dictionary<string, SkillData>();
-            void Add(SkillData s) => map[s.skillId] = s;
-            // 일반 공격(좌클릭 3연타): 코인 1~2개, 빠르고 안정적
-            Add(Make("BASIC_1", "베기", SkillSlot.Basic, 8, 1, 3, CoinMode.PerHit, 0.8f, new[] { 0.37f }, new[] { "Attack1" }, new[] { 0f }, 1.9f, 110, 4f));
-            Add(Make("BASIC_2", "되베기", SkillSlot.Basic, 8, 1, 4, CoinMode.PerHit, 0.8f, new[] { 0.37f }, new[] { "Attack2" }, new[] { 0f }, 1.9f, 110, 5f));
-            Add(Make("BASIC_3", "내려찍기", SkillSlot.Basic, 9, 2, 3, CoinMode.SingleMotion, 1.0f, new[] { 0.40f }, new[] { "Attack3" }, new[] { 0f }, 2.3f, 160, 8f));
-            // Q 연속 베기: 3코인 = 3연속 공격(설계서 예시: 기본 10, 코인 +3, 쿨 5초)
-            Add(Make("SKILL_001", "연속 베기", SkillSlot.Skill1, 10, 3, 3, CoinMode.PerHit, 1.9f, new[] { 0.37f, 0.87f, 1.37f }, new[] { "Attack1", "Attack2", "Attack3" }, new[] { 0f, 0.5f, 1.0f }, 2.1f, 120, 5f,
-                     cd: 5f, desc: "세 번 연속으로 벤다. 베기마다 코인을 하나씩 던진다."));
-            // E 특수: 한 번의 찌르기에 코인 2개, 정신력 -8, 모두 앞면이면 적을 경직
-            Add(Make("SKILL_002", "불꽃 찌르기", SkillSlot.Skill2, 16, 2, 6, CoinMode.SingleMotion, 1.0f, new[] { 0.45f }, new[] { "Attack3" }, new[] { 0f }, 2.8f, 70, 10f,
-                     mult: 1.2f, sanity: 8, cd: 8f, fx: CoinEffect.StaggerOnAllHeads, special: true, desc: "한 번의 찌르기에 코인 두 개를 건다. 모두 앞면이면 적이 크게 휘청인다. 정신력 8 소모."));
-            // R 필살기: 5코인 5연속, 높은 위력, 정신력 -12, 쿨 30초, 모두 앞면이면 정신력 +10
-            Add(Make("SKILL_003", "별빛 난무", SkillSlot.Ultimate, 14, 5, 5, CoinMode.PerHit, 2.8f, new[] { 0.35f, 0.75f, 1.15f, 1.55f, 2.1f }, new[] { "Attack1", "Attack2", "Attack1", "Attack2", "Attack3" }, new[] { 0f, 0.4f, 0.8f, 1.2f, 1.7f },
-                     3.2f, 360, 9f, mult: 1.3f, sanity: 12, cd: 30f, fx: CoinEffect.SanityOnAllHeads, special: true, desc: "주위를 다섯 번 베어 낸다. 다섯 코인이 모두 앞면이면 정신력이 크게 오른다. 정신력 12 소모."));
-            // 방어(우클릭): 합 전용 방어 코인. 방어를 누른 직후(0.2초)에 막으면 패링(기본 위력 +8)
-            Add(Make("GUARD", "방어", SkillSlot.Guard, 6, 2, 4, CoinMode.SingleMotion, 0f, new float[0], new string[0], new float[0], 0f, 140, 0f, desc: "막는 순간 방어 코인으로 합을 겨룬다. 누른 직후 막으면 패링."));
-
-            foreach (var a in Resources.LoadAll<SkillData>("Skills")) if (!string.IsNullOrEmpty(a.skillId)) map[a.skillId] = a;
+            if (map != null) return; map = new Dictionary<string, SkillDefinition>();
+            void Add(SkillDefinition s) => map[s.skillId] = s;
+            string[] A1 = { "Attack1" }, A2 = { "Attack2" }, A23 = { "Attack2", "Attack3" }, A123 = { "Attack1", "Attack2", "Attack3" }, A5 = { "Attack1", "Attack2", "Attack1", "Attack2", "Attack3" }, A33 = { "Attack3", "Attack3" };
+            // ── 플레이어: 일반 공격(좌클릭 3연타)
+            Add(S("BASIC_1", "베기", 8, 3, 1, 1f, 0f, 0, 0.8f, 0.35f, 0.25f, A1, 1.9f, 110, 4f));
+            Add(S("BASIC_2", "되베기", 8, 4, 1, 1f, 0f, 0, 0.8f, 0.35f, 0.25f, A2, 1.9f, 110, 5f));
+            Add(S("BASIC_3", "이어 베기", 9, 3, 2, 1f, 0f, 0, 0.45f, 0.35f, 0.35f, A23, 2.2f, 140, 7f));
+            // ── 플레이어: 스킬(명세 예시: 연속 베기 기본 10, 코인 +3, 3코인, 쿨 5초)
+            Add(S("SKILL_001", "연속 베기", 10, 3, 3, 1.0f, 5f, 0, 0.5f, 0.35f, 0.35f, A123, 2.1f, 120, 5f, desc: "세 번 연속으로 벤다. 베기마다 코인을 하나씩 던진다."));
+            Add(S("SKILL_002", "불꽃 찌르기", 14, 6, 2, 1.2f, 8f, 8, 0.55f, 0.4f, 0.4f, A33, 2.8f, 70, 10f, lunge: 4f, fx: CoinEffect.StaggerOnAllHeads,
+                  desc: "두 번 깊게 찌른다. 둘 다 앞면이면 적이 크게 휘청인다. 정신력 8 이상일 때 사용, 8 소모."));
+            Add(S("SKILL_003", "별빛 난무", 12, 5, 5, 1.3f, 30f, 15, 0.42f, 0.33f, 0.5f, A5, 3.2f, 360, 8f, fx: CoinEffect.SanityOnAllHeads,
+                  desc: "주위를 다섯 번 베어 낸다. 다섯 번 모두 앞면이면 정신력 +10. 정신력 15 이상일 때 사용, 15 소모."));
+            // ── 적(같은 SkillExecutor 사용). windup = 바닥 경고 시간
+            Add(S("ENEMY_BUMP", "몸통 박치기", 7, 3, 2, 0.7f, 1.2f, 0, 0.35f, 0.12f, 0.8f, A1, 1.6f, 100, 4f, windup: 0.65f, lunge: 5f));
+            Add(S("ENEMY_SLAM", "내려찍기", 9, 4, 2, 0.8f, 4f, 0, 0.45f, 0.15f, 1.1f, A1, 2.0f, 360, 7f, windup: 1.0f, lunge: 1f));
+            Add(S("BOSS_LUNGE", "돌진", 13, 4, 2, 0.8f, 5f, 0, 0.45f, 0.15f, 1.0f, A1, 6f, 70, 8f, windup: 0.8f, lunge: 12f));
+            Add(S("BOSS_FLURRY", "난타", 9, 3, 4, 0.6f, 6f, 0, 0.3f, 0.12f, 0.9f, A1, 2.4f, 120, 3f, windup: 0.7f, lunge: 3f));
+            Add(S("BOSS_BREAK", "방어 부수기", 18, 6, 1, 1.0f, 8f, 0, 0.5f, 0.15f, 1.2f, A1, 3.2f, 120, 9f, windup: 1.2f, lunge: 3f, unblockable: true));
         }
     }
 }

@@ -11,7 +11,7 @@ namespace MoominAction.UI
     /// </summary>
     public class HUD
     {
-        UIRoot ui; GameObject hudRoot, coreRoot; CombatHUD combat; Health hp; Stamina st; Inventory inv;
+        UIRoot ui; GameObject hudRoot, coreRoot; CombatHUD combat; CharacterStats hp; Stamina st; Inventory inv;
         Gauge hpBar, stBar; float hpTrail = 1f; Text objective, scoreText, goldText, weaponText;
         Image[] qIcon = new Image[4]; Text[] qCount = new Text[4]; Image flash;
         Text banner; float bannerT, bannerDur; Color bannerCol; Image deathBand; Text deathText, deathHint; float deathT = -1;
@@ -20,7 +20,7 @@ namespace MoominAction.UI
 
         public void Build(UIRoot ui, Transform canvas)
         {
-            this.ui = ui; hp = ui.player.GetComponent<Health>(); st = ui.player.GetComponent<Stamina>(); inv = ui.player.GetComponent<Inventory>();
+            this.ui = ui; hp = ui.player; st = ui.player.GetComponent<Stamina>(); inv = ui.player.GetComponent<Inventory>();
             hudRoot = NewRect("HUD", canvas).gameObject; Stretch((RectTransform)hudRoot.transform);
             var core = NewRect("Core", hudRoot.transform); Stretch(core); coreRoot = core.gameObject;
             var tl = new Vector2(0, 1);
@@ -85,7 +85,7 @@ namespace MoominAction.UI
         {
             float dt = Time.unscaledDeltaTime;
             coreRoot.SetActive(GameSettings.ShowHud); combat?.Update(dt);
-            float r = hp.Current / hp.maxHealth; hpBar.SetFill(r); hpTrail = r < hpTrail ? Mathf.MoveTowards(hpTrail, r, 0.35f * dt) : r; hpBar.SetTrail(hpTrail); hpBar.label.text = Mathf.CeilToInt(hp.Current) + " / " + Mathf.CeilToInt(hp.maxHealth);
+            float r = hp.currentHealth / hp.maxHealth; hpBar.SetFill(r); hpTrail = r < hpTrail ? Mathf.MoveTowards(hpTrail, r, 0.35f * dt) : r; hpBar.SetTrail(hpTrail); hpBar.label.text = Mathf.CeilToInt(hp.currentHealth) + " / " + Mathf.CeilToInt(hp.maxHealth);
             stBar.SetFill(st.Current / st.max);
             var gm = GameManager.Instance; if (gm != null) { objective.text = gm.Wave == 0 ? "그림자들이 몰려온다" : "웨이브 " + gm.Wave + "  —  남은 그림자 " + gm.EnemiesAlive + "마리"; scoreText.text = "처치 점수  " + gm.Score; }
             if (inv != null)

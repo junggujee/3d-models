@@ -1,0 +1,126 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace MoominAction
+{
+    public enum SkillPhase { None, Windup, Attacking, Recovery }
+
+    /// <summary>
+    /// 스킬 실행과 공격 순서(명세 v2 5장). <b>코인 하나 = 공격 한 번</b>: 3코인 스킬은 공격 애니메이션 3번, 각 타격 순간에 코인 판정.
+    /// 언제 공격할지만 정하고, 결과는 CoinSystem, 충돌·피해는 CombatResolver 가 맡음. 플레이어·적이 같은 컴포넌트를 씀.
+    ///
+    /// 애니메이션 이벤트(플레이어 클립에 MoominSetup 이 자동 배치): OnCoinAttack · OpenHitbox · CloseHitbox · OnSkillFinished.
+    /// 이벤트가 오지 않으면(적처럼 애니메이터가 없거나 설정 누락) 스킬 데이터의 hitTime 으로 대신 진행.
+    /// </summary>
+    [RequireComponent(typeof(CharacterStats), typeof(CoinSystem), typeof(CombatResolver))]
+    public class SkillExecutor : MonoBehaviour
+    {
+        public CoinSystem coinSystem; public CharacterStats stats; public Animator animator; public CombatResolver resolver;
+        public bool useAnimationEvents = false; public float eventGrace = 0.15f; public float weaponMultiplier = 1f;
+
+        public SkillDefinition CurrentSkill { get; private set; }
+        public AttackContext CurrentAttack { get; private set; }
+        public SkillPhase Phase { get; private set; }
+        public bool IsExecuting => isExecuting;
+        public bool CanCancel => !isExecuting || Phase == SkillPhase.Recovery;   // 회복 구간은 회피·다음 공격으로 취소 가능
+        public int CurrentCoin => currentCoin;
+        public float PhaseTime => t - stageStart;
+        public readonly List<AttackContext> results = new();   // 이번 스킬의 공격별 결과(HUD)
+
+        public event Action<SkillDefinition> SkillStarted; public event Action<AttackContext> CoinAttacked; public event Action<SkillDefinition, bool> SkillFinished; public event Action<SkillDefinition, string> SkillRefused;
+
+        readonly Dictionary<SkillDefinition, float> readyAt = new();
+        bool isExecuting, coinDoneThisStage, hitboxHeld; int currentCoin; float t, stageStart, recoveryEnd;
+
+        void Awake()
+        {
+            if (!coinSystem) coinSystem = GetComponent<CoinSystem>(); if (!stats) stats = GetComponent<CharacterStats>(); if (!resolver) resolver = GetComponent<CombatResolver>();
+            if (!animator && useAnimationEvents) animator = GetComponentInChildren<Animator>();   // 적(애니메이터 없음)은 타이머로만 진행
+        }
+
+        public float CooldownLeft(SkillDefinition s) => s != null && readyAt.TryGetValue(s, out var r) ? Mathf.Max(0, r - Time.time) : 0f;
+        public bool IsReady(SkillDefinition s) => s != null && CooldownLeft(s) <= 0f && stats.currentSanity >= s.sanityCost;
+
+        /// <summary>스킬 사용. 실행 중이면 회복 구간에서만 끊고 새로 시작(중복 실행 방지).</summary>
+        public bool UseSkill(SkillDefinition skill)
+        {
+            if (skill == null || !stats.IsAlive) return false;
+            if (isExecuting && Phase != SkillPhase.Recovery) return false;
+            float cd = CooldownLeft(skill); if (cd > 0) { SkillRefused?.Invoke(skill, $"재사용 대기 {cd:0.0}초"); return false; }
+            if (stats.currentSanity < skill.sanityCost) { SkillRefused?.Invoke(skill, $"정신력 {skill.sanityCost} 필요"); return false; }
+            if (isExecuting) Finish(false);
+            stats.ChangeSanity(-skill.sanityCost, skill.skillName);
+            CurrentSkill = skill; currentCoin = 0; t = 0; results.Clear(); CurrentAttack = null; isExecuting = true; hitboxHeld = false;
+            if (skill.cooldown > 0) readyAt[skill] = Time.time + skill.cooldown;
+            Phase = skill.windup > 0 ? SkillPhase.Windup : SkillPhase.Attacking; if (Phase == SkillPhase.Attacking) BeginStage();
+            SkillStarted?.Invoke(skill); return true;
+        }
+
+        void BeginStage()
+        {
+            stageStart = t; coinDoneThisStage = false;
+            var anims = CurrentSkill.attackAnimations;
+            if (animator && anims != null && anims.Length > 0) { string st = anims[currentCoin % anims.Length]; if (animator.HasState(0, Animator.StringToHash(st))) animator.CrossFadeInFixedTime(st, 0.06f); }
+        }
+
+        void Update()
+        {
+            if (!isExecuting || UIState.Paused) return;
+            t += Time.deltaTime; var s = CurrentSkill;
+            if (Phase == SkillPhase.Windup) { if (t >= s.windup) { Phase = SkillPhase.Attacking; BeginStage(); } return; }
+            if (Phase == SkillPhase.Attacking)
+            {
+                float local = t - stageStart;
+                if (!coinDoneThisStage && local >= s.hitTime + (useAnimationEvents ? eventGrace : 0f)) OnCoinAttack();     // 이벤트 대체(타이머)
+                if (!isExecuting) return;                                                                                  // 클래시 패배로 중단됐을 수 있음
+                if (CurrentAttack != null && CurrentAttack.HitboxOpen) resolver.Tick(CurrentAttack, s);                     // 히트박스가 열린 동안 계속 판정
+                if (!isExecuting) return;
+                if (coinDoneThisStage && local >= Mathf.Max(s.attackInterval, s.hitTime + s.activeWindow))
+                {
+                    if (currentCoin < s.coinCount) BeginStage();
+                    else { Phase = SkillPhase.Recovery; recoveryEnd = t + s.recovery; }
+                }
+                return;
+            }
+            if (Phase == SkillPhase.Recovery && t >= recoveryEnd) Finish(true);
+        }
+
+        // ── 애니메이션 이벤트 ─────────────────────────────
+        /// <summary>타격 프레임: 코인 판정 → 위력 계산 → AttackContext 생성 → CombatResolver 로 충돌 검사.</summary>
+        public void OnCoinAttack()
+        {
+            if (!isExecuting || Phase != SkillPhase.Attacking || coinDoneThisStage || currentCoin >= CurrentSkill.coinCount) return;
+            if (t - stageStart < CurrentSkill.hitTime - eventGrace) return;   // 이전 클립의 늦은 이벤트 무시
+            var s = CurrentSkill; var r = coinSystem.Toss(stats, currentCoin);
+            var ctx = new AttackContext(coinSystem.CalculatePower(s.basePower, s.coinPower, r.heads), r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
+            CurrentAttack = ctx; results.Add(ctx); currentCoin++; coinDoneThisStage = true; if (hitboxHeld) ctx.activeUntil = float.MaxValue;
+            CoinAttacked?.Invoke(ctx);
+            resolver.ResolveAttack(ctx, s);
+            if (isExecuting && currentCoin >= s.coinCount) ApplyAllHeadsEffect(s);
+        }
+        public void OpenHitbox() { hitboxHeld = true; if (CurrentAttack != null && !CurrentAttack.cancelled) CurrentAttack.activeUntil = Time.time + CurrentSkill.activeWindow * 3f; }
+        public void CloseHitbox() { hitboxHeld = false; if (CurrentAttack != null) CurrentAttack.activeUntil = Mathf.Min(CurrentAttack.activeUntil, Time.time); }
+        /// <summary>마지막 공격 뒤 이벤트. 코인이 남아 있으면 무시(각 공격 클립 끝에 있어도 안전).</summary>
+        public void OnSkillFinished() { if (isExecuting && currentCoin >= CurrentSkill.coinCount && Phase != SkillPhase.Windup) Finish(true); }
+
+        void ApplyAllHeadsEffect(SkillDefinition s)
+        {
+            if (s.coinEffect == CoinEffect.None || !stats.ExtraEffectsEnabled) return;
+            foreach (var r in results) if (!r.isHeads) return;
+            if (s.coinEffect == CoinEffect.SanityOnAllHeads) stats.ChangeSanity(10, s.skillName + " 전부 앞면");
+            else if (s.coinEffect == CoinEffect.StaggerOnAllHeads) foreach (var target in CurrentAttack.hitTargets) target.GetComponent<ICombatant>()?.Stagger(1.6f, 1.3f);
+        }
+
+        /// <summary>클래시 패배·피격 경직·회피 등으로 중단. 남은 코인은 소모하지 않음.</summary>
+        public void Interrupt() { if (isExecuting) { if (CurrentAttack != null) CurrentAttack.cancelled = true; Finish(false); } }
+
+        void Finish(bool completed)
+        {
+            var s = CurrentSkill; isExecuting = false; Phase = SkillPhase.None; CurrentSkill = null; hitboxHeld = false;
+            if (CurrentAttack != null) CurrentAttack.activeUntil = Mathf.Min(CurrentAttack.activeUntil, Time.time);
+            if (animator && animator.HasState(0, Animator.StringToHash("Locomotion"))) animator.CrossFadeInFixedTime("Locomotion", 0.15f);
+            SkillFinished?.Invoke(s, completed);
+        }
+    }
+}

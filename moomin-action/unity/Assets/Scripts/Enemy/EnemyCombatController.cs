@@ -1,0 +1,185 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+
+namespace MoominAction
+{
+    /// <summary>
+    /// AI 가 고른 행동을 실제 이동·공격으로 실행(명세 v2 8-5).
+    ///  · 접근: NavMeshAgent(구운 NavMesh 가 없으면 직접 이동으로 대체)
+    ///  · 공격: SkillExecutor.UseSkill — 예고(windup) 동안 바닥 경고(빨강 일반 / 보라 방어 불가), 공격마다 앞으로 돌진(lunge)
+    ///  · 방어: 정해진 시간 동안 Guarding(정면 피해 감소, 막 시작했을 때는 패링)
+    ///  · 회피: 옆·뒤로 짧게 물러나며 무적, 쿨타임
+    ///  · 경직(클래시 패배·패링당함): 스킬 중단, 받는 피해 증가 = 플레이어의 반격 기회
+    /// </summary>
+    [RequireComponent(typeof(CharacterStats), typeof(SkillExecutor))]
+    public class EnemyCombatController : MonoBehaviour, ICombatant
+    {
+        public static readonly List<EnemyCombatController> All = new();
+        public NavMeshAgent agent; public Animator animator; public SkillExecutor skillExecutor;
+        public SkillDefinition basicSkill; public List<SkillDefinition> skills = new();
+        public Transform visual; public float moveSpeed = 2.4f, dodgeDistance = 2.6f, dodgeTime = 0.32f, dodgeCooldown = 2.2f, guardCooldown = 1.2f, flinchTime = 0.25f, gravity = -20f;
+        public bool isBoss; public int score = 10;
+        public CharacterStats Stats => stats; public SkillExecutor Executor => skillExecutor;
+        public float AimHeight => isBoss ? 1.5f : 0.6f;
+        public bool IsStaggered => Time.time < staggerUntil;
+        public bool IsDodging => Time.time < dodgeEnd;
+        /// <summary>스킬·경직·회피·방어 중이면 새 판단을 하지 않음.</summary>
+        public bool Busy => !stats.IsAlive || skillExecutor.IsExecuting || IsStaggered || IsDodging || Time.time < busyUntil;
+
+        CharacterStats stats; Transform target; Vector3 knock, dodgeDir, baseScale; float vy, staggerUntil, dodgeEnd, nextDodge, nextGuard, busyUntil, deadT = -1, nextRepath, nextWarp; bool navigating;
+        TelegraphIndicator tele;
+
+        void OnEnable() { All.Add(this); } void OnDisable() { All.Remove(this); }
+        void Awake()
+        {
+            stats = GetComponent<CharacterStats>(); if (!skillExecutor) skillExecutor = GetComponent<SkillExecutor>(); if (!agent) agent = GetComponent<NavMeshAgent>(); if (!animator) animator = GetComponentInChildren<Animator>();
+            if (!visual) visual = transform.childCount > 0 ? transform.GetChild(0) : transform; baseScale = visual.localScale;
+            if (agent) { agent.updateRotation = false; agent.speed = moveSpeed; agent.stoppingDistance = 1.0f; agent.acceleration = 20f; }
+            skills.RemoveAll(s => s == null); if (skills.Count == 0) { skills.Add(basicSkill != null ? basicSkill : SkillLibrary.Get("ENEMY_BUMP")); skills.Add(SkillLibrary.Get("ENEMY_SLAM")); }
+            if (basicSkill == null) basicSkill = skills[0];
+            stats.Damaged += OnDamaged; stats.Died += OnDied;
+            skillExecutor.SkillStarted += OnSkillStarted; skillExecutor.SkillFinished += (s, done) => { HideTelegraph(); };
+            skillExecutor.CoinAttacked += a => visual.localScale = new Vector3(baseScale.x * 0.85f, baseScale.y * 1.2f, baseScale.z * 0.85f);
+        }
+
+        // ── AI 가 호출하는 행동 ─────────────────────────
+        public bool CanAttack() { if (Busy) return false; foreach (var s in skills) if (skillExecutor.IsReady(s)) return true; return false; }
+        public void Approach(Transform t) { target = t; navigating = true; stats.Guarding = false; }
+        public void Hold() { navigating = false; if (stats.Guarding && Time.time >= busyUntil) stats.Guarding = false; }
+        public void Attack(SkillDefinition skill, Transform t)
+        {
+            target = t; navigating = false; stats.Guarding = false; FaceNow(t);
+            skillExecutor.UseSkill(skill != null ? skill : basicSkill);
+        }
+        public void Guard(Transform t, float seconds)
+        {
+            if (Time.time < nextGuard) { Hold(); return; }
+            target = t; navigating = false; stats.Guarding = true; stats.GuardStartTime = Time.time; busyUntil = Time.time + seconds; nextGuard = busyUntil + guardCooldown;
+        }
+        public void Dodge(Transform t)
+        {
+            if (Time.time < nextDodge) { Guard(t, 0.6f); return; }
+            target = t; navigating = false; stats.Guarding = false; Vector3 away = transform.position - t.position; away.y = 0; away.Normalize();
+            Vector3 side = Vector3.Cross(Vector3.up, away) * (Random.value < 0.5f ? 1f : -1f);
+            dodgeDir = (away * 0.6f + side * 0.8f).normalized; dodgeEnd = Time.time + dodgeTime; nextDodge = dodgeEnd + dodgeCooldown; stats.Invulnerable = true;
+        }
+
+        public void Stagger(float seconds, float vulnerable = 1f)
+        {
+            if (!stats.IsAlive) return; float s = isBoss ? seconds * 0.6f : seconds;
+            skillExecutor.Interrupt(); HideTelegraph(); stats.Guarding = false; navigating = false; staggerUntil = Time.time + s; if (vulnerable > 1f) stats.SetVulnerable(vulnerable, s);
+        }
+
+        void OnSkillStarted(SkillDefinition s)
+        {
+            if (s.windup <= 0f) return; HideTelegraph();
+            bool aoe = s.angle >= 360f; float r = (aoe ? s.range : Mathf.Max(1f, s.range * 0.6f)) / transform.localScale.x;
+            Vector3 off = aoe ? Vector3.zero : Vector3.forward * (s.range * 0.5f / transform.localScale.z);
+            tele = TelegraphIndicator.Show(transform, off, r, s.windup, s.unblockable ? new Color(0.65f, 0.2f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f));
+        }
+        void HideTelegraph() { if (tele) tele.Hide(); tele = null; }
+
+        void OnDamaged(float dmg, Vector3 p, Vector3 k)
+        {
+            knock = k * (isBoss ? 0.25f : 1f);
+            if (!skillExecutor.IsExecuting && !IsStaggered && !stats.Guarding) { busyUntil = Mathf.Max(busyUntil, Time.time + flinchTime); visual.localScale = baseScale * 0.88f; }   // 공격 중에는 경직되지 않음(슈퍼아머)
+        }
+
+        void OnDied()
+        {
+            skillExecutor.Interrupt(); HideTelegraph(); stats.Guarding = false; deadT = 0f; if (agent && agent.enabled) agent.enabled = false;
+            GameManager.Instance?.AddScore(score); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
+        }
+
+        void Update()
+        {
+            if (UIState.Paused) return;
+            if (deadT >= 0f) { deadT += Time.deltaTime; visual.localScale = baseScale * Mathf.Max(0, 1 - deadT * 2.5f); if (deadT > 0.4f) Destroy(gameObject); return; }
+            knock = Vector3.Lerp(knock, Vector3.zero, 8f * Time.deltaTime);
+            if (stats.Invulnerable && !IsDodging) stats.Invulnerable = false;
+            Vector3 extra = knock; bool moveNav = false; var s = skillExecutor.CurrentSkill;
+
+            if (IsStaggered) { visual.localRotation = Quaternion.Euler(0, 0, 12f * Mathf.Sin(Time.time * 18f)); visual.localScale = baseScale * (1f + 0.05f * Mathf.Sin(Time.time * 30f)); }
+            else
+            {
+                visual.localRotation = Quaternion.identity;
+                if (IsDodging) extra += dodgeDir * (dodgeDistance / dodgeTime);
+                else if (skillExecutor.IsExecuting && s != null)
+                {
+                    if (skillExecutor.Phase == SkillPhase.Windup) { Face(4f); float w = Mathf.Clamp01(skillExecutor.PhaseTime / Mathf.Max(0.01f, s.windup)); visual.localScale = Vector3.Lerp(baseScale, new Vector3(baseScale.x * 1.18f, baseScale.y * 0.78f, baseScale.z * 1.18f), w); }
+                    else if (skillExecutor.Phase == SkillPhase.Attacking) { extra += transform.forward * s.lunge * Mathf.Max(0f, 1f - skillExecutor.PhaseTime / 0.3f); Face(2f); }
+                    else visual.localScale = Vector3.Lerp(visual.localScale, baseScale, 8f * Time.deltaTime);
+                }
+                else if (stats.Guarding) { Face(8f); visual.localScale = Vector3.Lerp(visual.localScale, new Vector3(baseScale.x * 1.1f, baseScale.y * 0.85f, baseScale.z * 1.1f), 10f * Time.deltaTime); if (Time.time >= busyUntil) stats.Guarding = false; }
+                else
+                {
+                    visual.localScale = Vector3.Lerp(visual.localScale, baseScale, 8f * Time.deltaTime);
+                    if (navigating && target) { moveNav = true; Face(10f); float bob = Mathf.Abs(Mathf.Sin(Time.time * 8f)); visual.localScale = new Vector3(baseScale.x * (1 + 0.08f * bob), baseScale.y * (1 - 0.12f * bob), baseScale.z * (1 + 0.08f * bob)); }
+                    else if (target) Face(6f);
+                }
+            }
+            Move(moveNav, extra);
+        }
+
+        void Move(bool moveNav, Vector3 extra)
+        {
+            bool nav = agent && agent.enabled && agent.isOnNavMesh;
+            if (agent && agent.enabled && !agent.isOnNavMesh && Time.time >= nextWarp) { nextWarp = Time.time + 1f; if (NavMesh.SamplePosition(transform.position, out var hit, 3f, NavMesh.AllAreas)) agent.Warp(hit.position); }
+            if (nav)
+            {
+                agent.isStopped = !moveNav;
+                if (moveNav && target && Time.time >= nextRepath) { nextRepath = Time.time + 0.2f; agent.SetDestination(target.position); }
+                if (extra.sqrMagnitude > 0.0001f) agent.Move(extra * Time.deltaTime);
+                return;
+            }
+            // NavMesh 가 없을 때: 직접 이동 + 바닥 붙이기
+            Vector3 v = extra;
+            if (moveNav && target) { Vector3 to = target.position - transform.position; to.y = 0; if (to.magnitude > 1.0f) v += to.normalized * moveSpeed; }
+            Vector3 pos = transform.position + v * Time.deltaTime;
+            if (GroundBelow(pos, out float gy)) { pos.y = gy; vy = 0; }
+            else { vy += gravity * Time.deltaTime; pos.y += vy * Time.deltaTime; }
+            transform.position = pos;
+        }
+
+        /// <summary>자기 콜라이더를 제외한 가장 가까운 바닥 높이.</summary>
+        bool GroundBelow(Vector3 pos, out float y)
+        {
+            y = 0; float best = float.MaxValue; bool found = false;
+            foreach (var h in Physics.RaycastAll(pos + Vector3.up * 1.5f, Vector3.down, 4f, ~0, QueryTriggerInteraction.Ignore))
+                if (!h.transform.IsChildOf(transform) && h.collider.GetComponentInParent<CharacterStats>() == null && h.distance < best) { best = h.distance; y = h.point.y; found = true; }
+            return found;
+        }
+
+        void Face(float speed) { if (!target) return; Vector3 to = target.position - transform.position; to.y = 0; if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), speed * Time.deltaTime); }
+        void FaceNow(Transform t) { Vector3 to = t.position - transform.position; to.y = 0; if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(to); }
+
+        /// <summary>보스로 전환(웨이브 3마다): 체력 ×6, 크기 ×1.8, 위력 ×1.35, 보스 기술, 신중한 성격.</summary>
+        public void ConfigureBoss()
+        {
+            isBoss = true; score = 100; stats.displayName = "거대한 그림자"; stats.maxHealth *= 6f; stats.ResetStats(); stats.ChangeSanity(10, "보스");
+            transform.localScale *= 1.8f; moveSpeed *= 0.85f; if (agent) agent.speed = moveSpeed;
+            skills = new List<SkillDefinition>();
+            foreach (var id in new[] { "ENEMY_BUMP", "ENEMY_SLAM", "BOSS_LUNGE", "BOSS_FLURRY", "BOSS_BREAK" })
+            {
+                var c = Instantiate(SkillLibrary.Get(id)); c.basePower = Mathf.RoundToInt(c.basePower * 1.35f); c.range *= 1.5f; skills.Add(c);
+            }
+            basicSkill = skills[0]; var brain = GetComponent<EnemyBrain>(); if (brain) brain.personality = EnemyPersonality.Boss;
+        }
+    }
+
+    /// <summary>처치 보상: 금화 항상, 별조각 40% · 붉은 약병 25% · 불꽃 가루 30% · 은빛 깃털 8% · 무기 3%(보스는 4번 굴리고 무기 25%).</summary>
+    public static class EnemyLoot
+    {
+        public static void Drop(Vector3 p, bool boss)
+        {
+            ItemPickup.Spawn("gold", Random.Range(5, 16) * (boss ? 8 : 1), p);
+            for (int k = 0, n = boss ? 4 : 1; k < n; k++)
+            {
+                if (Random.value < 0.40f) ItemPickup.Spawn("shard_star", 1, p); if (Random.value < 0.25f) ItemPickup.Spawn("potion_red", 1, p);
+                if (Random.value < 0.30f) ItemPickup.Spawn("dust_fire", Random.Range(1, 4), p); if (Random.value < 0.08f) ItemPickup.Spawn("feather_silver", 1, p);
+                if (Random.value < (boss ? 0.25f : 0.03f)) ItemPickup.Spawn(Random.value < 0.5f ? "sword_ember" : "sword_frost", 1, p);
+            }
+        }
+    }
+}

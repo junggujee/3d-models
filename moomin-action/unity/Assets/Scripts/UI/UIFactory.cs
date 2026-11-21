@@ -45,7 +45,7 @@ namespace MoominAction.UI
         public static void OnClick(GameObject go, Action<PointerEventData> a) => AddTrigger(go, EventTriggerType.PointerClick, a);
         static void AddTrigger(GameObject go, EventTriggerType type, Action<PointerEventData> a)
         {
-            var et = go.GetComponent<EventTrigger>() ?? go.AddComponent<EventTrigger>(); var e = new EventTrigger.Entry { eventID = type }; e.callback.AddListener(d => a((PointerEventData)d)); et.triggers.Add(e);
+            var et = go.GetComponent<EventTrigger>(); if (et == null) et = go.AddComponent<EventTrigger>();   // Unity 의 '가짜 null' 때문에 ?? 를 쓰지 않음 var e = new EventTrigger.Entry { eventID = type }; e.callback.AddListener(d => a((PointerEventData)d)); et.triggers.Add(e);
         }
 
         /// <summary>게이지(틀 + 채움). 채움 비율은 SetFill 로.</summary>

@@ -21,10 +21,11 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 한글 폰트: `Font.CreateDynamicFontFromOSFont`(나눔명조 → 바탕 → 맑은 고딕 …) 로 OS 폰트 사용. 모든 PC 에서 같은 모양을 원하면 TTF 를 프로젝트에 넣고 `UITheme.Font` 를 바꿀 것.
 - Unity 6(또는 2023.1+) 권장(`FindFirstObjectByType`; 이전 버전은 `#if` 로 대체됨). 새/기존 Input System 모두 지원, UI 는 `com.unity.ugui`(기본 포함) 사용.
 
-## 코인 전투 (림버스 컴퍼니 재해석) — 상세는 docs/COMBAT.md
-- 키: Space 회피, 좌클릭 일반 공격, 우클릭 방어(패링 0.2초), Q/E/R 스킬, Tab 타깃 고정, I 가방(Tab 아님). 점프는 없음.
-- 흐름: `SkillManager`(입력·타이밍·쿨타임) → `AttackController.ExecuteHit`(합 → 코인 → 피해) → `ClashManager`(다회 합, 결과 적용). 적이 맞히는 순간 `EnemyAI.Impact` → `CombatManager.ReceiveEnemyAttack`(회피 → 합 → 방어 합 → 일방 공격).
-- 수식은 `CoinMath` 한 곳. 바꾸면 `tools/coin_sim.py` 도 같이 고쳐서 `docs/balance.md` 를 다시 생성할 것(두 구현이 같은 규칙이어야 함).
-- 스킬 수치는 `SkillLibrary`(기본값) 또는 `Assets/Resources/Skills/*.asset`(덮어쓰기). 적 공격은 `EnemyAttack` 팩토리 + 프리팹 목록.
-- 정적 이벤트(`ClashManager.Clashed`, `EnemyAI.AnyCoinTossed`)는 구독한 쪽이 해제해야 함(`CombatHUD.Dispose`).
-- `using System;` 이 있는 파일에서 `[Range]` 대신 `[UnityEngine.Range]`, `Random` 대신 `UnityEngine.Random` 을 쓸 것(모호성 오류).
+## 코인 전투 — 명세 v2.0 (상세: docs/COMBAT.md)
+- 구조: CombatManager(플레이어 입력) → SkillExecutor(공격 순서, 플레이어·적 공용) → CoinSystem(판정) → AttackContext(결과) → CombatResolver(히트박스·피해) → ClashManager(위력 비교). 적: EnemyBrain → EnemyDecisionSystem(점수) → EnemyCombatController(NavMesh 이동·행동).
+- 코인 하나 = 공격 한 번, 공격 위력 = 기본 + (앞면 ? 코인 위력 : 0) (누적 아님). 클래시는 양쪽 히트박스가 동시에 열렸을 때만, 이미 던진 코인으로 비교. 진 쪽은 남은 코인 소모 없이 중단.
+- 체력·정신력은 CharacterStats 하나(예전 Health·SanitySystem 은 삭제). 팀은 CharacterStats.team.
+- 스킬 수치: SkillLibrary(기본) → 메뉴가 Assets/Data/Skills/*.asset 생성·연결. 정신력 비용은 "이 이상일 때 사용 가능 + 소모".
+- **수정 후 반드시 `tools/compile_check.sh` 로 컴파일 확인**(dotnet-sdk-8.0 필요, Unity 참조 어셈블리는 NuGet 에서 자동 다운로드). 수식을 바꾸면 `tools/coin_sim.py` 도 같이 고쳐 balance.md 재생성.
+- Unity 함정: 직렬화 필드·GetComponent 결과에 `??`/`??=` 금지(에디터의 '가짜 null'), `using System;` 파일에서는 `UnityEngine.Random`/`[UnityEngine.Range]`, 정적 이벤트는 구독 해제(CombatHUD.Dispose).
+- 키: Space 회피, 좌클릭 공격, 우클릭 방어(0.2초 패링), Q/E/R 스킬, Tab 조준, I 가방.

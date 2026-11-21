@@ -16,12 +16,12 @@ namespace MoominAction
         public Slot[] slots = new Slot[Capacity]; public string[] quick = new string[QuickCount]; public string equippedWeapon = "sword_spark"; public int gold;
         public event Action Changed; public event Action<ItemDef, int> Picked; public event Action<string> Message;
         const string PrefKey = "moomin.inventory";
-        Health health; Stamina stamina; AttackController combat; SwordGlow glow;
+        CharacterStats health; Stamina stamina; SkillExecutor combat; SwordGlow glow;
 
         void Awake()
         {
             for (int i = 0; i < Capacity; i++) slots[i] = new Slot();
-            health = GetComponent<Health>(); stamina = GetComponent<Stamina>(); combat = GetComponent<AttackController>();
+            health = GetComponent<CharacterStats>(); stamina = GetComponent<Stamina>(); combat = GetComponent<SkillExecutor>();
             if (!Load()) NewGame();
         }
         void Start() { glow = GetComponentInChildren<SwordGlow>(); ApplyWeapon(); }
@@ -66,7 +66,7 @@ namespace MoominAction
             {
                 case ItemType.Weapon: Equip(id); return true;
                 case ItemType.Consumable:
-                    if (d.heal > 0 && health != null) { if (health.Current >= health.maxHealth && d.stamina <= 0) { Message?.Invoke("체력이 가득 찼다"); return false; } health.Heal(d.heal); }
+                    if (d.heal > 0 && health != null) { if (health.currentHealth >= health.maxHealth && d.stamina <= 0) { Message?.Invoke("체력이 가득 찼다"); return false; } health.Heal(d.heal); }
                     if (d.stamina > 0 && stamina != null) stamina.Restore(d.stamina);
                     Remove(id, 1); Message?.Invoke(d.name + " 사용"); return true;
                 default: Message?.Invoke("지금은 쓸 수 없다"); return false;
@@ -82,7 +82,7 @@ namespace MoominAction
         void ApplyWeapon()
         {
             var d = ItemDatabase.Get(equippedWeapon); if (d == null) return;
-            if (combat == null) combat = GetComponent<AttackController>(); if (glow == null) glow = GetComponentInChildren<SwordGlow>();
+            if (combat == null) combat = GetComponent<SkillExecutor>(); if (glow == null) glow = GetComponentInChildren<SwordGlow>();
             if (combat != null) combat.weaponMultiplier = d.damageMultiplier; if (glow != null) glow.hueOverride = d.hue;
         }
 
