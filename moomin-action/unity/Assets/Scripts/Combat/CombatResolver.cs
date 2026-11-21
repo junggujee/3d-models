@@ -79,7 +79,8 @@ namespace MoominAction
                 {
                     target.ChangeSanity(CharacterStats.ParrySuccess, "패링"); attack.cancelled = true;
                     SparkBurst.Spawn(hitPoint, -to.normalized + Vector3.up, 50, 7f, SparkBurst.Gold); HitStop.Do(0.14f);
-                    GetComponent<ICombatant>()?.Stagger(1.0f, 1.5f); ClashManager.RaiseParry(target, stats); return;
+                    GetComponent<ICombatant>()?.Stagger(1.0f, 1.5f); ClashManager.RaiseParry(target, stats);
+                    var de = target.GetComponent<EnergyManager>(); if (de != null) de.Gain(de.onParryGain, "패링"); return;
                 }
                 r *= target.guardDamageMultiplier; target.ChangeSanity(CharacterStats.GuardBlock, "방어");
             }
@@ -90,11 +91,34 @@ namespace MoominAction
             target.TakeDamage(dmg, hitPoint, to.normalized * skill.knockback + Vector3.up * 1.5f);
             if (wasInvulnerable) return;   // 회피됨
             attack.isHit = true; stats.ChangeSanity(CharacterStats.HitLanded, "명중");
-            var se = target.GetComponent<StatusEffects>(); if (se == null) se = target.gameObject.AddComponent<StatusEffects>();   // 상태이상: 진동 발동 → 새로 부여
-            se.OnHitTaken(); se.Apply(skill.onHitStatus, skill.onHitStacks);
+            ApplyStatusAndEnergy(attack, target, hitPoint);
             SparkBurst.Spawn(hitPoint, -to.normalized + Vector3.up * 0.5f, attack.isHeads ? 40 : 22, attack.isHeads ? 7f : 4.5f, attack.isHeads ? SparkBurst.Gold : (stats.team == Team.Enemy ? SparkBurst.Crimson : (Color?)null));
             DamageDealt?.Invoke(attack, target, dmg);
         }
         public static event System.Action<AttackContext, CharacterStats, int> DamageDealt;
+        /// <summary>진동 폭발: (공격, 대상, 경직 피해, 경직이 깨졌는가) — HUD 연출용.</summary>
+        public static event System.Action<AttackContext, CharacterStats, int, bool> TremorBurst;
+
+        /// <summary>
+        /// 명중 후 처리 순서(한 공격·대상당 1회 — hitTargets 로 보장):
+        /// ① 침잠 발동(이미 쌓인 것) ② 이번 코인 결과(앞/뒷면)로 새 상태이상 부여 ③ 진동 폭발(스킬 설정 시) ④ 공격자 에너지 획득.
+        /// 부여보다 폭발이 뒤라서, 같은 공격으로 준 진동도 바로 터질 수 있음.
+        /// </summary>
+        void ApplyStatusAndEnergy(AttackContext attack, CharacterStats target, Vector3 hitPoint)
+        {
+            var skill = attack.skill; var se = target.GetComponent<StatusEffectManager>();
+            if (se == null) se = target.gameObject.AddComponent<StatusEffectManager>();
+            se.OnHitTaken(attack);
+            if (target.IsAlive) se.ApplyFromSkill(skill, attack.isHeads);
+            var energy = executor != null ? executor.energy : GetComponent<EnergyManager>();
+            int sd = 0; bool broke = skill.tremorBurstEnabled && target.IsAlive && se.TryTremorBurst(attack, out sd);
+            if (sd > 0)
+            {
+                SparkBurst.Spawn(hitPoint, Vector3.up, broke ? 70 : 35, broke ? 9f : 6f, SparkBurst.Gold); HitStop.Do(broke ? 0.16f : 0.07f);
+                if (broke && energy != null) energy.Gain(energy.onStaggerBreakGain, "경직 깨뜨림");
+                TremorBurst?.Invoke(attack, target, sd, broke);
+            }
+            if (energy != null) energy.Gain(energy.onHitGain + skill.energyGain, "명중");
+        }
     }
 }

@@ -107,6 +107,21 @@ namespace MoominAction.UI
             return true;
         }
 
+        /// <summary>"출혈 앞 2/1 · 뒤 1/1  진동 폭발" — 강도/횟수, 앞면·뒷면이 같으면 하나만.</summary>
+        public static string StatusLine(SkillDefinition s, out StatusType first)
+        {
+            first = StatusType.None; var sb = new System.Text.StringBuilder(); int n = 0;
+            foreach (var t in StatusInfo.All)
+            {
+                if (!s.InflictsStatus(t)) continue; if (first == StatusType.None) first = t; n++;
+                StatusAmount h = s.StatusOn(t, true), l = s.StatusOn(t, false);
+                string amt = h.potency == l.potency && h.count == l.count ? $"{h}" : (h.IsEmpty ? "" : $"앞 {h}") + (!h.IsEmpty && !l.IsEmpty ? " · " : "") + (l.IsEmpty ? "" : $"뒤 {l}");
+                sb.Append($"<color=#{StatusInfo.Hex(t)}>{StatusInfo.Name(t)}</color> {amt}  ");
+            }
+            if (s.tremorBurstEnabled) { if (first == StatusType.None) first = StatusType.Tremor; sb.Append($"<color=#{StatusInfo.Hex(StatusType.Tremor)}>진동 폭발</color>"); n++; }
+            string r = sb.ToString().TrimEnd(); return n > 1 ? "<size=18>" + r + "</size>" : r;
+        }
+
         void Show(SkillDefinition s)
         {
             shown = s; var c = SkillAttributes.ColorOf(s.attribute); var light = Color.Lerp(c, Color.white, 0.35f); var deep = c * 0.55f; deep.a = 1f;
@@ -116,10 +131,10 @@ namespace MoominAction.UI
             plus.text = "+" + s.coinPower; plus.color = light; plus.GetComponent<Outline>().effectColor = deep;
             int[] stats = { s.coinCount, s.basePower * s.coinCount, (s.basePower + s.coinPower) * s.coinCount };
             for (int i = 0; i < 3; i++) { statNum[i].text = stats[i].ToString(); statNum[i].color = light; statIcon[i].color = light; }
-            attrLine.text = SkillAttributes.Names[(int)s.attribute] + " 속성 · " + SkillAttributes.WeaknessText(s.attribute) + (s.unblockable ? " · <color=#C080FF>방어 불가</color>" : "");
+            attrLine.text = SkillAttributes.Names[(int)s.attribute] + " 속성 · " + SkillAttributes.WeaknessText(s.attribute) + (s.unblockable ? " · <color=#C080FF>방어 불가</color>" : "") + (s.energyCost > 0 ? $" · <color=#6FE0F0>에너지 {s.energyCost}</color>" : "");
             art.sprite = SkillIllustration.Get(s);
-            bool hasStatus = s.onHitStatus != StatusType.None && s.onHitStacks > 0; statusIcon.gameObject.SetActive(hasStatus);
-            if (hasStatus) { var sc = StatusInfo.ColorOf(s.onHitStatus); statusIcon.sprite = SkillPanelArt.StatusIcon(s.onHitStatus); statusIcon.color = sc; status.text = $"적중 시      <color=#{ColorUtility.ToHtmlStringRGB(sc)}>{StatusInfo.Name(s.onHitStatus)}</color> {s.onHitStacks} 부여"; }
+            string line = StatusLine(s, out var first); bool hasStatus = line.Length > 0; statusIcon.gameObject.SetActive(hasStatus);
+            if (hasStatus) { statusIcon.sprite = SkillPanelArt.StatusIcon(first); statusIcon.color = StatusInfo.ColorOf(first); status.text = "적중 시      " + line; }
             else status.text = s.description != null && s.description.Length > 0 ? "<size=18>" + s.description + "</size>" : "";
             totalLabel.color = light; total.color = Color.Lerp(Color.white, c, 0.55f); total.GetComponent<Outline>().effectColor = deep; total.text = "?"; punch = 0.15f;
         }

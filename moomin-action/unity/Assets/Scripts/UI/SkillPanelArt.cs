@@ -5,7 +5,7 @@ namespace MoominAction.UI
     /// <summary>스킬 패널용 붓 질감 스프라이트(흰색 — Image.color 로 속성색을 입힘). 거친 테두리·이름 띠·육각형·팔각 코인·빛 번짐·작은 아이콘.</summary>
     public static class SkillPanelArt
     {
-        static Sprite frame, fill, banner, hexFill, hexRing, glow, iconCoin, iconMin, iconMax, iconBleed, iconBurn, iconTremor; static Sprite[] coins;
+        static Sprite frame, fill, banner, hexFill, hexRing, glow, iconCoin, iconMin, iconMax, iconBleed, iconBurn, iconTremor, iconSinking; static Sprite[] coins;
         static float Hash(int x, int y) { unchecked { int h = x * 374761393 + y * 668265263; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) & 0xffff) / 65535f; } }
         static float Noise(float x, float y) { int xi = Mathf.FloorToInt(x), yi = Mathf.FloorToInt(y); float tx = x - xi, ty = y - yi; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
             return Mathf.Lerp(Mathf.Lerp(Hash(xi, yi), Hash(xi + 1, yi), tx), Mathf.Lerp(Hash(xi, yi + 1), Hash(xi + 1, yi + 1), tx), ty); }
@@ -79,6 +79,7 @@ namespace MoominAction.UI
         {
             StatusType.Bleed => iconBleed ??= Icon((x, y) => Mathf.Min(Mathf.Sqrt(x * x + (y + .25f) * (y + .25f)) - .55f, Mathf.Abs(x) * 1.6f + (y - .25f) - .55f)),   // 핏방울
             StatusType.Burn => iconBurn ??= Icon((x, y) => Mathf.Min(Mathf.Sqrt(x * x + (y + .35f) * (y + .35f)) - .5f, Mathf.Abs(x + Mathf.Sin(y * 3) * .15f) * 1.4f + (y - .2f) * .9f - .45f)),   // 불꽃
+            StatusType.Sinking => iconSinking ??= Icon((x, y) => Mathf.Max(Mathf.Min(Mathf.Abs(y - .35f - Mathf.Sin(x * 5f) * .12f) - .11f, Mathf.Max(Mathf.Abs(x) * 1.1f - y * .9f - .55f, y + .05f)), Mathf.Abs(x) - .85f)),   // 물결 + 아래 화살표
             _ => iconTremor ??= Icon((x, y) => { float r = Mathf.Sqrt(x * x + y * y), a = Mathf.Atan2(y, x); float s = Mathf.Repeat(r * 9f - a * 1.43f, Mathf.PI * 2f); return Mathf.Max(r - .9f, Mathf.Abs(s - Mathf.PI) / 9f - .12f); }),   // 소용돌이
         };
     }

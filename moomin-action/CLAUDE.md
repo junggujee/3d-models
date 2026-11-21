@@ -39,7 +39,8 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 ## 속성·상성·스킬 패널
 - 속성 7색(SkillDefinition.attribute) + 몸 속성(CharacterStats.attribute). 상성 = 색상환 다음 색을 이김(빨>주>노>초>파>보>빨), 검정 중립. 수치·판정은 `SkillAttributes`(SkillDefinition.cs) 한 곳: 유리 피해 ×1.25·클래시 +2, 불리 ×0.8.
 - 스킬 패널 v2 `UI/SkillPanel.cs`(적 머리 위 `EnemySkillPanels` + 플레이어 왼쪽 아래), 붓 질감 `UI/SkillPanelArt.cs`, 일러스트 `UI/SkillIllustration.cs`(실루엣+빛 연출; Python 시제품 `tools/illustration_preview.py` 와 같은 알고리즘 — 한쪽을 바꾸면 다른 쪽도). 목업 `previews/skill_panel_v2_mock.png`.
-- 상태이상 `Character/StatusEffects.cs`(출혈·화상·진동). 상태이상 피해는 `CharacterStats.LoseHealth`(경직·회피 없음).
+- 상태이상·경직·에너지(상세: docs/STATUS_ENERGY.md): `StatusEffects/`(출혈·화상·침잠·진동, 강도/횟수 분리) + `StatusEffectManager`, 경직 게이지 `CharacterStats.AddStagger`, 에너지 `CombatResources/EnergyManager`. 발동은 전투 사건에서만, 같은 `AttackContext.id` 로는 한 번만. 화상만 시간(누적 후 간격마다). 상태이상 피해는 `CharacterStats.LoseHealth`(경직·회피 없음).
+- 핵심 로직은 순수 C#(UnityEngine 없음) → `cd tools && dotnet run --project status_tests` 로 검증. 이 파일들에 UnityEngine 을 쓰지 말 것.
 
 ## 맵(blender/build_map.py)
 - 원본 GLB(SketchUp→openskp→Blender): 맨 위 계층 + 메시 공유 = 부품 원본 → 삭제. 1단위 = 0.14m, 바닥 z=-51 → 0.

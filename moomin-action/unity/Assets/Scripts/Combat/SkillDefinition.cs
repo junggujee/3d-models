@@ -61,11 +61,24 @@ namespace MoominAction
         [Tooltip("마지막 공격 뒤 회복(이 구간은 회피·다음 공격으로 취소 가능)")] public float recovery = 0.3f;
         [Tooltip("코인 i 에 쓸 애니메이터 상태(개수보다 적으면 반복)")] public string[] attackAnimations = { "Attack1", "Attack2", "Attack3" };
 
-        [Header("On Hit")] [Tooltip("적중 시 부여할 상태이상")] public StatusType onHitStatus = StatusType.None; public int onHitStacks = 0;
+        [Header("Status On Hit (강도/횟수 — 코인 앞면·뒷면 따로)")]
+        public StatusAmount bleedOnHeads, bleedOnTails;
+        public StatusAmount burnOnHeads, burnOnTails;
+        public StatusAmount sinkingOnHeads, sinkingOnTails;
+        public StatusAmount tremorOnHeads, tremorOnTails;
+        [Tooltip("적중 시 대상의 진동을 폭발시켜 경직 게이지 피해")] public bool tremorBurstEnabled;
+        [Header("Energy")] [Tooltip("사용에 필요한(소비하는) 에너지")] [Min(0)] public int energyCost; [Tooltip("공격이 명중할 때마다 얻는 에너지(기본 명중 보너스에 더해짐)")] [Min(0)] public int energyGain;
         [Header("Hit")] public float range = 2f; public float angle = 120f; public float knockback = 4f; [Tooltip("공격마다 앞으로 미끄러지는 속도")] public float lunge = 0f;
         public CoinEffect coinEffect = CoinEffect.None;
         [TextArea] public string description;
 
+        public StatusAmount StatusOn(StatusType t, bool heads) => t switch
+        {
+            StatusType.Bleed => heads ? bleedOnHeads : bleedOnTails, StatusType.Burn => heads ? burnOnHeads : burnOnTails,
+            StatusType.Sinking => heads ? sinkingOnHeads : sinkingOnTails, StatusType.Tremor => heads ? tremorOnHeads : tremorOnTails, _ => default,
+        };
+        public bool InflictsStatus(StatusType t) => !StatusOn(t, true).IsEmpty || !StatusOn(t, false).IsEmpty;
+        public bool HasAnyStatus { get { foreach (var t in StatusInfo.All) if (InflictsStatus(t)) return true; return false; } }
         public int MinPower => basePower; public int MaxPower => basePower + coinPower;
         public float ExpectedPower(int sanity) => CoinMath.ExpectedPower(basePower, coinPower, sanity);
         public float Duration => windup + (coinCount - 1) * attackInterval + hitTime + activeWindow + recovery;

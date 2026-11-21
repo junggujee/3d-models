@@ -50,7 +50,8 @@ namespace MoominAction
             Vector3 mid = (p.owner.transform.position + e.owner.transform.position) * 0.5f + Vector3.up * 0.9f;
             if (win != null)
             {
-                win.owner.stats.ChangeSanity(CharacterStats.ClashWin, "클래시 승리"); lose.owner.stats.ChangeSanity(CharacterStats.ClashLose, "클래시 패배");
+                win.owner.stats.ChangeSanity(CharacterStats.ClashWin, "클래시 승리");
+                if (win.owner.energy != null) win.owner.energy.Gain(win.owner.energy.onClashWinGain, "클래시 승리"); lose.owner.stats.ChangeSanity(CharacterStats.ClashLose, "클래시 패배");
                 lose.cancelled = true; lose.owner.Interrupt(); lose.owner.GetComponent<ICombatant>()?.Stagger(loserStagger, loserVulnerable);
                 win.owner.resolver.ApplyHit(win, lose.owner.stats);                                   // 이긴 공격은 그대로 명중
                 SparkBurst.Spawn(mid, Vector3.up, 45, 7f, win == p ? SparkBurst.Gold : SparkBurst.Crimson); HitStop.Do(0.12f);

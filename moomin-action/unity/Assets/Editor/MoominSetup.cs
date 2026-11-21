@@ -120,7 +120,7 @@ namespace MoominAction.EditorTools
             var cc = player.AddComponent<CharacterController>(); cc.height = 1.3f; cc.radius = 0.35f; cc.center = new Vector3(0, 0.65f, 0); cc.stepOffset = 0.3f;
             var anim = player.GetComponentInChildren<Animator>(); anim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "Moomin.controller"); anim.applyRootMotion = false;
             var stats = player.AddComponent<CharacterStats>(); stats.displayName = "민미"; stats.team = Team.Player; stats.attribute = SkillAttribute.Black; stats.maxHealth = stats.currentHealth = 100f;
-            player.AddComponent<Stamina>(); player.AddComponent<CoinSystem>(); var res = player.AddComponent<CombatResolver>(); res.targetMask = enemyMask;
+            player.AddComponent<Stamina>(); player.AddComponent<CoinSystem>(); player.AddComponent<StatusEffectManager>(); player.AddComponent<EnergyManager>(); var res = player.AddComponent<CombatResolver>(); res.targetMask = enemyMask;
             var ex = player.AddComponent<SkillExecutor>(); ex.useAnimationEvents = true; ex.animator = anim;
             var cm = player.AddComponent<CombatManager>();
             cm.basic1 = SkillAsset("BASIC_1"); cm.basic2 = SkillAsset("BASIC_2"); cm.basic3 = SkillAsset("BASIC_3"); cm.skill1 = SkillAsset("SKILL_001"); cm.skill2 = SkillAsset("SKILL_002"); cm.ultimate = SkillAsset("SKILL_003");
@@ -141,7 +141,7 @@ namespace MoominAction.EditorTools
             var col = enemy.AddComponent<CapsuleCollider>(); col.center = new Vector3(0, 0.45f, 0); col.radius = 0.4f; col.height = 0.9f;
             var agent = enemy.AddComponent<UnityEngine.AI.NavMeshAgent>(); agent.radius = 0.4f; agent.height = 0.9f; agent.speed = 2.4f; agent.angularSpeed = 0f; agent.stoppingDistance = 1f;
             var es = enemy.AddComponent<CharacterStats>(); es.displayName = "그림자"; es.team = Team.Enemy; es.attribute = SkillAttribute.Black; es.maxHealth = es.currentHealth = 30f; es.invulnerableTime = 0.1f;
-            enemy.AddComponent<CoinSystem>(); var eres = enemy.AddComponent<CombatResolver>(); eres.targetMask = playerMask;
+            enemy.AddComponent<CoinSystem>(); enemy.AddComponent<StatusEffectManager>(); enemy.AddComponent<EnergyManager>(); var eres = enemy.AddComponent<CombatResolver>(); eres.targetMask = playerMask;
             var eex = enemy.AddComponent<SkillExecutor>(); eex.useAnimationEvents = false;
             var ecc = enemy.AddComponent<EnemyCombatController>(); ecc.archetype = EnemyArchetype.GroundMonster; ecc.visual = vis.transform; ecc.agent = agent; ecc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("ENEMY_BUMP"), SkillAsset("ENEMY_SLAM") }; ecc.basicSkill = ecc.skills[0];
             enemy.AddComponent<EnemyBrain>();
@@ -159,7 +159,7 @@ namespace MoominAction.EditorTools
                 var bc = b.AddComponent<CapsuleCollider>(); bc.center = new Vector3(0, 0.63f, 0); bc.radius = 0.35f; bc.height = 1.26f;
                 var ba = b.AddComponent<UnityEngine.AI.NavMeshAgent>(); ba.radius = 0.35f; ba.height = 1.26f; ba.speed = 2.2f; ba.angularSpeed = 0f; ba.stoppingDistance = 1f;
                 var bs = b.AddComponent<CharacterStats>(); bs.displayName = "잠꾸러기 곰"; bs.team = Team.Enemy; bs.attribute = SkillAttribute.Yellow; bs.maxHealth = bs.currentHealth = 45f; bs.invulnerableTime = 0.1f;
-                b.AddComponent<CoinSystem>(); var br = b.AddComponent<CombatResolver>(); br.targetMask = playerMask;
+                b.AddComponent<CoinSystem>(); b.AddComponent<StatusEffectManager>(); b.AddComponent<EnergyManager>(); var br = b.AddComponent<CombatResolver>(); br.targetMask = playerMask;
                 var bex = b.AddComponent<SkillExecutor>(); bex.useAnimationEvents = false; bex.animator = bAnim;
                 var bcc = b.AddComponent<EnemyCombatController>(); bcc.archetype = EnemyArchetype.Humanoid; bcc.animator = bAnim; bcc.agent = ba; bcc.visual = b.transform; bcc.moveSpeed = 2.2f; bcc.score = 15;
                 bcc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("HUMAN_JAB"), SkillAsset("HUMAN_SLAM"), SkillAsset("HUMAN_RUSH") }; bcc.basicSkill = bcc.skills[0];

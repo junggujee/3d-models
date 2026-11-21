@@ -26,7 +26,17 @@ namespace MoominAction
         {
             if (map != null) return; map = new Dictionary<string, SkillDefinition>();
             void Look(string id, SkillAttribute a, SkillMotif m) { if (map.TryGetValue(id, out var s)) { s.attribute = a; s.motif = m; } }
-            void OnHit(string id, StatusType t, int n) { if (map.TryGetValue(id, out var s)) { s.onHitStatus = t; s.onHitStacks = n; } }
+            // 상태이상 부여량: 앞면(hp,hc) / 뒷면(tp,tc) — 강도/횟수
+            void St(string id, StatusType t, int hp, int hc, int tp = 0, int tc = 0)
+            {
+                if (!map.TryGetValue(id, out var s)) return; var h = new StatusAmount(hp, hc); var l = new StatusAmount(tp, tc);
+                switch (t)
+                {
+                    case StatusType.Bleed: s.bleedOnHeads = h; s.bleedOnTails = l; break; case StatusType.Burn: s.burnOnHeads = h; s.burnOnTails = l; break;
+                    case StatusType.Sinking: s.sinkingOnHeads = h; s.sinkingOnTails = l; break; case StatusType.Tremor: s.tremorOnHeads = h; s.tremorOnTails = l; break;
+                }
+            }
+            void Energy(string id, int cost, int gain, bool burst = false) { if (map.TryGetValue(id, out var s)) { s.energyCost = cost; s.energyGain = gain; s.tremorBurstEnabled = burst; } }
             void Add(SkillDefinition s) => map[s.skillId] = s;
             string[] A1 = { "Attack1" }, A2 = { "Attack2" }, A23 = { "Attack2", "Attack3" }, A123 = { "Attack1", "Attack2", "Attack3" }, A5 = { "Attack1", "Attack2", "Attack1", "Attack2", "Attack3" }, A33 = { "Attack3", "Attack3" };
             // ── 플레이어: 일반 공격(좌클릭 3연타)
@@ -37,8 +47,8 @@ namespace MoominAction
             Add(S("SKILL_001", "연속 베기", 10, 3, 3, 1.0f, 5f, 0, 0.5f, 0.35f, 0.35f, A123, 2.1f, 120, 5f, desc: "세 번 연속으로 벤다. 베기마다 코인을 하나씩 던진다."));
             Add(S("SKILL_002", "불꽃 찌르기", 14, 6, 2, 1.2f, 8f, 8, 0.55f, 0.4f, 0.4f, A33, 2.8f, 70, 10f, lunge: 4f, fx: CoinEffect.StaggerOnAllHeads,
                   desc: "두 번 깊게 찌른다. 둘 다 앞면이면 적이 크게 휘청인다. 정신력 8 이상일 때 사용, 8 소모."));
-            Add(S("SKILL_003", "별빛 난무", 12, 5, 5, 1.3f, 30f, 15, 0.42f, 0.33f, 0.5f, A5, 3.2f, 360, 8f, fx: CoinEffect.SanityOnAllHeads,
-                  desc: "주위를 다섯 번 베어 낸다. 다섯 번 모두 앞면이면 정신력 +10. 정신력 15 이상일 때 사용, 15 소모."));
+            Add(S("SKILL_003", "별빛 난무", 14, 5, 5, 1.3f, 20f, 0, 0.42f, 0.33f, 0.5f, A5, 3.2f, 360, 8f, fx: CoinEffect.SanityOnAllHeads,
+                  desc: "강화 스킬 — 에너지 60 소비. 주위를 다섯 번 베어 내며 쌓인 진동을 폭발시킨다. 다섯 번 모두 앞면이면 정신력 +10."));
             // ── 인간형 적: 잠꾸러기 곰(애니메이션 있음 — hitTime 을 클립 타격 프레임에 맞춤: Attack1/2 0.35초, Attack3 0.43초)
             Add(S("HUMAN_JAB", "솜주먹 연타", 6, 3, 3, 0.6f, 2.5f, 0, 0.4f, 0.35f, 0.7f, new[] { "Attack1", "Attack2", "Attack1" }, 1.7f, 90, 3f, windup: 0.45f, lunge: 2f));
             Add(S("HUMAN_SLAM", "베개 내려찍기", 10, 4, 2, 0.8f, 5f, 0, 0.6f, 0.43f, 1.0f, new[] { "Attack3" }, 2.0f, 140, 7f, windup: 0.85f, lunge: 1.5f));
@@ -54,9 +64,16 @@ namespace MoominAction
             Look("SKILL_001", SkillAttribute.Red, SkillMotif.Flurry); Look("SKILL_002", SkillAttribute.Orange, SkillMotif.Thrust); Look("SKILL_003", SkillAttribute.Purple, SkillMotif.Slash);
             Look("HUMAN_JAB", SkillAttribute.Yellow, SkillMotif.Flurry); Look("HUMAN_SLAM", SkillAttribute.Blue, SkillMotif.Smash); Look("HUMAN_RUSH", SkillAttribute.Green, SkillMotif.Rush);
             Look("ENEMY_BUMP", SkillAttribute.Black, SkillMotif.Rush); Look("ENEMY_SLAM", SkillAttribute.Purple, SkillMotif.Smash);
-            // 적중 시 상태이상
-            OnHit("SKILL_001", StatusType.Bleed, 1); OnHit("SKILL_002", StatusType.Burn, 2); OnHit("SKILL_003", StatusType.Tremor, 1);
-            OnHit("HUMAN_SLAM", StatusType.Tremor, 2); OnHit("ENEMY_SLAM", StatusType.Tremor, 1); OnHit("BOSS_LUNGE", StatusType.Bleed, 2); OnHit("BOSS_FLURRY", StatusType.Burn, 1);
+            // 적중 시 상태이상(앞면 / 뒷면)
+            St("BASIC_1", StatusType.Tremor, 1, 1); St("BASIC_2", StatusType.Sinking, 1, 1); St("BASIC_3", StatusType.Tremor, 2, 1, 1, 1);
+            St("SKILL_001", StatusType.Bleed, 2, 1, 1, 1); St("SKILL_002", StatusType.Burn, 3, 2, 2, 1); St("SKILL_003", StatusType.Sinking, 2, 1);
+            St("HUMAN_JAB", StatusType.Tremor, 1, 1); St("HUMAN_SLAM", StatusType.Sinking, 2, 2, 1, 1); St("ENEMY_SLAM", StatusType.Tremor, 2, 1);
+            St("BOSS_LUNGE", StatusType.Bleed, 3, 2, 1, 1); St("BOSS_FLURRY", StatusType.Burn, 2, 1);
+            // 에너지: (소비, 명중 시 추가 획득, 진동 폭발)
+            Energy("BASIC_1", 0, 4); Energy("BASIC_2", 0, 4); Energy("BASIC_3", 0, 4);
+            Energy("SKILL_001", 0, 2); Energy("SKILL_002", 0, 2);
+            Energy("SKILL_003", 60, 0, burst: true);   // 강화 스킬: 에너지 60 소비, 진동 폭발
+            Energy("BOSS_BREAK", 40, 0, burst: true); Energy("HUMAN_RUSH", 0, 0, burst: true);
             Look("BOSS_LUNGE", SkillAttribute.Red, SkillMotif.Rush); Look("BOSS_FLURRY", SkillAttribute.Orange, SkillMotif.Flurry); Look("BOSS_BREAK", SkillAttribute.Black, SkillMotif.Smash);
         }
     }

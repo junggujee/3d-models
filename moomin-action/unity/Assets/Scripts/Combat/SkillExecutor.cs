@@ -16,7 +16,7 @@ namespace MoominAction
     [RequireComponent(typeof(CharacterStats), typeof(CoinSystem), typeof(CombatResolver))]
     public class SkillExecutor : MonoBehaviour
     {
-        public CoinSystem coinSystem; public CharacterStats stats; public Animator animator; public CombatResolver resolver;
+        public CoinSystem coinSystem; public CharacterStats stats; public EnergyManager energy; public StatusEffectManager status; public Animator animator; public CombatResolver resolver;
         public bool useAnimationEvents = false; public float eventGrace = 0.15f; public float weaponMultiplier = 1f;
 
         public SkillDefinition CurrentSkill { get; private set; }
@@ -38,11 +38,14 @@ namespace MoominAction
         void Awake()
         {
             if (!coinSystem) coinSystem = GetComponent<CoinSystem>(); if (!stats) stats = GetComponent<CharacterStats>(); if (!resolver) resolver = GetComponent<CombatResolver>();
+            if (!energy) energy = GetComponent<EnergyManager>(); if (!status) status = GetComponent<StatusEffectManager>();
             if (!animator && useAnimationEvents) animator = GetComponentInChildren<Animator>();   // 적(애니메이터 없음)은 타이머로만 진행
         }
 
         public float CooldownLeft(SkillDefinition s) => s != null && readyAt.TryGetValue(s, out var r) ? Mathf.Max(0, r - Time.time) : 0f;
-        public bool IsReady(SkillDefinition s) => s != null && CooldownLeft(s) <= 0f && stats.currentSanity >= s.sanityCost;
+        public bool IsReady(SkillDefinition s) => s != null && CooldownLeft(s) <= 0f && stats.currentSanity >= s.sanityCost && HasEnergyFor(s);
+        /// <summary>에너지가 충분한가(EnergyManager 가 없으면 비용 0 인 스킬만).</summary>
+        public bool HasEnergyFor(SkillDefinition s) => s == null || s.energyCost <= 0 || (energy != null && energy.CanSpend(s.energyCost));
 
         /// <summary>스킬 사용. 실행 중이면 회복 구간에서만 끊고 새로 시작(중복 실행 방지).</summary>
         public bool UseSkill(SkillDefinition skill)
@@ -51,7 +54,9 @@ namespace MoominAction
             if (isExecuting && Phase != SkillPhase.Recovery) return false;
             float cd = CooldownLeft(skill); if (cd > 0) { SkillRefused?.Invoke(skill, $"재사용 대기 {cd:0.0}초"); return false; }
             if (stats.currentSanity < skill.sanityCost) { SkillRefused?.Invoke(skill, $"정신력 {skill.sanityCost} 필요"); return false; }
+            if (!HasEnergyFor(skill)) { SkillRefused?.Invoke(skill, $"에너지 {skill.energyCost} 필요"); return false; }
             if (isExecuting) Finish(false);
+            if (skill.energyCost > 0) energy.Spend(skill.energyCost, skill.skillName);
             stats.ChangeSanity(-skill.sanityCost, skill.skillName);
             CurrentSkill = LastSkill = skill; currentCoin = 0; t = 0; results.Clear(); CurrentAttack = null; isExecuting = true; hitboxHeld = false;
             if (skill.cooldown > 0) readyAt[skill] = Time.time + skill.cooldown;
@@ -98,7 +103,8 @@ namespace MoominAction
             var ctx = new AttackContext(coinSystem.CalculatePower(s.basePower, s.coinPower, r.heads), r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
             CurrentAttack = ctx; results.Add(ctx); currentCoin++; coinDoneThisStage = true; if (hitboxHeld) ctx.activeUntil = float.MaxValue;
             CoinAttacked?.Invoke(ctx);
-            var se = GetComponent<StatusEffects>(); if (se != null) se.OnCoinTossed();   // 출혈: 공격할 때마다 체력 손실
+            if (status != null) status.OnCoinUsed(ctx);   // 출혈: 공격 코인을 쓸 때(같은 ctx.id 로는 한 번만)
+            if (!stats.IsAlive) { Interrupt(); return; }   // 출혈로 쓰러짐
             resolver.ResolveAttack(ctx, s);
             if (isExecuting && currentCoin >= s.coinCount) ApplyAllHeadsEffect(s);
         }

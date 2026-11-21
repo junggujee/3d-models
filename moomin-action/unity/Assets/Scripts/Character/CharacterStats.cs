@@ -17,8 +17,18 @@ namespace MoominAction
         public string displayName = "민미"; public Team team = Team.Player;
         [Tooltip("몸 속성(공격 중이 아닐 때 맞는 쪽 상성). 검정 = 상성 없음")] public SkillAttribute attribute = SkillAttribute.Black;
         [Header("Health")] public float maxHealth = 100f; public float currentHealth = 100f;
-        [Header("Sanity")] public int maxSanity = 45; public int minSanity = -45; public int currentSanity = 0; public float sanityRecoverPerSecond = 3f;
+        [Header("Sanity")] [Tooltip("끄면 침잠이 정신력 대신 StatusEffectManager.OnSinkingWithoutSanity 효과를 줌")] public bool hasSanity = true; public int maxSanity = 45; public int minSanity = -45; public int currentSanity = 0; public float sanityRecoverPerSecond = 3f;
         [Header("Defense")] public float invulnerableTime = 0.05f; public float guardDamageMultiplier = 0.3f; public float parryWindow = 0.2f; public float strongHitDamage = 14f;
+
+        [Header("Stagger Gauge (체력과 별개)")]
+        [Min(1)] public float maxStagger = 100f; [Tooltip("게이지가 가득 차면 이 시간 동안 경직(이동·공격 불가)")] public float staggerDuration = 3f;
+        [Tooltip("경직 중 받는 피해 배율")] public float staggerVulnerable = 1.5f; [Tooltip("마지막 경직 피해 후 회복 시작까지(초)")] public float staggerRecoverDelay = 4f; public float staggerRecoverPerSecond = 10f;
+        public readonly StaggerGauge StaggerGauge = new();
+        /// <summary>(경직 피해량, 깨졌는가)</summary>
+        public event Action<float, bool> StaggerDamaged;
+        public static event Action<CharacterStats> AnyStaggerBroken;
+        public bool IsStaggerBroken => Time.time < staggerBrokenUntil;
+        float staggerBrokenUntil = -99f;
 
         // 정신력 변화 규칙(초기 밸런스 값)
         public const int HitLanded = 1, ClashWin = 5, ClashLose = -5, StrongHitTaken = -4, DodgeSuccess = 1, GuardBlock = 1, ParrySuccess = 5;
@@ -34,8 +44,21 @@ namespace MoominAction
         public event Action<int, int, string> SanityChanged;   // (이전, 현재, 이유)
         float lastHit = -99f, lastEvade = -99f, vulnerableUntil, vulnerableMult = 1f, recoverAcc;
 
-        void Awake() { currentHealth = maxHealth; currentSanity = Mathf.Clamp(currentSanity, minSanity, maxSanity); }
-        public void ResetStats() { currentHealth = maxHealth; Invulnerable = Guarding = false; }
+        void Awake() { ConfigureStagger(); currentHealth = maxHealth; currentSanity = Mathf.Clamp(currentSanity, minSanity, maxSanity); }
+        public void ResetStats() { currentHealth = maxHealth; Invulnerable = Guarding = false; StaggerGauge.Reset(); }
+        void ConfigureStagger() { StaggerGauge.Max = maxStagger; StaggerGauge.RecoverDelay = staggerRecoverDelay; StaggerGauge.RecoverPerSecond = staggerRecoverPerSecond; }
+        void OnValidate() { ConfigureStagger(); }
+
+        // ── 경직 게이지
+        /// <summary>경직 게이지 피해. 가득 차면 staggerDuration 동안 경직(ICombatant.Stagger) → true. 이미 경직 중이면 쌓지 않음.</summary>
+        public bool AddStagger(float amount)
+        {
+            if (!IsAlive || amount <= 0f || IsStaggerBroken) return false;
+            bool broke = StaggerGauge.Add(amount);
+            if (broke) { staggerBrokenUntil = Time.time + staggerDuration; GetComponent<ICombatant>()?.Stagger(staggerDuration, staggerVulnerable); }
+            StaggerDamaged?.Invoke(amount, broke); if (broke) AnyStaggerBroken?.Invoke(this);
+            return broke;
+        }
 
         // ── 체력
         public void TakeDamage(float damage) => TakeDamage(damage, transform.position + Vector3.up, Vector3.zero);
@@ -77,6 +100,7 @@ namespace MoominAction
 
         void Update()
         {
+            if (!UIState.Paused && !IsStaggerBroken) StaggerGauge.Advance(Time.deltaTime);   // 게이지 회복(피해 아님)
             if (inCombat || currentSanity == 0 || UIState.Paused || sanityRecoverPerSecond <= 0) return;   // 전투가 끝나면 0을 향해 회복
             recoverAcc += sanityRecoverPerSecond * Time.deltaTime; if (recoverAcc < 1f) return;
             int step = Mathf.FloorToInt(recoverAcc); recoverAcc -= step; ChangeSanity(currentSanity > 0 ? -Mathf.Min(step, currentSanity) : Mathf.Min(step, -currentSanity), "전투 종료");
