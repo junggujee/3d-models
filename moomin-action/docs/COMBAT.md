@@ -66,6 +66,14 @@
 | 적 | 몸통 박치기 / 내려찍기 | 7 / 9 | +3 / +4 | 2 / 2 | 0.7 / 0.8 | 1.2 / 4초 | - | 예고 0.65 / 1.0초 |
 | 보스 | 돌진 · 난타 · 방어 부수기(×1.35) | 13 · 9 · 18 | +4 · +3 · +6 | 2 · 4 · 1 | | | | 방어 부수기 = 방어 불가 |
 
+## 적 유형
+| 유형 | 적 | 모델 | 기술(기본/코인 위력/코인 수) | 성격 | 체력 |
+|---|---|---|---|---|---|
+| 인간형 | 잠꾸러기 곰 | `SleepyBear`(애니메이션) | 솜주먹 연타 6/+3/3 · 베개 내려찍기 10/+4/2 · 졸음 돌진 9/+4/1(먼 거리) | 공격 0.9 · 방어 1.25 · 회피 1.2 | 45 |
+| 지상괴물형 | 그림자 덩어리(임시) | `ShadowBlob`(코드 연출) | 몸통 박치기 7/+3/2 · 내려찍기 9/+4/2 | 공격 1.0 · 방어 0.6 · 회피 0.5 | 30 |
+| 바다괴물형 | (예정) | | | | |
+`EnemyCombatController.archetype` 으로 구분. 애니메이터가 있는 적은 Windup·Attack·Guard·Dodge·Hit·Death 동작을 재생하고, 없는 적은 몸을 늘였다 줄이는 연출을 씀.
+
 ## Unity 연결(명세 9장) — 메뉴 Moomin ▸ 한 번에 설정이 자동으로 해 줌
 - **Player**: CharacterController, PlayerController, CharacterStats, CoinSystem, SkillExecutor(이벤트 사용), CombatResolver(대상 = Enemy 레이어), CombatManager(스킬 에셋 연결), Stamina, Inventory, LockOnSystem
 - **Enemy**: CapsuleCollider, NavMeshAgent, CharacterStats, CoinSystem, SkillExecutor(타이머), CombatResolver(대상 = Player 레이어), EnemyBrain, EnemyCombatController

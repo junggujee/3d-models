@@ -29,3 +29,9 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - **수정 후 반드시 `tools/compile_check.sh` 로 컴파일 확인**(dotnet-sdk-8.0 필요, Unity 참조 어셈블리는 NuGet 에서 자동 다운로드). 수식을 바꾸면 `tools/coin_sim.py` 도 같이 고쳐 balance.md 재생성.
 - Unity 함정: 직렬화 필드·GetComponent 결과에 `??`/`??=` 금지(에디터의 '가짜 null'), `using System;` 파일에서는 `UnityEngine.Random`/`[UnityEngine.Range]`, 정적 이벤트는 구독 해제(CombatHUD.Dispose).
 - 키: Space 회피, 좌클릭 공격, 우클릭 방어(0.2초 패링), Q/E/R 스킬, Tab 조준, I 가방.
+
+## 적 유형(인간형 · 지상괴물형 · 바다괴물형)
+- `EnemyCombatController.archetype`. 인간형 = `blender/build_bear.py` → SleepyBear(뼈 8개, Windup·Attack1~3·Guard·Dodge·Hit·Death 클립). 적 스킬의 hitTime 은 클립 타격 프레임(Attack1/2 0.35초, Attack3 0.43초)에 맞춤 — 적은 애니메이션 이벤트를 쓰지 않음.
+- 애니메이션 있는 적: SkillExecutor.animator 를 setup 에서 지정, EnemyCombatController 가 Speed·상태를 재생(Animated). 없는 적: visual 스케일 연출.
+- 줄무늬처럼 무늬가 필요한 부분은 텍스처 대신 **면마다 재질을 나눠** 칠함(FBX→Unity 에서 확실히 보이게). 표면에 붙는 패치는 몸 타원식으로 z 를 계산해 띄움(body_front).
+- 새 적 유형 추가: build_*.py(모델·애니메이션) → SkillLibrary 에 기술 → MoominSetup 에 프리팹(BuildPrefabs) → GameManager.enemyPrefabs.

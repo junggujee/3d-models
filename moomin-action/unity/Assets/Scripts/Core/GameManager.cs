@@ -9,7 +9,7 @@ namespace MoominAction
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
-        public GameObject enemyPrefab; public CharacterStats player; public float spawnRadius = 14f, wavePause = 4f; public int firstWave = 3, perWave = 2, bossEvery = 3;
+        public GameObject enemyPrefab; [Tooltip("웨이브에 섞어 나올 적들(비어 있으면 enemyPrefab 만). 보스는 enemyPrefab 으로 만듦")] public List<GameObject> enemyPrefabs = new(); public CharacterStats player; public float spawnRadius = 14f, wavePause = 4f; public int firstWave = 3, perWave = 2, bossEvery = 3;
         public int Score { get; private set; } public int Wave { get; private set; } public bool IsOver { get; private set; }
         public int EnemiesAlive { get { alive.RemoveAll(g => g == null); return alive.Count; } }
         public event Action<int> WaveStarted, WaveCleared;
@@ -45,7 +45,8 @@ namespace MoominAction
             {
                 float a = UnityEngine.Random.value * Mathf.PI * 2; Vector3 p = player.transform.position + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * (spawnRadius + UnityEngine.Random.value * 4f);
                 if (Physics.Raycast(p + Vector3.up * 30f, Vector3.down, out var h, 80f)) p = h.point + Vector3.up * 0.2f;
-                alive.Add(Instantiate(enemyPrefab, p, Quaternion.identity));
+                var prefab = enemyPrefabs.Count > 0 ? enemyPrefabs[UnityEngine.Random.Range(0, enemyPrefabs.Count)] : enemyPrefab; if (prefab == null) prefab = enemyPrefab;
+                alive.Add(Instantiate(prefab, p, Quaternion.identity));
             }
             if (boss) { Vector3 bp = player.transform.position + player.transform.forward * spawnRadius; var b = Instantiate(enemyPrefab, bp, Quaternion.identity); b.GetComponent<EnemyCombatController>()?.ConfigureBoss(); alive.Add(b); }
             WaveStarted?.Invoke(Wave);

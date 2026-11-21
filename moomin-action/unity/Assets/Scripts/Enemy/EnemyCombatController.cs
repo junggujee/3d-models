@@ -12,6 +12,9 @@ namespace MoominAction
     ///  · 회피: 옆·뒤로 짧게 물러나며 무적, 쿨타임
     ///  · 경직(클래시 패배·패링당함): 스킬 중단, 받는 피해 증가 = 플레이어의 반격 기회
     /// </summary>
+    /// <summary>적 유형: 인간형(곰 인형 등) · 지상괴물형 · 바다괴물형.</summary>
+    public enum EnemyArchetype { Humanoid, GroundMonster, SeaMonster }
+
     [RequireComponent(typeof(CharacterStats), typeof(SkillExecutor))]
     public class EnemyCombatController : MonoBehaviour, ICombatant
     {
@@ -19,9 +22,12 @@ namespace MoominAction
         public NavMeshAgent agent; public Animator animator; public SkillExecutor skillExecutor;
         public SkillDefinition basicSkill; public List<SkillDefinition> skills = new();
         public Transform visual; public float moveSpeed = 2.4f, dodgeDistance = 2.6f, dodgeTime = 0.32f, dodgeCooldown = 2.2f, guardCooldown = 1.2f, flinchTime = 0.25f, gravity = -20f;
-        public bool isBoss; public int score = 10;
+        public EnemyArchetype archetype = EnemyArchetype.GroundMonster; public bool isBoss; public int score = 10;
         public CharacterStats Stats => stats; public SkillExecutor Executor => skillExecutor;
-        public float AimHeight => isBoss ? 1.5f : 0.6f;
+        public float AimHeight => (archetype == EnemyArchetype.Humanoid ? 0.9f : 0.6f) * (isBoss ? 2.4f : 1f);
+        /// <summary>애니메이터(컨트롤러 포함)가 있으면 동작을 재생, 없으면 몸을 늘였다 줄였다 하는 연출.</summary>
+        public bool Animated => animator != null && animator.runtimeAnimatorController != null;
+        void Play(string state, float fade = 0.08f) { if (Animated && animator.HasState(0, Animator.StringToHash(state))) animator.CrossFadeInFixedTime(state, fade); }
         public bool IsStaggered => Time.time < staggerUntil;
         public bool IsDodging => Time.time < dodgeEnd;
         /// <summary>스킬·경직·회피·방어 중이면 새 판단을 하지 않음.</summary>
@@ -38,9 +44,9 @@ namespace MoominAction
             if (agent) { agent.updateRotation = false; agent.speed = moveSpeed; agent.stoppingDistance = 1.0f; agent.acceleration = 20f; }
             skills.RemoveAll(s => s == null); if (skills.Count == 0) { skills.Add(basicSkill != null ? basicSkill : SkillLibrary.Get("ENEMY_BUMP")); skills.Add(SkillLibrary.Get("ENEMY_SLAM")); }
             if (basicSkill == null) basicSkill = skills[0];
-            stats.Damaged += OnDamaged; stats.Died += OnDied;
+            stats.Damaged += OnDamaged; stats.Died += OnDied; lastPos = transform.position;
             skillExecutor.SkillStarted += OnSkillStarted; skillExecutor.SkillFinished += (s, done) => { HideTelegraph(); };
-            skillExecutor.CoinAttacked += a => visual.localScale = new Vector3(baseScale.x * 0.85f, baseScale.y * 1.2f, baseScale.z * 0.85f);
+            skillExecutor.CoinAttacked += a => { if (!Animated) visual.localScale = new Vector3(baseScale.x * 0.85f, baseScale.y * 1.2f, baseScale.z * 0.85f); };
         }
 
         // ── AI 가 호출하는 행동 ─────────────────────────
@@ -55,25 +61,25 @@ namespace MoominAction
         public void Guard(Transform t, float seconds)
         {
             if (Time.time < nextGuard) { Hold(); return; }
-            target = t; navigating = false; stats.Guarding = true; stats.GuardStartTime = Time.time; busyUntil = Time.time + seconds; nextGuard = busyUntil + guardCooldown;
+            target = t; navigating = false; stats.Guarding = true; stats.GuardStartTime = Time.time; busyUntil = Time.time + seconds; nextGuard = busyUntil + guardCooldown; Play("Guard");
         }
         public void Dodge(Transform t)
         {
             if (Time.time < nextDodge) { Guard(t, 0.6f); return; }
             target = t; navigating = false; stats.Guarding = false; Vector3 away = transform.position - t.position; away.y = 0; away.Normalize();
             Vector3 side = Vector3.Cross(Vector3.up, away) * (Random.value < 0.5f ? 1f : -1f);
-            dodgeDir = (away * 0.6f + side * 0.8f).normalized; dodgeEnd = Time.time + dodgeTime; nextDodge = dodgeEnd + dodgeCooldown; stats.Invulnerable = true;
+            dodgeDir = (away * 0.6f + side * 0.8f).normalized; dodgeEnd = Time.time + dodgeTime; nextDodge = dodgeEnd + dodgeCooldown; stats.Invulnerable = true; Play("Dodge", 0.04f);
         }
 
         public void Stagger(float seconds, float vulnerable = 1f)
         {
             if (!stats.IsAlive) return; float s = isBoss ? seconds * 0.6f : seconds;
-            skillExecutor.Interrupt(); HideTelegraph(); stats.Guarding = false; navigating = false; staggerUntil = Time.time + s; if (vulnerable > 1f) stats.SetVulnerable(vulnerable, s);
+            skillExecutor.Interrupt(); HideTelegraph(); stats.Guarding = false; navigating = false; staggerUntil = Time.time + s; if (vulnerable > 1f) stats.SetVulnerable(vulnerable, s); Play("Hit", 0.04f);
         }
 
         void OnSkillStarted(SkillDefinition s)
         {
-            if (s.windup <= 0f) return; HideTelegraph();
+            if (s.windup <= 0f) return; HideTelegraph(); Play("Windup", 0.1f);
             bool aoe = s.angle >= 360f; float r = (aoe ? s.range : Mathf.Max(1f, s.range * 0.6f)) / transform.localScale.x;
             Vector3 off = aoe ? Vector3.zero : Vector3.forward * (s.range * 0.5f / transform.localScale.z);
             tele = TelegraphIndicator.Show(transform, off, r, s.windup, s.unblockable ? new Color(0.65f, 0.2f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f));
@@ -83,43 +89,58 @@ namespace MoominAction
         void OnDamaged(float dmg, Vector3 p, Vector3 k)
         {
             knock = k * (isBoss ? 0.25f : 1f);
-            if (!skillExecutor.IsExecuting && !IsStaggered && !stats.Guarding) { busyUntil = Mathf.Max(busyUntil, Time.time + flinchTime); visual.localScale = baseScale * 0.88f; }   // 공격 중에는 경직되지 않음(슈퍼아머)
+            if (!skillExecutor.IsExecuting && !IsStaggered && !stats.Guarding) { busyUntil = Mathf.Max(busyUntil, Time.time + flinchTime); if (Animated) Play("Hit", 0.04f); else visual.localScale = baseScale * 0.88f; }   // 공격 중에는 경직되지 않음(슈퍼아머)
         }
 
         void OnDied()
         {
-            skillExecutor.Interrupt(); HideTelegraph(); stats.Guarding = false; deadT = 0f; if (agent && agent.enabled) agent.enabled = false;
+            skillExecutor.Interrupt(); HideTelegraph(); stats.Guarding = false; deadT = 0f; if (agent && agent.enabled) agent.enabled = false; Play("Death", 0.05f);
+            foreach (var c in GetComponents<Collider>()) c.enabled = false;
             GameManager.Instance?.AddScore(score); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
         }
 
         void Update()
         {
             if (UIState.Paused) return;
-            if (deadT >= 0f) { deadT += Time.deltaTime; visual.localScale = baseScale * Mathf.Max(0, 1 - deadT * 2.5f); if (deadT > 0.4f) Destroy(gameObject); return; }
+            if (deadT >= 0f)   // 애니메이션이 있으면 쓰러지는 동작을 보여 준 뒤 사라짐
+            {
+                deadT += Time.deltaTime; float hold = Animated ? 1.6f : 0f; float k = Mathf.Max(0, 1 - Mathf.Max(0, deadT - hold) * 2.5f);
+                visual.localScale = baseScale * k; if (deadT > hold + 0.4f) Destroy(gameObject); return;
+            }
             knock = Vector3.Lerp(knock, Vector3.zero, 8f * Time.deltaTime);
             if (stats.Invulnerable && !IsDodging) stats.Invulnerable = false;
             Vector3 extra = knock; bool moveNav = false; var s = skillExecutor.CurrentSkill;
 
-            if (IsStaggered) { visual.localRotation = Quaternion.Euler(0, 0, 12f * Mathf.Sin(Time.time * 18f)); visual.localScale = baseScale * (1f + 0.05f * Mathf.Sin(Time.time * 30f)); }
+            UpdateAnimator();
+            if (IsStaggered) { if (!Animated) { visual.localRotation = Quaternion.Euler(0, 0, 12f * Mathf.Sin(Time.time * 18f)); visual.localScale = baseScale * (1f + 0.05f * Mathf.Sin(Time.time * 30f)); } }   // 애니메이션이 있으면 Hit 동작
             else
             {
-                visual.localRotation = Quaternion.identity;
+                if (!Animated) visual.localRotation = Quaternion.identity;
                 if (IsDodging) extra += dodgeDir * (dodgeDistance / dodgeTime);
                 else if (skillExecutor.IsExecuting && s != null)
                 {
-                    if (skillExecutor.Phase == SkillPhase.Windup) { Face(4f); float w = Mathf.Clamp01(skillExecutor.PhaseTime / Mathf.Max(0.01f, s.windup)); visual.localScale = Vector3.Lerp(baseScale, new Vector3(baseScale.x * 1.18f, baseScale.y * 0.78f, baseScale.z * 1.18f), w); }
+                    if (skillExecutor.Phase == SkillPhase.Windup) { Face(4f); float w = Mathf.Clamp01(skillExecutor.PhaseTime / Mathf.Max(0.01f, s.windup)); if (!Animated) visual.localScale = Vector3.Lerp(baseScale, new Vector3(baseScale.x * 1.18f, baseScale.y * 0.78f, baseScale.z * 1.18f), w); }
                     else if (skillExecutor.Phase == SkillPhase.Attacking) { extra += transform.forward * s.lunge * Mathf.Max(0f, 1f - skillExecutor.PhaseTime / 0.3f); Face(2f); }
-                    else visual.localScale = Vector3.Lerp(visual.localScale, baseScale, 8f * Time.deltaTime);
+                    else if (!Animated) visual.localScale = Vector3.Lerp(visual.localScale, baseScale, 8f * Time.deltaTime);
                 }
-                else if (stats.Guarding) { Face(8f); visual.localScale = Vector3.Lerp(visual.localScale, new Vector3(baseScale.x * 1.1f, baseScale.y * 0.85f, baseScale.z * 1.1f), 10f * Time.deltaTime); if (Time.time >= busyUntil) stats.Guarding = false; }
+                else if (stats.Guarding) { Face(8f); if (!Animated) visual.localScale = Vector3.Lerp(visual.localScale, new Vector3(baseScale.x * 1.1f, baseScale.y * 0.85f, baseScale.z * 1.1f), 10f * Time.deltaTime); if (Time.time >= busyUntil) { stats.Guarding = false; Play("Locomotion", 0.15f); } }
                 else
                 {
-                    visual.localScale = Vector3.Lerp(visual.localScale, baseScale, 8f * Time.deltaTime);
-                    if (navigating && target) { moveNav = true; Face(10f); float bob = Mathf.Abs(Mathf.Sin(Time.time * 8f)); visual.localScale = new Vector3(baseScale.x * (1 + 0.08f * bob), baseScale.y * (1 - 0.12f * bob), baseScale.z * (1 + 0.08f * bob)); }
+                    if (!Animated) visual.localScale = Vector3.Lerp(visual.localScale, baseScale, 8f * Time.deltaTime);
+                    if (navigating && target) { moveNav = true; Face(10f); float bob = Mathf.Abs(Mathf.Sin(Time.time * 8f)); if (!Animated) visual.localScale = new Vector3(baseScale.x * (1 + 0.08f * bob), baseScale.y * (1 - 0.12f * bob), baseScale.z * (1 + 0.08f * bob)); }
                     else if (target) Face(6f);
                 }
             }
             Move(moveNav, extra);
+        }
+
+        Vector3 lastPos; float speedSmoothed;
+        /// <summary>이동 속도를 Animator "Speed"(0 대기 · 0.5 걷기 · 1 달리기)로 전달.</summary>
+        void UpdateAnimator()
+        {
+            if (!Animated) return;
+            float v = Time.deltaTime > 0 ? Vector3.ProjectOnPlane(transform.position - lastPos, Vector3.up).magnitude / Time.deltaTime : 0f; lastPos = transform.position;
+            speedSmoothed = Mathf.Lerp(speedSmoothed, Mathf.Clamp01(v / (moveSpeed * 2f)), 10f * Time.deltaTime); animator.SetFloat("Speed", skillExecutor.IsExecuting || IsDodging ? 0f : speedSmoothed);
         }
 
         void Move(bool moveNav, Vector3 extra)

@@ -17,7 +17,7 @@ namespace MoominAction.EditorTools
         const string Models = "Assets/Models/", Prefabs = "Assets/Prefabs/", Anims = "Assets/Animations/", Scenes = "Assets/Scenes/";
 
         [MenuItem("Moomin/한 번에 설정 (전부 실행)")]
-        public static void All() { ConfigureImports(); BuildController(); BuildPrefabs(); BuildScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Main.unity 를 열고 Play!"); }
+        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildPrefabs(); BuildScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Main.unity 를 열고 Play!"); }
 
         [MenuItem("Moomin/1. FBX 임포트 설정")]
         public static void ConfigureImports()
@@ -36,7 +36,37 @@ namespace MoominAction.EditorTools
                 else c.events = new AnimationEvent[0];
             }
             imp.clipAnimations = clips; imp.SaveAndReimport();
+            // 인간형 적: 잠꾸러기 곰(애니메이션 이벤트 없음 — 적은 스킬 데이터의 hitTime 으로 진행)
+            var bear = AssetImporter.GetAtPath(Models + "SleepyBear.fbx") as ModelImporter;
+            if (bear != null)
+            {
+                bear.animationType = ModelImporterAnimationType.Generic; bear.importAnimation = true; bear.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                var bc = bear.defaultClipAnimations;
+                foreach (var c in bc) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
+                bear.clipAnimations = bc; bear.SaveAndReimport();
+            }
             foreach (var n in new[] { "StarSparkSword.fbx", "ShadowBlob.fbx" }) { var m = AssetImporter.GetAtPath(Models + n) as ModelImporter; if (m != null) { m.materialImportMode = ModelImporterMaterialImportMode.ImportStandard; m.SaveAndReimport(); } }
+        }
+
+        static AnimationClip ClipOf(string fbx, string name) => AssetDatabase.LoadAllAssetsAtPath(Models + fbx).OfType<AnimationClip>().FirstOrDefault(c => !c.name.StartsWith("__preview") && c.name.EndsWith(name));
+
+        /// <summary>Idle/Walk/Run 블렌드(Speed) + 추가 상태. oneShots 는 끝나면 Locomotion 으로 돌아감.</summary>
+        static RuntimeAnimatorController MakeController(string fbx, string path, string[] states, string[] oneShots)
+        {
+            System.IO.Directory.CreateDirectory(Anims); AssetDatabase.DeleteAsset(path);
+            var ac = AnimatorController.CreateAnimatorControllerAtPath(path); ac.AddParameter("Speed", AnimatorControllerParameterType.Float);
+            ac.CreateBlendTreeInController("Locomotion", out BlendTree tree); tree.blendParameter = "Speed";
+            tree.AddChild(ClipOf(fbx, "Idle"), 0f); tree.AddChild(ClipOf(fbx, "Walk"), 0.5f); tree.AddChild(ClipOf(fbx, "Run"), 1f);
+            var sm = ac.layers[0].stateMachine;
+            foreach (var n in states) { var st = sm.AddState(n); st.motion = ClipOf(fbx, n); if (System.Array.IndexOf(oneShots, n) >= 0) { var t = st.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f; } }
+            AssetDatabase.SaveAssets(); return ac;
+        }
+
+        [MenuItem("Moomin/2-1. 곰(인간형 적) Animator 만들기")]
+        public static void BuildBearController()
+        {
+            if (AssetImporter.GetAtPath(Models + "SleepyBear.fbx") == null) { Debug.LogWarning("Assets/Models/SleepyBear.fbx 가 없습니다."); return; }
+            MakeController("SleepyBear.fbx", Anims + "SleepyBear.controller", new[] { "Windup", "Attack1", "Attack2", "Attack3", "Guard", "Dodge", "Hit", "Death" }, new[] { "Attack1", "Attack2", "Attack3", "Dodge", "Hit" });
         }
 
         static AnimationClip Clip(string name) => AssetDatabase.LoadAllAssetsAtPath(Models + "Moomin.fbx").OfType<AnimationClip>().FirstOrDefault(c => !c.name.StartsWith("__preview") && c.name.EndsWith(name));
@@ -113,11 +143,30 @@ namespace MoominAction.EditorTools
             var es = enemy.AddComponent<CharacterStats>(); es.displayName = "그림자"; es.team = Team.Enemy; es.maxHealth = es.currentHealth = 30f; es.invulnerableTime = 0.1f;
             enemy.AddComponent<CoinSystem>(); var eres = enemy.AddComponent<CombatResolver>(); eres.targetMask = playerMask;
             var eex = enemy.AddComponent<SkillExecutor>(); eex.useAnimationEvents = false;
-            var ecc = enemy.AddComponent<EnemyCombatController>(); ecc.visual = vis.transform; ecc.agent = agent; ecc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("ENEMY_BUMP"), SkillAsset("ENEMY_SLAM") }; ecc.basicSkill = ecc.skills[0];
+            var ecc = enemy.AddComponent<EnemyCombatController>(); ecc.archetype = EnemyArchetype.GroundMonster; ecc.visual = vis.transform; ecc.agent = agent; ecc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("ENEMY_BUMP"), SkillAsset("ENEMY_SLAM") }; ecc.basicSkill = ecc.skills[0];
             enemy.AddComponent<EnemyBrain>();
             foreach (var id in new[] { "BOSS_LUNGE", "BOSS_FLURRY", "BOSS_BREAK" }) SkillAsset(id);
             SetLayer(enemy, enemyLayer);
             PrefabUtility.SaveAsPrefabAsset(enemy, Prefabs + "ShadowBlob.prefab"); Object.DestroyImmediate(enemy);
+
+            // ── 인간형 적: 잠꾸러기 곰(애니메이션·신중한 성격·주먹 기술)
+            var bearModel = AssetDatabase.LoadAssetAtPath<GameObject>(Models + "SleepyBear.fbx");
+            if (bearModel != null)
+            {
+                var b = (GameObject)PrefabUtility.InstantiatePrefab(bearModel); b.name = "SleepyBear";
+                var bAnim = b.GetComponentInChildren<Animator>(); if (bAnim == null) bAnim = b.AddComponent<Animator>();
+                bAnim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "SleepyBear.controller"); bAnim.applyRootMotion = false;
+                var bc = b.AddComponent<CapsuleCollider>(); bc.center = new Vector3(0, 0.63f, 0); bc.radius = 0.35f; bc.height = 1.26f;
+                var ba = b.AddComponent<UnityEngine.AI.NavMeshAgent>(); ba.radius = 0.35f; ba.height = 1.26f; ba.speed = 2.2f; ba.angularSpeed = 0f; ba.stoppingDistance = 1f;
+                var bs = b.AddComponent<CharacterStats>(); bs.displayName = "잠꾸러기 곰"; bs.team = Team.Enemy; bs.maxHealth = bs.currentHealth = 45f; bs.invulnerableTime = 0.1f;
+                b.AddComponent<CoinSystem>(); var br = b.AddComponent<CombatResolver>(); br.targetMask = playerMask;
+                var bex = b.AddComponent<SkillExecutor>(); bex.useAnimationEvents = false; bex.animator = bAnim;
+                var bcc = b.AddComponent<EnemyCombatController>(); bcc.archetype = EnemyArchetype.Humanoid; bcc.animator = bAnim; bcc.agent = ba; bcc.visual = b.transform; bcc.moveSpeed = 2.2f; bcc.score = 15;
+                bcc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("HUMAN_JAB"), SkillAsset("HUMAN_SLAM"), SkillAsset("HUMAN_RUSH") }; bcc.basicSkill = bcc.skills[0];
+                b.AddComponent<EnemyBrain>().personality = EnemyPersonality.Humanoid;
+                SetLayer(b, enemyLayer);
+                PrefabUtility.SaveAsPrefabAsset(b, Prefabs + "SleepyBear.prefab"); Object.DestroyImmediate(b);
+            }
             AssetDatabase.SaveAssets();
         }
 
@@ -159,6 +208,7 @@ namespace MoominAction.EditorTools
             player.GetComponent<PlayerController>().cam = camGo.transform;
             var gmGo = new GameObject("GameManager"); var gm = gmGo.AddComponent<GameManager>(); gmGo.AddComponent<NavMeshBaker>(); gmGo.AddComponent<ClashManager>();
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
+            foreach (var n in new[] { "ShadowBlob", "SleepyBear" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Scenes + "Main.unity", true) };
         }

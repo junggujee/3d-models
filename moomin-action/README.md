@@ -20,7 +20,8 @@ python blender/build_all.py --preview     # exports/ 와 previews/ 갱신
 |---|---|
 | `Moomin` | 서 있는 민미(약 1.27m, 약 1만 정점). 뼈대 14개, 애니메이션 **Idle, Walk, Run, Roll, Guard, Attack1~3, Hit, Death**. 눈 깜빡임용 `eye.L/R`, 검 소켓 `hand.R` |
 | `StarSparkSword` | 검은 금속 칼날 + 빛나는 날 + 붉은 육각 가드. 스파크 위치 `SparkPoint_*` 빈 오브젝트 |
-| `ShadowBlob` | 적. 움직임은 Unity 코드(스쿼시) |
+| `ShadowBlob` | 적(지상괴물형 자리 임시). 움직임은 Unity 코드(스쿼시) |
+| `SleepyBear` | **인간형 적: 잠꾸러기 곰**(다이소 잠자는 곰 인형 바탕). 뼈대 8개, 애니메이션 Idle(꾸벅꾸벅)·Walk·Run·Windup·Attack1~3·Guard·Dodge·Hit·Death |
 
 ## 2. Unity에서 실행
 1. Unity 6(또는 2022 LTS 이상)에서 **3D(URP 또는 Built-in) 새 프로젝트** 생성
@@ -34,6 +35,7 @@ python blender/build_all.py --preview     # exports/ 와 previews/ 갱신
 | 시스템 | 내용 |
 |---|---|
 | **코인 전투** | 명세 v2.0: 코인 하나 = 공격 한 번, 공격마다 앞면이면 위력 추가, 양쪽 공격이 동시에 활성화되면 위력 비교 클래시, 정신력(-45~+45)이 앞면 확률 결정. 자세한 내용: [`docs/COMBAT.md`](docs/COMBAT.md), 수치·승률: [`docs/balance.md`](docs/balance.md) |
+| 적 유형 | 인간형(잠꾸러기 곰: 솜주먹 연타·베개 내려찍기·졸음 돌진, 신중하게 막고 피함) · 지상괴물형(그림자 덩어리, 임시) · 바다괴물형(예정). 웨이브에 섞여 나옴 |
 | 적 AI | 거리·체력·플레이어 공격 여부·정신력·쿨타임으로 접근·공격·방어·회피 점수를 매겨 행동(NavMesh 이동). 공격은 바닥 경고(빨강 일반, 보라 방어 불가) 뒤 코인 공격. 웨이브 3마다 보스 |
 | 회피 | Space. 스태미나 18, 무적 0.05~0.40초, 공격 회복 구간에서 취소 가능 |
 | 스태미나 | 구르기·공격·달리기 소모, 잠깐 쉬면 회복. 좌상단 녹색 게이지 |

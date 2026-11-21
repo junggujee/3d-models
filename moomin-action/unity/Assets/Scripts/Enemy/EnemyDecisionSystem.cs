@@ -19,6 +19,8 @@ namespace MoominAction
         [Range(0, 2)] public float aggression, caution, evasion; [Range(0, 30)] public float randomness;
         public static EnemyPersonality Grunt => new EnemyPersonality { aggression = 1f, caution = 0.6f, evasion = 0.5f, randomness = 12f };
         public static EnemyPersonality Boss => new EnemyPersonality { aggression = 1.2f, caution = 1f, evasion = 0.8f, randomness = 8f };
+        /// <summary>인간형: 덜 들이대고 더 막고 피함.</summary>
+        public static EnemyPersonality Humanoid => new EnemyPersonality { aggression = 0.9f, caution = 1.25f, evasion = 1.2f, randomness = 10f };
     }
 
     /// <summary>
