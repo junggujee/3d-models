@@ -10,6 +10,7 @@ namespace MoominAction
     {
         public float distance, healthRatio, playerHealthRatio; public bool playerAttacking, playerGuarding, attackAvailable; public int sanity;
         public float playerAttackPower;   // 플레이어가 지금 쓰는 스킬의 기대 위력(공격 중일 때)
+        public SkillAttribute playerAttribute;   // 플레이어의 방어 속성(공격 중이면 그 스킬 속성)
     }
 
     /// <summary>적의 성격(가중치). 같은 판단 규칙에 숫자만 바꿔 다른 적을 만든다.</summary>
@@ -42,7 +43,8 @@ namespace MoominAction
             {
                 if (sk == null) continue; maxRange = Mathf.Max(maxRange, sk.range);
                 if (!ex.IsReady(sk) || s.distance > sk.range * 0.95f) continue;
-                float exp = sk.ExpectedPower(s.sanity) * sk.coinCount * (s.playerGuarding && sk.unblockable ? 2f : 1f);   // 막고 있으면 방어 불가 기술 선호
+                float exp = sk.ExpectedPower(s.sanity) * sk.coinCount * (s.playerGuarding && sk.unblockable ? 2f : 1f)   // 막고 있으면 방어 불가 기술 선호
+                          * SkillAttributes.DamageMultiplier(SkillAttributes.Affinity(sk.attribute, s.playerAttribute));            // 상성 유리한 기술 선호
                 if (exp > bestExp) { bestExp = exp; chosen = sk; }
             }
             bool canAttack = chosen != null && s.attackAvailable;
@@ -54,7 +56,8 @@ namespace MoominAction
                 if (s.playerAttacking)
                 {
                     attack = canAttack ? 20 : 0; guard = 60; dodge = s.distance < 2.5f ? 90 : 30;
-                    if (canAttack && chosen.ExpectedPower(s.sanity) >= s.playerAttackPower + 2f) attack += 50;   // 이길 만하면 맞받아쳐 클래시
+                    int aff = canAttack ? SkillAttributes.Affinity(chosen.attribute, s.playerAttribute) : 0;
+                    if (canAttack && chosen.ExpectedPower(s.sanity) + (aff > 0 ? SkillAttributes.AdvantageClashBonus : 0) >= s.playerAttackPower + (aff < 0 ? SkillAttributes.AdvantageClashBonus : 0) + 2f) attack += 50;   // 이길 만하면(상성 포함) 맞받아쳐 클래시
                 }
                 if (s.healthRatio < 0.2f) { attack = Mathf.Min(attack, 20); guard = 90; dodge = 70; }
                 if (s.playerHealthRatio < 0.3f && canAttack) attack += 25;      // 마무리

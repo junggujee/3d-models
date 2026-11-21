@@ -55,7 +55,25 @@ for n_, (b, c, n, m, cost) in {**PLAYER, **ENEMY}.items():
     e0, e20 = n * (b + .5 * c), n * (b + .7 * c)
     emit(f"| {n_} | {n} | {b}~{b+c} | {e0:.1f} / {e20:.1f} | {e0*m:.1f} / {e20*m:.1f} | {cost or '-'} |")
 
-emit("\n## 4. (선택 모드) 림버스식 다회 합 — 연속 베기 vs 몸통 박치기, 정신력 0\n")
+emit("\n## 4. 속성 상성(빨강 > 주황 > 노랑 > 초록 > 파랑 > 보라 > 빨강, 검정 = 상성 없음)\n")
+emit("유리: 피해 ×1.25, 클래시 위력 +2 · 불리: 피해 ×0.8\n")
+WHEEL = ["빨강", "주황", "노랑", "초록", "파랑", "보라"]
+def aff(a, d):
+    if a not in WHEEL or d not in WHEEL: return 0
+    i, j = WHEEL.index(a), WHEEL.index(d)
+    return 1 if (i + 1) % 6 == j else -1 if (j + 1) % 6 == i else 0
+ATTR = {"연속 베기(Q)": "빨강", "불꽃 찌르기(E)": "주황", "별빛 난무(R)": "보라", "베기(좌1)": "노랑"}
+EATTR = {"솜주먹 연타(곰)": ("노랑", (6, 3, 1)), "베개 내려찍기(곰)": ("파랑", (10, 4, 1)), "몸통 박치기": ("검정", (7, 3, 1))}
+emit("| 내 공격(속성) \\ 적 공격(속성) | " + " | ".join(f"{k}({v[0]})" for k, v in EATTR.items()) + " |\n|---|" + "---|" * len(EATTR))
+for pn, pa in ATTR.items():
+    pb = PLAYER[pn]; cells = []
+    for en, (ea, ev) in EATTR.items():
+        a = aff(pa, ea); p2 = (pb[0] + (2 if a > 0 else 0), pb[1]); e2 = (ev[0] + (2 if a < 0 else 0), ev[1])
+        w, d, l = stage_odds(p2, 0, e2, 0); tag = "유리" if a > 0 else "불리" if a < 0 else "보통"
+        cells.append(f"{tag} · 승 {w:.0%}")
+    emit(f"| {pn}({pa}) | " + " | ".join(cells) + " |")
+
+emit("\n## 5. (선택 모드) 림버스식 다회 합 — 연속 베기 vs 몸통 박치기, 정신력 0\n")
 rng = random.Random(3); N = 40000; W = T = 0
 for _ in range(N):
     pc, ec, rounds = 3, 2, 0

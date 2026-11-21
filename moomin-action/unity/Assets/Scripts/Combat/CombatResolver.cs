@@ -83,6 +83,7 @@ namespace MoominAction
                 }
                 r *= target.guardDamageMultiplier; target.ChangeSanity(CharacterStats.GuardBlock, "방어");
             }
+            int aff = SkillAttributes.Affinity(skill.attribute, SkillAttributes.DefenderAttribute(target)); attack.affinity = aff; r *= SkillAttributes.DamageMultiplier(aff);   // 속성 상성
             float m = skill.damageMultiplier * (executor ? executor.weaponMultiplier : 1f) * stats.DamageDealtMultiplier;
             int dmg = DamageCalculator.Final(attack.power, m, r);
             bool wasInvulnerable = target.Invulnerable;

@@ -12,6 +12,8 @@ namespace MoominAction
         public int power; public bool isHeads; public bool isResolved; public bool isHit;
         public SkillDefinition skill; public SkillExecutor owner; public int coinIndex;
         public bool clashed, cancelled; public float activeUntil;
+        /// <summary>마지막으로 맞힌 대상과의 상성(+1 유리, -1 불리).</summary>
+        public int affinity;
         public readonly HashSet<CharacterStats> hitTargets = new();
 
         public AttackContext(int power, bool isHeads) { this.power = power; this.isHeads = isHeads; isResolved = true; }

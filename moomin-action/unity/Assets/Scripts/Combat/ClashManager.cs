@@ -10,7 +10,7 @@ namespace MoominAction
 
     public class ClashOutcome
     {
-        public string playerName, enemyName; public int playerPower, enemyPower; public ClashResult result; public ClashMode mode; public bool parry;
+        public string playerName, enemyName; public int playerPower, enemyPower, playerAffinity; public ClashResult result; public ClashMode mode; public bool parry;
         public int playerCoinsLeft, enemyCoinsLeft; public readonly List<(int player, int enemy, int pc, int ec)> rounds = new();
     }
 
@@ -37,11 +37,14 @@ namespace MoominAction
             var p = a.owner.stats.team == Team.Player ? a : b; var e = p == a ? b : a;
             a.clashed = b.clashed = true;
             var o = new ClashOutcome { playerName = p.owner.stats.displayName, enemyName = e.owner.stats.displayName, mode = mode };
+            // 속성 상성: 유리한 쪽 클래시 위력 +2
+            o.playerAffinity = SkillAttributes.Affinity(p.skill.attribute, e.skill.attribute);
+            int pb = o.playerAffinity > 0 ? SkillAttributes.AdvantageClashBonus : 0, eb = o.playerAffinity < 0 ? SkillAttributes.AdvantageClashBonus : 0;
             if (mode == ClashMode.StageCompare)
             {
-                o.playerPower = p.power; o.enemyPower = e.power; o.result = ComparePower(p.power, e.power); o.rounds.Add((p.power, e.power, 1, 1));
+                o.playerPower = p.power + pb; o.enemyPower = e.power + eb; o.result = ComparePower(o.playerPower, o.enemyPower); o.rounds.Add((o.playerPower, o.enemyPower, 1, 1));
             }
-            else LimbusRounds(p, e, o);
+            else LimbusRounds(p, e, o, pb, eb);
 
             AttackContext win = o.result == ClashResult.PlayerWin ? p : o.result == ClashResult.EnemyWin ? e : null, lose = win == null ? null : (win == p ? e : p);
             Vector3 mid = (p.owner.transform.position + e.owner.transform.position) * 0.5f + Vector3.up * 0.9f;
@@ -62,12 +65,12 @@ namespace MoominAction
         }
 
         /// <summary>림버스식(선택): 지금 공격 + 남은 코인으로 라운드 진행, 매 라운드 남은 코인 전부 다시 던짐. 이긴 쪽 위력은 마지막 라운드 값.</summary>
-        void LimbusRounds(AttackContext p, AttackContext e, ClashOutcome o)
+        void LimbusRounds(AttackContext p, AttackContext e, ClashOutcome o, int pb, int eb)
         {
-            int pc = p.skill.coinCount - p.coinIndex, ec = e.skill.coinCount - e.coinIndex, ps = p.owner.stats.currentSanity, es = e.owner.stats.currentSanity; int pp = p.power, ep = e.power;
+            int pc = p.skill.coinCount - p.coinIndex, ec = e.skill.coinCount - e.coinIndex, ps = p.owner.stats.currentSanity, es = e.owner.stats.currentSanity; int pp = p.power + pb, ep = e.power + eb;
             for (int round = 0; pc > 0 && ec > 0 && round < 12; round++)
             {
-                if (round > 0) { pp = p.skill.basePower + CoinMath.TossMany(pc, ps) * p.skill.coinPower; ep = e.skill.basePower + CoinMath.TossMany(ec, es) * e.skill.coinPower; }
+                if (round > 0) { pp = p.skill.basePower + CoinMath.TossMany(pc, ps) * p.skill.coinPower + pb; ep = e.skill.basePower + CoinMath.TossMany(ec, es) * e.skill.coinPower + eb; }
                 o.rounds.Add((pp, ep, pc, ec)); if (pp > ep) ec--; else if (pp < ep) pc--;
             }
             o.playerPower = pp; o.enemyPower = ep; o.playerCoinsLeft = pc; o.enemyCoinsLeft = ec;

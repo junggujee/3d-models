@@ -35,3 +35,7 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 애니메이션 있는 적: SkillExecutor.animator 를 setup 에서 지정, EnemyCombatController 가 Speed·상태를 재생(Animated). 없는 적: visual 스케일 연출.
 - 줄무늬처럼 무늬가 필요한 부분은 텍스처 대신 **면마다 재질을 나눠** 칠함(FBX→Unity 에서 확실히 보이게). 표면에 붙는 패치는 몸 타원식으로 z 를 계산해 띄움(body_front).
 - 새 적 유형 추가: build_*.py(모델·애니메이션) → SkillLibrary 에 기술 → MoominSetup 에 프리팹(BuildPrefabs) → GameManager.enemyPrefabs.
+
+## 속성·상성·스킬 패널
+- 속성 7색(SkillDefinition.attribute) + 몸 속성(CharacterStats.attribute). 상성 = 색상환 다음 색을 이김(빨>주>노>초>파>보>빨), 검정 중립. 수치·판정은 `SkillAttributes`(SkillDefinition.cs) 한 곳: 유리 피해 ×1.25·클래시 +2, 불리 ×0.8.
+- 적 스킬 패널 `UI/SkillPanel.cs`(+`EnemySkillPanels`), 일러스트 `UI/SkillIllustration.cs`(illustration 비면 motif 로 스케치 생성). 화면 목업은 `previews/enemy_skill_panel_mock.png`.

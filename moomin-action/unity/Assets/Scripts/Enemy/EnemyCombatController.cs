@@ -178,7 +178,7 @@ namespace MoominAction
         /// <summary>보스로 전환(웨이브 3마다): 체력 ×6, 크기 ×1.8, 위력 ×1.35, 보스 기술, 신중한 성격.</summary>
         public void ConfigureBoss()
         {
-            isBoss = true; score = 100; stats.displayName = "거대한 그림자"; stats.maxHealth *= 6f; stats.ResetStats(); stats.ChangeSanity(10, "보스");
+            isBoss = true; score = 100; stats.displayName = "거대한 그림자"; stats.attribute = SkillAttribute.Red; stats.maxHealth *= 6f; stats.ResetStats(); stats.ChangeSanity(10, "보스");
             transform.localScale *= 1.8f; moveSpeed *= 0.85f; if (agent) agent.speed = moveSpeed;
             skills = new List<SkillDefinition>();
             foreach (var id in new[] { "ENEMY_BUMP", "ENEMY_SLAM", "BOSS_LUNGE", "BOSS_FLURRY", "BOSS_BREAK" })

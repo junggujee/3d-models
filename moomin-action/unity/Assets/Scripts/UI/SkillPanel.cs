@@ -25,7 +25,7 @@ namespace MoominAction.UI
             // 이름 띠(육각형 뒤)
             banner = Img(root, "Banner", SkillIllustration.Banner, Color.white, true); Set(banner.rectTransform, tl, tl, tl, new Vector2(70, -42), new Vector2(300, 46));
             skillName = Txt(banner.transform, "", 26, Color.white, TextAnchor.MiddleLeft, FontStyle.Bold); Set(skillName.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(18, 0), new Vector2(-40, 0));
-            attr = Txt(root, "", 16, UITheme.Cream, TextAnchor.MiddleRight); Set(attr.rectTransform, tl, tl, tl, new Vector2(230, -18), new Vector2(140, 24));
+            attr = Txt(root, "", 16, UITheme.Cream, TextAnchor.MiddleRight); Set(attr.rectTransform, tl, tl, tl, new Vector2(150, -18), new Vector2(220, 24));
             // 일러스트
             frame = Img(root, "ArtFrame", UITheme.Slot, Color.white, true); Set(frame.rectTransform, tl, tl, tl, new Vector2(96, -94), new Vector2(270, 112));
             art = Img(frame.transform, "Art", null, Color.white, false); Stretch(art.rectTransform, 4); art.preserveAspect = false;
@@ -78,7 +78,7 @@ namespace MoominAction.UI
             banner.color = new Color(c.r * 0.8f, c.g * 0.8f, c.b * 0.8f, 0.95f); hexRing.color = light; frame.color = Color.Lerp(Color.white, c, 0.5f);
             basePower.text = s.basePower.ToString(); basePower.GetComponent<Outline>().effectColor = c * 0.6f;
             plus.text = "+" + s.coinPower; plus.color = light; range.text = $"{s.basePower * s.coinCount}  {(s.basePower + s.coinPower) * s.coinCount}"; range.color = light;
-            skillName.text = s.skillName; attr.text = SkillAttributes.Names[(int)s.attribute] + " 속성" + (s.unblockable ? "  · 방어 불가" : "");
+            skillName.text = s.skillName; attr.text = SkillAttributes.Names[(int)s.attribute] + " 속성 · " + SkillAttributes.WeaknessText(s.attribute) + (s.unblockable ? " · 방어 불가" : "");
             art.sprite = SkillIllustration.Get(s); art.color = Color.Lerp(Color.white, c, 0.15f);
             total.color = light; total.GetComponent<Outline>().effectColor = c * 0.5f; total.text = "?"; punch = 0.2f;
         }

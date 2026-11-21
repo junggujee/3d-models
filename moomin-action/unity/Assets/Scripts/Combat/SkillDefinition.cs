@@ -17,6 +17,24 @@ namespace MoominAction
             SkillAttribute.Green => new Color(0.3f, 0.75f, 0.3f), SkillAttribute.Orange => new Color(0.98f, 0.5f, 0.12f), SkillAttribute.Purple => new Color(0.6f, 0.3f, 0.9f),
             _ => new Color(0.32f, 0.3f, 0.34f),
         };
+
+        // ── 상성: 색상환 순서로 다음 색을 이김(빨강 > 주황 > 노랑 > 초록 > 파랑 > 보라 > 빨강). 검정은 상성 없음.
+        public const float AdvantageDamage = 1.25f, DisadvantageDamage = 0.8f; public const int AdvantageClashBonus = 2;
+        static readonly SkillAttribute[] Wheel = { SkillAttribute.Red, SkillAttribute.Orange, SkillAttribute.Yellow, SkillAttribute.Green, SkillAttribute.Blue, SkillAttribute.Purple };
+        static int WheelIndex(SkillAttribute a) => System.Array.IndexOf(Wheel, a);
+        /// <summary>a 가 이기는 속성(검정이면 null).</summary>
+        public static SkillAttribute? Beats(SkillAttribute a) { int i = WheelIndex(a); return i < 0 ? null : Wheel[(i + 1) % Wheel.Length]; }
+        /// <summary>a 에게 지는 속성 = a 의 약점(검정이면 null).</summary>
+        public static SkillAttribute? WeakTo(SkillAttribute a) { int i = WheelIndex(a); return i < 0 ? null : Wheel[(i + Wheel.Length - 1) % Wheel.Length]; }
+        /// <summary>공격 속성 vs 방어 속성: +1 유리, -1 불리, 0 보통.</summary>
+        public static int Affinity(SkillAttribute attacker, SkillAttribute defender) => Beats(attacker) == defender ? 1 : Beats(defender) == attacker ? -1 : 0;
+        public static float DamageMultiplier(int affinity) => affinity > 0 ? AdvantageDamage : affinity < 0 ? DisadvantageDamage : 1f;
+        /// <summary>방어 쪽 속성: 공격 중이면 그 스킬의 속성, 아니면 몸 속성.</summary>
+        public static SkillAttribute DefenderAttribute(CharacterStats target)
+        {
+            var ex = target.GetComponent<SkillExecutor>(); return ex != null && ex.IsExecuting && ex.CurrentSkill != null ? ex.CurrentSkill.attribute : target.attribute;
+        }
+        public static string WeaknessText(SkillAttribute a) { var w = WeakTo(a); return w.HasValue ? Names[(int)w.Value] + "에 약함" : "상성 없음"; }
     }
 
     /// <summary>

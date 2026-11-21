@@ -15,6 +15,7 @@ namespace MoominAction
     public class CharacterStats : MonoBehaviour, IDamageable
     {
         public string displayName = "민미"; public Team team = Team.Player;
+        [Tooltip("몸 속성(공격 중이 아닐 때 맞는 쪽 상성). 검정 = 상성 없음")] public SkillAttribute attribute = SkillAttribute.Black;
         [Header("Health")] public float maxHealth = 100f; public float currentHealth = 100f;
         [Header("Sanity")] public int maxSanity = 45; public int minSanity = -45; public int currentSanity = 0; public float sanityRecoverPerSecond = 3f;
         [Header("Defense")] public float invulnerableTime = 0.05f; public float guardDamageMultiplier = 0.3f; public float parryWindow = 0.2f; public float strongHitDamage = 14f;

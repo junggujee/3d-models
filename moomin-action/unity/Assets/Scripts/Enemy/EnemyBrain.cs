@@ -30,7 +30,8 @@ namespace MoominAction
             {
                 distance = distance, healthRatio = stats.HealthRatio, playerHealthRatio = playerStats.HealthRatio, playerAttacking = playerAttacking, playerGuarding = playerStats.Guarding,
                 attackAvailable = combat.CanAttack(), sanity = stats.currentSanity,
-                playerAttackPower = playerAttacking && playerSkills.CurrentSkill != null ? playerSkills.CurrentSkill.ExpectedPower(playerStats.currentSanity) : 0f
+                playerAttackPower = playerAttacking && playerSkills.CurrentSkill != null ? playerSkills.CurrentSkill.ExpectedPower(playerStats.currentSanity) : 0f,
+                playerAttribute = SkillAttributes.DefenderAttribute(playerStats)
             };
             var action = decision.Decide(situation, personality, combat.skills, combat.Executor, out var skill);
             LastAction = action;
