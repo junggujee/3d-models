@@ -16,12 +16,12 @@ namespace MoominAction
         public Slot[] slots = new Slot[Capacity]; public string[] quick = new string[QuickCount]; public string equippedWeapon = "sword_spark"; public int gold;
         public event Action Changed; public event Action<ItemDef, int> Picked; public event Action<string> Message;
         const string PrefKey = "moomin.inventory";
-        Health health; Stamina stamina; SwordCombat combat; SwordGlow glow;
+        Health health; Stamina stamina; AttackController combat; SwordGlow glow;
 
         void Awake()
         {
             for (int i = 0; i < Capacity; i++) slots[i] = new Slot();
-            health = GetComponent<Health>(); stamina = GetComponent<Stamina>(); combat = GetComponent<SwordCombat>();
+            health = GetComponent<Health>(); stamina = GetComponent<Stamina>(); combat = GetComponent<AttackController>();
             if (!Load()) NewGame();
         }
         void Start() { glow = GetComponentInChildren<SwordGlow>(); ApplyWeapon(); }
@@ -82,8 +82,8 @@ namespace MoominAction
         void ApplyWeapon()
         {
             var d = ItemDatabase.Get(equippedWeapon); if (d == null) return;
-            if (combat == null) combat = GetComponent<SwordCombat>(); if (glow == null) glow = GetComponentInChildren<SwordGlow>();
-            if (combat != null) combat.damageMultiplier = d.damageMultiplier; if (glow != null) glow.hueOverride = d.hue;
+            if (combat == null) combat = GetComponent<AttackController>(); if (glow == null) glow = GetComponentInChildren<SwordGlow>();
+            if (combat != null) combat.weaponMultiplier = d.damageMultiplier; if (glow != null) glow.hueOverride = d.hue;
         }
 
         public bool Drop(int index)

@@ -21,12 +21,15 @@ namespace MoominAction
         }
         public static Vector2 Look() { var m = Mouse.current; Vector2 d = m != null ? m.delta.ReadValue() * 0.08f : Vector2.zero; if (Gamepad.current != null) d += Gamepad.current.rightStick.ReadValue() * 3f; return d; }
         public static bool AttackPressed() => (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) || K(Key.J) || (Gamepad.current != null && Gamepad.current.buttonWest.wasPressedThisFrame);
-        public static bool JumpPressed() => K(Key.Space) || (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame);
         public static bool SprintHeld() => KH(Key.LeftShift) || (Gamepad.current != null && Gamepad.current.leftStickButton.isPressed);
-        public static bool RollPressed() => K(Key.Q) || (Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame);
+        // 전투(설계서 2-1): Space 회피, 우클릭 방어, Q/E/R 스킬, Tab 타깃 고정
+        public static bool DodgePressed() => K(Key.Space) || (Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame);
+        public static bool GuardHeld() => (Mouse.current != null && Mouse.current.rightButton.isPressed) || (Gamepad.current != null && Gamepad.current.leftShoulder.isPressed);
+        public static int SkillPressed() { if (K(Key.Q) || (Gamepad.current != null && Gamepad.current.buttonNorth.wasPressedThisFrame)) return 0; if (K(Key.E) || (Gamepad.current != null && Gamepad.current.rightShoulder.wasPressedThisFrame)) return 1; if (K(Key.R) || (Gamepad.current != null && Gamepad.current.rightTrigger.wasPressedThisFrame)) return 2; return -1; }
+        public static bool LockOnPressed() => K(Key.Tab) || (Gamepad.current != null && Gamepad.current.rightStickButton.wasPressedThisFrame);
         public static bool RestartPressed() => K(Key.R);
         public static bool PausePressed() => K(Key.Escape) || (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame);
-        public static bool InventoryPressed() => K(Key.I) || K(Key.Tab);
+        public static bool InventoryPressed() => K(Key.I);
         public static int QuickPressed() { Key[] ks = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4 }; for (int i = 0; i < 4; i++) if (K(ks[i])) return i; return -1; }
         // ── 메뉴 조작
         public static Vector2Int NavPressed() => new Vector2Int((K(Key.D) || K(Key.RightArrow) ? 1 : 0) - (K(Key.A) || K(Key.LeftArrow) ? 1 : 0), (K(Key.W) || K(Key.UpArrow) ? 1 : 0) - (K(Key.S) || K(Key.DownArrow) ? 1 : 0));
@@ -40,12 +43,14 @@ namespace MoominAction
         public static Vector2 Move() => Vector2.ClampMagnitude(new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")), 1f);
         public static Vector2 Look() => new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * 3f;
         public static bool AttackPressed() => Input.GetMouseButtonDown(0) || K(KeyCode.J);
-        public static bool JumpPressed() => K(KeyCode.Space);
         public static bool SprintHeld() => Input.GetKey(KeyCode.LeftShift);
-        public static bool RollPressed() => K(KeyCode.Q);
+        public static bool DodgePressed() => K(KeyCode.Space);
+        public static bool GuardHeld() => Input.GetMouseButton(1);
+        public static int SkillPressed() => K(KeyCode.Q) ? 0 : K(KeyCode.E) ? 1 : K(KeyCode.R) ? 2 : -1;
+        public static bool LockOnPressed() => K(KeyCode.Tab);
         public static bool RestartPressed() => K(KeyCode.R);
         public static bool PausePressed() => K(KeyCode.Escape);
-        public static bool InventoryPressed() => K(KeyCode.I) || K(KeyCode.Tab);
+        public static bool InventoryPressed() => K(KeyCode.I);
         public static int QuickPressed() { KeyCode[] ks = { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4 }; for (int i = 0; i < 4; i++) if (K(ks[i])) return i; return -1; }
         public static Vector2Int NavPressed() => new Vector2Int((K(KeyCode.D) || K(KeyCode.RightArrow) ? 1 : 0) - (K(KeyCode.A) || K(KeyCode.LeftArrow) ? 1 : 0), (K(KeyCode.W) || K(KeyCode.UpArrow) ? 1 : 0) - (K(KeyCode.S) || K(KeyCode.DownArrow) ? 1 : 0));
         public static bool ConfirmPressed() => K(KeyCode.Return) || K(KeyCode.E) || K(KeyCode.Space);

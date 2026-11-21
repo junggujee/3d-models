@@ -11,7 +11,7 @@ namespace MoominAction.UI
     /// </summary>
     public class HUD
     {
-        UIRoot ui; GameObject hudRoot, coreRoot; Health hp; Stamina st; Inventory inv;
+        UIRoot ui; GameObject hudRoot, coreRoot; CombatHUD combat; Health hp; Stamina st; Inventory inv;
         Gauge hpBar, stBar; float hpTrail = 1f; Text objective, scoreText, goldText, weaponText;
         Image[] qIcon = new Image[4]; Text[] qCount = new Text[4]; Image flash;
         Text banner; float bannerT, bannerDur; Color bannerCol; Image deathBand; Text deathText, deathHint; float deathT = -1;
@@ -27,10 +27,10 @@ namespace MoominAction.UI
             hpBar = MakeGauge(core.transform, "HP", UITheme.Red, new Vector2(520, 26), true, true); Set(hpBar.root, tl, tl, tl, new Vector2(44, -40), new Vector2(520, 26));
             stBar = MakeGauge(core.transform, "ST", UITheme.Green, new Vector2(380, 16), false, false); Set(stBar.root, tl, tl, tl, new Vector2(44, -74), new Vector2(380, 16));
             // 목표
-            var diamond = Img(core.transform, "ObjIcon", UITheme.Slot, Color.white, true); Set(diamond.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(62, -140), new Vector2(34, 34)); diamond.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
+            var diamond = Img(core.transform, "ObjIcon", UITheme.Slot, Color.white, true); Set(diamond.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(62, -152), new Vector2(34, 34)); diamond.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
             var dot = Box(diamond.transform, "Dot", UITheme.Gold); Set(dot.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(14, 14));
-            objective = Txt(core.transform, "", 30, UITheme.Cream); Set(objective.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(92, -140), new Vector2(700, 44));
-            scoreText = Txt(core.transform, "", 24, UITheme.Muted); Set(scoreText.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(92, -178), new Vector2(700, 36));
+            objective = Txt(core.transform, "", 30, UITheme.Cream); Set(objective.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(92, -152), new Vector2(700, 44));
+            scoreText = Txt(core.transform, "", 24, UITheme.Muted); Set(scoreText.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(92, -190), new Vector2(700, 36));
             // 퀵슬롯(우하단, 다이아몬드)
             var br = new Vector2(1, 0);
             weaponText = Txt(core.transform, "", 22, UITheme.GoldDim, TextAnchor.MiddleRight); Set(weaponText.rectTransform, br, br, br, new Vector2(-40, 176), new Vector2(560, 34));
@@ -45,7 +45,7 @@ namespace MoominAction.UI
             // 좌하단
             var bl = new Vector2(0, 0);
             goldText = Txt(core.transform, "", 28, UITheme.GoldBright); Set(goldText.rectTransform, bl, bl, bl, new Vector2(44, 70), new Vector2(400, 40));
-            var hint = Txt(core.transform, "Q 구르기   좌클릭 공격   I 가방   1~4 퀵슬롯   Esc 휴식", 21, UITheme.Muted); Set(hint.rectTransform, bl, bl, bl, new Vector2(44, 28), new Vector2(900, 34));
+            var hint = Txt(core.transform, "Space 회피   좌클릭 공격   우클릭 방어   Q·E·R 스킬   Tab 조준   I 가방   1~4 퀵슬롯   Esc 휴식", 21, UITheme.Muted); Set(hint.rectTransform, bl, bl, bl, new Vector2(44, 28), new Vector2(900, 34));
             // 획득 알림(우상단)
             var tp = NewRect("Toasts", hudRoot.transform); Stretch(tp); toastParent = tp;
             // 중앙 배너·피격 번쩍임·쓰러짐
@@ -60,6 +60,7 @@ namespace MoominAction.UI
             if (inv != null) { inv.Picked += OnPicked; inv.Message += m => Toast_Text(m); }
             var gm = GameManager.Instance; if (gm != null) { gm.WaveStarted += w => Banner("웨이브 " + w, UITheme.Gold, 2.4f); gm.WaveCleared += w => Banner("적을 쓰러뜨렸다", new Color(1f, .86f, .5f), 2.6f); }
             hp.Died += () => { deathT = 0; deathBand.gameObject.SetActive(true); deathHint.gameObject.SetActive(true); };
+            combat = new CombatHUD(); combat.Build(ui, hudRoot.transform, core);
         }
 
         void OnPicked(ItemDef d, int n) { if (d == null) Toast_Item(null, "금화  +" + n); else Toast_Item(d, d.name + (n > 1 ? "  ×" + n : "")); }
@@ -78,10 +79,12 @@ namespace MoominAction.UI
             t.t = 3.2f; t.text.text = msg; t.icon.enabled = d != null; t.icon.sprite = d != null ? ItemIcons.Get(d) : null; t.rt.gameObject.SetActive(true); toasts.Insert(0, t); if (toasts.Count > 5) { var old = toasts[toasts.Count - 1]; toasts.RemoveAt(toasts.Count - 1); old.rt.gameObject.SetActive(false); pool.Add(old); }
         }
 
+        public void Dispose() => combat?.Dispose();
+
         public void Update()
         {
             float dt = Time.unscaledDeltaTime;
-            coreRoot.SetActive(GameSettings.ShowHud);
+            coreRoot.SetActive(GameSettings.ShowHud); combat?.Update(dt);
             float r = hp.Current / hp.maxHealth; hpBar.SetFill(r); hpTrail = r < hpTrail ? Mathf.MoveTowards(hpTrail, r, 0.35f * dt) : r; hpBar.SetTrail(hpTrail); hpBar.label.text = Mathf.CeilToInt(hp.Current) + " / " + Mathf.CeilToInt(hp.maxHealth);
             stBar.SetFill(st.Current / st.max);
             var gm = GameManager.Instance; if (gm != null) { objective.text = gm.Wave == 0 ? "그림자들이 몰려온다" : "웨이브 " + gm.Wave + "  —  남은 그림자 " + gm.EnemiesAlive + "마리"; scoreText.text = "처치 점수  " + gm.Score; }

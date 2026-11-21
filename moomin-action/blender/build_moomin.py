@@ -1,4 +1,4 @@
-"""민미(서 있는 모습) 모델 + 뼈대 + 애니메이션(Idle, Walk, Run, Roll, Attack1~3, Hit, Death)을 만들어 exports/ 에 FBX·GLB·blend 로 내보냄.
+"""민미(서 있는 모습) 모델 + 뼈대 + 애니메이션(Idle, Walk, Run, Roll, Guard, Attack1~3, Hit, Death)을 만들어 exports/ 에 FBX·GLB·blend 로 내보냄.
 실행: python build_moomin.py [--preview]
 """
 import sys, os, math
@@ -156,6 +156,14 @@ def roll(act):  # 앞구르기 (20f, 루프 아님): 몸을 한 바퀴 굴리며
         key(arm, "arm.L", f, rot=E("arm.L", X, -1.0 * tuck)); key(arm, "arm.R", f, rot=E("arm.R", X, -1.0 * tuck))
         key(arm, "head", f, rot=E("head", X, 0.5 * tuck)); key(arm, "tail1", f, rot=E("tail1", Z, 0.5 * tuck))
 
+def guard(act):  # 방어 자세(루프, 12f): 두 팔을 얼굴 앞으로 모아 올리고 몸을 낮춤
+    for f, v in ((1, 0), (6, 1), (12, 0.92)):
+        for side in ("L", "R"):
+            key(arm, f"arm.{side}", f, rot=E(f"arm.{side}", X, -1.9 * v))
+        key(arm, "head", f, rot=E("head", X, 0.25 * v))
+        key(arm, "hips", f, rot=E("hips", X, -0.12 * v), loc=Vector((0, -0.05 * v * K, 0)))
+        key(arm, "ear.L", f, rot=E("ear.L", Y, 0.25 * v)); key(arm, "ear.R", f, rot=E("ear.R", Y, -0.25 * v))
+
 ACTS = {}
 ACTS["Idle"] = anim("Idle", 61, idle)
 ACTS["Walk"] = anim("Walk", 31, walk(1.0))
@@ -164,6 +172,7 @@ ACTS["Attack1"] = anim("Attack1", 24, attack(2.6, 1.2, 0.5), loop=False)
 ACTS["Attack2"] = anim("Attack2", 24, attack(2.0, 0.9, -0.6), loop=False)
 ACTS["Attack3"] = anim("Attack3", 30, attack(3.0, 1.3, 0.9, 30), loop=False)
 ACTS["Roll"] = anim("Roll", 20, roll, loop=False)
+ACTS["Guard"] = anim("Guard", 12, guard)
 ACTS["Hit"] = anim("Hit", 18, hit, loop=False)
 ACTS["Death"] = anim("Death", 40, death, loop=False)
 
@@ -171,6 +180,7 @@ if "--preview" in sys.argv:
     os.makedirs(PRE, exist_ok=True)
     c = T(0, 1.05, 0)
     preview(os.path.join(PRE, "moomin_front.png"), T(1.2, 1.2, 5.6), c, arm_ob=arm, action=ACTS["Idle"], frame=1)
+    preview(os.path.join(PRE, "moomin_guard.png"), T(1.6, 1.3, 5.2), c, arm_ob=arm, action=ACTS["Guard"], frame=6)
     preview(os.path.join(PRE, "moomin_roll.png"), T(3.4, 1.4, 4.8), c, arm_ob=arm, action=ACTS["Roll"], frame=10)
     for nm, fr in (("moomin_attack", 11), ("moomin_walk", 8)):
         preview(os.path.join(PRE, nm + ".png"), T(3.4, 1.4, 4.8), c, arm_ob=arm, action=ACTS[nm.split("_")[1].capitalize() if nm != "moomin_attack" else "Attack1"], frame=fr)

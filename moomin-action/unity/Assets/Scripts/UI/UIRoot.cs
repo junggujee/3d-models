@@ -39,12 +39,12 @@ namespace MoominAction.UI
             inventory = player.GetComponent<Inventory>(); if (inventory == null) inventory = player.gameObject.AddComponent<Inventory>();
             hud = new HUD(); hud.Build(this, canvas.transform);
             pausePage = new PauseMenu(); settingsPage = new SettingsMenu(); inventoryPage = new InventoryMenu();
-            controlsPage = new InfoPage("조작법", new[] { "W A S D", "Shift", "Space", "Q", "좌클릭 / J", "I / Tab", "1 ~ 4", "Esc" }, new[] { "이동", "달리기 (스태미나 소모)", "점프", "구르기 — 짧은 무적, 공격 회피", "공격 (3연타 콤보)", "가방 열기", "퀵슬롯 아이템 사용", "휴식 메뉴" });
+            controlsPage = new InfoPage("조작법", new[] { "W A S D / Shift", "Space", "좌클릭", "우클릭", "Q / E / R", "Tab", "I  ·  1~4", "Esc" }, new[] { "이동 / 달리기", "회피 — 짧은 무적", "일반 공격 (코인 1~2개, 3연타)", "방어 — 누른 직후는 패링", "연속 베기 · 불꽃 찌르기 · 별빛 난무", "타깃 고정 / 해제", "가방 · 퀵슬롯 사용", "휴식 메뉴" });
             foreach (var pg in new MenuPage[] { pausePage, settingsPage, inventoryPage, controlsPage }) pg.Build(this, canvas.transform);
             inventory.Message += m => { };   // HUD 가 이미 구독
         }
 
-        void OnDestroy() { UIState.Reset(); }
+        void OnDestroy() { hud?.Dispose(); UIState.Reset(); }
 
         void Update()
         {
