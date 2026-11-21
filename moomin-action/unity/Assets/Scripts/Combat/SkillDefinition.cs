@@ -61,6 +61,7 @@ namespace MoominAction
         [Tooltip("마지막 공격 뒤 회복(이 구간은 회피·다음 공격으로 취소 가능)")] public float recovery = 0.3f;
         [Tooltip("코인 i 에 쓸 애니메이터 상태(개수보다 적으면 반복)")] public string[] attackAnimations = { "Attack1", "Attack2", "Attack3" };
 
+        [Header("On Hit")] [Tooltip("적중 시 부여할 상태이상")] public StatusType onHitStatus = StatusType.None; public int onHitStacks = 0;
         [Header("Hit")] public float range = 2f; public float angle = 120f; public float knockback = 4f; [Tooltip("공격마다 앞으로 미끄러지는 속도")] public float lunge = 0f;
         public CoinEffect coinEffect = CoinEffect.None;
         [TextArea] public string description;

@@ -98,6 +98,7 @@ namespace MoominAction
             var ctx = new AttackContext(coinSystem.CalculatePower(s.basePower, s.coinPower, r.heads), r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
             CurrentAttack = ctx; results.Add(ctx); currentCoin++; coinDoneThisStage = true; if (hitboxHeld) ctx.activeUntil = float.MaxValue;
             CoinAttacked?.Invoke(ctx);
+            var se = GetComponent<StatusEffects>(); if (se != null) se.OnCoinTossed();   // 출혈: 공격할 때마다 체력 손실
             resolver.ResolveAttack(ctx, s);
             if (isExecuting && currentCoin >= s.coinCount) ApplyAllHeadsEffect(s);
         }

@@ -49,6 +49,13 @@ namespace MoominAction
             Damaged?.Invoke(damage, hitPoint, knockback);
             if (!IsAlive) Died?.Invoke();
         }
+        /// <summary>상태이상 등으로 체력 손실: 회피·무적 시간·경직과 무관(Damaged 이벤트 없이 HealthLost).</summary>
+        public void LoseHealth(float amount, string reason = "")
+        {
+            if (!IsAlive || amount <= 0) return; currentHealth = Mathf.Max(0, currentHealth - amount); HealthLost?.Invoke(amount, reason);
+            if (!IsAlive) Died?.Invoke();
+        }
+        public event Action<float, string> HealthLost;
         public void Heal(float amount) { if (!IsAlive || amount <= 0) return; float b = currentHealth; currentHealth = Mathf.Min(maxHealth, currentHealth + amount); if (currentHealth > b) Healed?.Invoke(currentHealth - b); }
 
         // ── 정신력

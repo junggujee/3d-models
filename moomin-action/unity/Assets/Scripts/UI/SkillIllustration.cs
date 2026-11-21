@@ -4,75 +4,119 @@ using UnityEngine;
 namespace MoominAction.UI
 {
     /// <summary>
-    /// 스킬 일러스트가 없을 때 코드로 그리는 흑백 스케치(어두운 바탕 + 하얀 붓 획). 동작(SkillMotif)과 스킬 id 로 모양이 정해져 스킬마다 다름.
-    /// 베기 = 큰 대각선 호 · 찌르기 = 한 점으로 모이는 선 · 내려찍기 = 아래에서 퍼지는 균열 · 돌진 = 가로 속도선 · 연타 = 짧은 획 여러 개.
+    /// 스킬 일러스트 v2: 인물 실루엣 + 화려한 빛 연출 + 하프톤 + 먹 번짐 + 속성색 포인트(흑백 만화풍).
+    /// SkillDefinition.illustration 에 그림을 넣으면 그 그림을 쓰고, 비어 있으면 motif 로 코드 생성(스킬 id 로 모양이 고정).
+    ///   베기 = 큰 빛의 호 · 찌르기 = 광선과 수렴선 · 내려찍기 = 아래서 터지는 가시 폭발 · 돌진 = 가로 속도선 · 연타 = 엇갈린 궤적
+    /// 획마다 영향 범위(bbox)만 계산해서 스킬당 수십 ms 안에 그려지고, 한 번 그리면 캐시.
+    /// (같은 알고리즘의 Python 시제품: tools/illustration_preview.py)
     /// </summary>
     public static class SkillIllustration
     {
-        static readonly Dictionary<string, Sprite> cache = new(); static Sprite hex, hexRing, banner;
-        const int W = 256, H = 144;
+        const int W = 384, H = 200; const float ASP = (float)W / H;
+        static readonly Dictionary<string, Sprite> cache = new();
+        static float[] lum, glow, acc; static System.Random rng;
+        static float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+        static int StableHash(string s) { unchecked { int h = (int)2166136261; foreach (char c in s) h = (h ^ c) * 16777619; return h; } }
 
         public static Sprite Get(SkillDefinition s)
         {
             if (s == null) return null; if (s.illustration != null) return s.illustration;
-            string key = s.skillId + "_" + s.motif; if (cache.TryGetValue(key, out var sp)) return sp;
-            var rng = new System.Random(s.skillId.GetHashCode()); var segs = new List<(Vector2 a, Vector2 b, float w, float lum)>(); var arcs = new HashSet<int>();   // 호 조각은 끝을 가늘게 하지 않음(구슬처럼 끊겨 보이지 않게)
-            float R(float lo, float hi) => lo + (float)rng.NextDouble() * (hi - lo);
+            string key = s.skillId + "_" + s.motif + "_" + s.attribute; if (cache.TryGetValue(key, out var sp)) return sp;
+            rng = new System.Random(StableHash(s.skillId)); lum = new float[W * H]; glow = new float[W * H]; acc = new float[W * H];
+            for (int j = 0; j < H; j++) for (int i = 0; i < W; i++) lum[j * W + i] = 0.06f + 0.08f * (j + .5f) / H + (float)rng.NextDouble() * 0.03f;
+
+            float fx = R(0.45f, 0.7f); float[] pose;
             switch (s.motif)
             {
                 case SkillMotif.Slash:
-                    for (int k = 0; k < 4; k++) { float off = R(-0.25f, 0.25f), w = k == 0 ? 0.035f : R(0.006f, 0.02f); Arc(segs, arcs, new Vector2(0.5f + off, 1.25f), R(0.75f, 0.95f), R(200f, 225f), R(315f, 340f), w, k == 0 ? 1f : R(0.55f, 0.85f)); }
+                    pose = new[] { 15f, 70f, 200f, -60f, -120f, 30f }; Arc(fx + 0.5f, 0.2f, 1.0f, 0.75f, 180f, 75f, 0.05f, 1f, 0.3f, 24);
+                    for (int k = 0; k < 8; k++) Arc(fx + 0.5f + R(-.1f, .1f), 0.2f + R(-.1f, .1f), R(.85f, 1.1f), R(.6f, .85f), R(170f, 190f), R(70f, 90f), R(.002f, .01f), R(.5f, .9f), R(0, 1) > .6f ? 1 : 0, 24);
                     break;
                 case SkillMotif.Thrust:
-                    { var tip = new Vector2(R(0.72f, 0.85f), R(0.4f, 0.6f)); segs.Add((new Vector2(0.05f, tip.y + R(-0.1f, 0.1f)), tip, 0.04f, 1f));
-                      for (int k = 0; k < 14; k++) { float a = R(140f, 220f) * Mathf.Deg2Rad; var from = tip + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * R(0.35f, 0.9f); segs.Add((from, tip + (from - tip) * R(0.05f, 0.3f), R(0.003f, 0.01f), R(0.4f, 0.8f))); } }
+                    pose = new[] { 35f, 5f, 190f, -30f, -150f, 2f }; Stroke(fx + .2f, .47f, ASP, .5f, .05f, 1f, .2f, true);
+                    for (int k = 0; k < 18; k++) { float y = R(.1f, .9f); Stroke(R(fx + .3f, ASP), y, ASP + .2f, .5f + (y - .5f) * .3f, R(.002f, .008f), R(.4f, .9f), R(0, 1) > .7f ? 1 : 0, true); }
                     break;
                 case SkillMotif.Smash:
-                    { var c = new Vector2(R(0.4f, 0.6f), 0.12f); segs.Add((new Vector2(0.05f, 0.12f), new Vector2(0.95f, 0.12f), 0.02f, 0.9f));
-                      for (int k = 0; k < 9; k++) { var p = c; float a = R(20f, 160f) * Mathf.Deg2Rad; for (int j = 0; j < 4; j++) { var q = p + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * R(0.08f, 0.2f); segs.Add((p, q, Mathf.Lerp(0.018f, 0.004f, j / 3f), R(0.6f, 1f))); p = q; a += R(-0.5f, 0.5f); } } }
+                    pose = new[] { 5f, 100f, 80f, -70f, -110f, 95f }; { float cx = fx + .35f, cy = .05f; for (int k = 0; k < 26; k++) { float a = R(15f, 165f) * Mathf.Deg2Rad, l = R(.3f, 1f); Stroke(cx, cy, cx + Mathf.Cos(a) * l, cy + Mathf.Sin(a) * l, R(.01f, .04f), R(.6f, 1f), R(0, 1) > .6f ? 1 : 0, true); } }
                     break;
                 case SkillMotif.Rush:
-                    for (int k = 0; k < 22; k++) { float y = R(0.08f, 0.92f), x0 = R(0f, 0.5f); segs.Add((new Vector2(x0, y), new Vector2(x0 + R(0.25f, 0.6f), y + R(-0.02f, 0.02f)), R(0.003f, 0.014f), R(0.4f, 1f))); }
-                    segs.Add((new Vector2(0.55f, 0.35f), new Vector2(0.92f, 0.5f), 0.05f, 1f)); segs.Add((new Vector2(0.55f, 0.65f), new Vector2(0.92f, 0.5f), 0.05f, 1f));
+                    pose = new[] { 45f, -10f, 160f, -20f, -170f, -5f }; for (int k = 0; k < 36; k++) { float y = R(.05f, .95f), x0 = R(0, ASP); Stroke(x0, y, x0 - R(.3f, .9f), y, R(.002f, .012f), R(.3f, .9f), R(0, 1) > .75f ? 1 : 0, true); }
                     break;
-                default:   // Flurry
-                    for (int k = 0; k < 16; k++) { var c = new Vector2(R(0.15f, 0.85f), R(0.15f, 0.85f)); float a = R(0f, Mathf.PI), l = R(0.1f, 0.3f); var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * l; segs.Add((c - d, c + d, R(0.005f, 0.022f), R(0.5f, 1f))); }
+                default:
+                    pose = new[] { 20f, 40f, 210f, -55f, -125f, 60f }; for (int k = 0; k < 6; k++) Arc(fx + R(-.2f, .6f), R(.2f, .8f), R(.3f, .6f), R(.3f, .5f), R(0, 360), R(0, 360), R(.006f, .025f), R(.6f, 1f), R(0, 1) > .5f ? 1 : 0, 14);
                     break;
             }
-            var px = new Color[W * H]; float aspect = (float)W / H;
+            // 먹 번짐
+            for (int k = 0; k < 40; k++) { float cx = R(0, ASP), cy = R(0, 1), r = R(.003f, .03f); ForBox(cx - r, cy - r, cx + r, cy + r, (idx, x, y) => { if (Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) < r) lum[idx] = Mathf.Min(lum[idx], 0.03f); }); }
+            // 빛 번짐 합성 + 하프톤
             for (int j = 0; j < H; j++) for (int i = 0; i < W; i++)
             {
-                float x = (i + .5f) / W, y = (j + .5f) / H; float bg = Mathf.Lerp(0.07f, 0.16f, y) + ((i * 73 + j * 151) % 17) / 17f * 0.025f; float lum = bg;
-                for (int si = 0; si < segs.Count; si++)
-                {
-                    var sg = segs[si];
-                    var pa = new Vector2((x - sg.a.x) * aspect, y - sg.a.y); var ba = new Vector2((sg.b.x - sg.a.x) * aspect, sg.b.y - sg.a.y);
-                    float h = Mathf.Clamp01(Vector2.Dot(pa, ba) / Mathf.Max(1e-6f, Vector2.Dot(ba, ba))); float taper = arcs.Contains(si) ? 1f : Mathf.Sin(Mathf.PI * Mathf.Clamp(h, 0.03f, 0.97f));   // 붓 획처럼 양끝이 가늘게
-                    float d = (pa - ba * h).magnitude - sg.w * taper; float a = Mathf.Clamp01(0.5f - d * H * 0.7f); lum = Mathf.Max(lum, Mathf.Lerp(bg, sg.lum, a));
-                }
-                px[j * W + i] = new Color(lum, lum, lum, 1f);
+                int idx = j * W + i; float v = Mathf.Clamp01(lum[idx] + glow[idx] * 0.35f);
+                if (v > .15f && v < .6f) { float gx = i % 6 - 3f, gy = j % 6 - 3f; v += Mathf.Sqrt(gx * gx + gy * gy) < v * 6f * 0.75f ? .15f : -.08f; }
+                lum[idx] = v;
+            }
+            Figure(pose, fx);
+            // 색 입히기
+            var c = SkillAttributes.ColorOf(s.attribute); var px = new Color[W * H];
+            for (int k = 0; k < px.Length; k++)
+            {
+                float v = Mathf.Clamp01(lum[k]), a = Mathf.Clamp01(acc[k]) * (v > .3f ? 1f : 0f), m = Mathf.Max(v, .6f);
+                px[k] = new Color(v * (1 - a * .8f) + c.r * a * m, v * (1 - a * .8f) + c.g * a * m, v * (1 - a * .8f) + c.b * a * m, 1f);
             }
             var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp }; tex.SetPixels(px); tex.Apply();
-            sp = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(.5f, .5f), 100f); cache[key] = sp; return sp;
+            sp = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(.5f, .5f), 100f); cache[key] = sp; lum = glow = acc = null; return sp;
         }
 
-        static void Arc(List<(Vector2, Vector2, float, float)> segs, HashSet<int> arcs, Vector2 c, float r, float a0, float a1, float w, float lum)
+        delegate void PixelFn(int idx, float x, float y);
+        static void ForBox(float x0, float y0, float x1, float y1, PixelFn f)
         {
-            const int N = 10; Vector2 P(float t) { float a = Mathf.Lerp(a0, a1, t) * Mathf.Deg2Rad; return c + new Vector2(Mathf.Cos(a) * r * 0.6f, Mathf.Sin(a) * r); }
-            for (int k = 0; k < N; k++) { arcs.Add(segs.Count); segs.Add((P(k / (float)N), P((k + 1) / (float)N), w * Mathf.Max(0.15f, Mathf.Sin(Mathf.PI * (k + 0.5f) / N)), lum)); }
+            int i0 = Mathf.Max(0, (int)(x0 / ASP * W)), i1 = Mathf.Min(W - 1, (int)(x1 / ASP * W) + 1), j0 = Mathf.Max(0, (int)(y0 * H)), j1 = Mathf.Min(H - 1, (int)(y1 * H) + 1);
+            for (int j = j0; j <= j1; j++) for (int i = i0; i <= i1; i++) f(j * W + i, (i + .5f) / W * ASP, (j + .5f) / H);
         }
 
-        // ── 패널용 모양(흰색, Image.color 로 속성색을 입힘)
-        static Sprite Make(int w, int h, System.Func<float, float, float> alpha, Vector4 border = default)
+        static float Seg(float x, float y, float ax, float ay, float bx, float by, out float h)
         {
-            var t = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp }; var c = new Color[w * h];
-            for (int j = 0; j < h; j++) for (int i = 0; i < w; i++) c[j * w + i] = new Color(1, 1, 1, alpha((i + .5f) / w, (j + .5f) / h));
-            t.SetPixels(c); t.Apply(); return Sprite.Create(t, new Rect(0, 0, w, h), new Vector2(.5f, .5f), 100f, 0, SpriteMeshType.FullRect, border);
+            float pax = x - ax, pay = y - ay, bax = bx - ax, bay = by - ay; h = Mathf.Clamp01((pax * bax + pay * bay) / Mathf.Max(1e-9f, bax * bax + bay * bay));
+            float dx = pax - bax * h, dy = pay - bay * h; return Mathf.Sqrt(dx * dx + dy * dy);
         }
-        static float HexD(float x, float y) { x = Mathf.Abs(x * 2 - 1); y = Mathf.Abs(y * 2 - 1); return Mathf.Max(x * 0.866f + y * 0.5f, y) - 0.9f; }   // 뾰족한 위아래 육각형
-        public static Sprite Hex => hex ??= Make(128, 128, (x, y) => Mathf.Clamp01(0.5f - HexD(x, y) * 64f));
-        public static Sprite HexRing => hexRing ??= Make(128, 128, (x, y) => Mathf.Clamp01(0.5f - (Mathf.Abs(HexD(x, y) + 0.06f) - 0.05f) * 64f));
-        /// <summary>오른쪽 끝이 비스듬하고 오른쪽으로 갈수록 옅어지는 이름 띠.</summary>
-        public static Sprite Banner => banner ??= Make(128, 32, (x, y) => (x < 1f - (1f - y) * 0.12f ? 1f : 0f) * Mathf.Lerp(1f, 0.55f, x), new Vector4(8, 0, 24, 0));
+
+        /// <summary>붓 획: 밝은 심 + 주변 빛 번짐 + (선택) 속성색.</summary>
+        static void Stroke(float ax, float ay, float bx, float by, float w, float l, float ac, bool taper)
+        {
+            const float pad = 0.12f;
+            ForBox(Mathf.Min(ax, bx) - w - pad, Mathf.Min(ay, by) - w - pad, Mathf.Max(ax, bx) + w + pad, Mathf.Max(ay, by) + w + pad, (idx, x, y) =>
+            {
+                float dd = Seg(x, y, ax, ay, bx, by, out float h); float t = taper ? Mathf.Sin(Mathf.PI * Mathf.Clamp(h, .02f, .98f)) : 1f; float d = dd - w * t;
+                float core = Mathf.Clamp01(0.5f - d * H * 0.8f); lum[idx] = Mathf.Max(lum[idx], core * l); glow[idx] += Mathf.Exp(-Mathf.Max(d, 0) * 40f) * w * 6f * l; acc[idx] = Mathf.Max(acc[idx], core * ac);
+            });
+        }
+
+        static void Arc(float cx, float cy, float rx, float ry, float a0, float a1, float w, float l, float ac, int n)
+        {
+            for (int k = 0; k < n; k++)
+            {
+                float t0 = (float)k / n, t1 = (k + 1f) / n, A0 = Mathf.Lerp(a0, a1, t0) * Mathf.Deg2Rad, A1 = Mathf.Lerp(a0, a1, t1) * Mathf.Deg2Rad;
+                Stroke(cx + Mathf.Cos(A0) * rx, cy + Mathf.Sin(A0) * ry, cx + Mathf.Cos(A1) * rx, cy + Mathf.Sin(A1) * ry, w * Mathf.Max(.12f, Mathf.Sin(Mathf.PI * (k + .5f) / n)), l, ac, false);
+            }
+        }
+
+        /// <summary>인물 실루엣(캡슐 SDF): 검은 몸 + 빛 쪽 가장자리 하이라이트 + 밝은 칼날. pose = 몸 기울기, 앞팔, 뒷팔, 앞다리, 뒷다리, 무기 각도(도).</summary>
+        static void Figure(float[] pose, float ox)
+        {
+            float lean = pose[0] * Mathf.Deg2Rad, fa = pose[1] * Mathf.Deg2Rad, ba = pose[2] * Mathf.Deg2Rad, fl = pose[3] * Mathf.Deg2Rad, bl = pose[4] * Mathf.Deg2Rad, wa = pose[5] * Mathf.Deg2Rad;
+            var hip = new Vector2(ox, 0.35f); var up = new Vector2(Mathf.Sin(lean), Mathf.Cos(lean)); var chest = hip + up * 0.22f; var head = chest + up * 0.09f;
+            Vector2[] Limb(Vector2 o, float ang, float l1, float l2, float bend) { var e = o + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * l1; var w = e + new Vector2(Mathf.Cos(ang + bend), Mathf.Sin(ang + bend)) * l2; return new[] { e, w }; }
+            var f = Limb(chest, fa, .12f, .11f, -.3f); var b = Limb(chest, ba, .11f, .1f, .4f); var fk = Limb(hip, fl, .15f, .15f, -.5f); var bk = Limb(hip, bl, .15f, .15f, .6f);
+            var cape = chest + new Vector2(-.18f, -.12f); var tip = f[1] + new Vector2(Mathf.Cos(wa), Mathf.Sin(wa)) * .34f;
+            var caps = new (Vector2 a, Vector2 b, float r)[] { (hip, chest, .05f), (chest, f[0], .022f), (f[0], f[1], .02f), (chest, b[0], .022f), (b[0], b[1], .02f), (hip, fk[0], .03f), (fk[0], fk[1], .026f), (hip, bk[0], .03f), (bk[0], bk[1], .026f), (chest, cape, .045f) };
+            ForBox(ox - .6f, 0f, ox + .7f, 1f, (idx, x, y) =>
+            {
+                float d = Mathf.Sqrt((x - head.x) * (x - head.x) + (y - head.y) * (y - head.y)) - .05f;
+                foreach (var c in caps) d = Mathf.Min(d, Seg(x, y, c.a.x, c.a.y, c.b.x, c.b.y, out _) - c.r);
+                float rim = Mathf.Clamp01(1 - Mathf.Abs(d) * H * 0.35f) * Mathf.Clamp01(glow[idx]);
+                if (d < 0) lum[idx] = 0.02f + 0.15f * rim; lum[idx] = Mathf.Max(lum[idx], rim * 0.8f);
+                if (Seg(x, y, f[1].x, f[1].y, tip.x, tip.y, out _) - .008f < 0) lum[idx] = 0.9f;
+            });
+        }
     }
 }

@@ -26,6 +26,7 @@ namespace MoominAction
         {
             if (map != null) return; map = new Dictionary<string, SkillDefinition>();
             void Look(string id, SkillAttribute a, SkillMotif m) { if (map.TryGetValue(id, out var s)) { s.attribute = a; s.motif = m; } }
+            void OnHit(string id, StatusType t, int n) { if (map.TryGetValue(id, out var s)) { s.onHitStatus = t; s.onHitStacks = n; } }
             void Add(SkillDefinition s) => map[s.skillId] = s;
             string[] A1 = { "Attack1" }, A2 = { "Attack2" }, A23 = { "Attack2", "Attack3" }, A123 = { "Attack1", "Attack2", "Attack3" }, A5 = { "Attack1", "Attack2", "Attack1", "Attack2", "Attack3" }, A33 = { "Attack3", "Attack3" };
             // ── 플레이어: 일반 공격(좌클릭 3연타)
@@ -53,6 +54,9 @@ namespace MoominAction
             Look("SKILL_001", SkillAttribute.Red, SkillMotif.Flurry); Look("SKILL_002", SkillAttribute.Orange, SkillMotif.Thrust); Look("SKILL_003", SkillAttribute.Purple, SkillMotif.Slash);
             Look("HUMAN_JAB", SkillAttribute.Yellow, SkillMotif.Flurry); Look("HUMAN_SLAM", SkillAttribute.Blue, SkillMotif.Smash); Look("HUMAN_RUSH", SkillAttribute.Green, SkillMotif.Rush);
             Look("ENEMY_BUMP", SkillAttribute.Black, SkillMotif.Rush); Look("ENEMY_SLAM", SkillAttribute.Purple, SkillMotif.Smash);
+            // 적중 시 상태이상
+            OnHit("SKILL_001", StatusType.Bleed, 1); OnHit("SKILL_002", StatusType.Burn, 2); OnHit("SKILL_003", StatusType.Tremor, 1);
+            OnHit("HUMAN_SLAM", StatusType.Tremor, 2); OnHit("ENEMY_SLAM", StatusType.Tremor, 1); OnHit("BOSS_LUNGE", StatusType.Bleed, 2); OnHit("BOSS_FLURRY", StatusType.Burn, 1);
             Look("BOSS_LUNGE", SkillAttribute.Red, SkillMotif.Rush); Look("BOSS_FLURRY", SkillAttribute.Orange, SkillMotif.Flurry); Look("BOSS_BREAK", SkillAttribute.Black, SkillMotif.Smash);
         }
     }

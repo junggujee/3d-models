@@ -13,7 +13,7 @@ namespace MoominAction.UI
     {
         class SlotUI { public SkillDefinition skill; public Text name, cd, cost, affinity; public RectTransform cdFill; public Image frame; }
         UIRoot ui; CharacterStats stats; SkillExecutor ex; CombatManager cm; LockOnSystem lockOn;
-        RectTransform sanityPos, sanityNeg, canvasRect; Text sanityLabel; readonly List<SlotUI> slots = new(); CoinDisplay coinDisplay; EnemySkillPanels enemyPanels;
+        RectTransform sanityPos, sanityNeg, canvasRect; Text sanityLabel; readonly List<SlotUI> slots = new(); EnemySkillPanels enemyPanels; SkillPanel playerPanel; Text playerStatus; RectTransform canvasForPanels;
         GameObject clashPanel; CanvasGroup clashGroup; Text clashTitle, clashRows, clashResult; ClashOutcome clash; float clashT;
         GameObject targetPanel; Text targetName, targetIntent, targetCoins; Gauge targetHp; float targetTrail = 1f; Image lockMarker; EnemyCombatController lastTarget;
         readonly List<string> enemyCoins = new(); float enemyCoinT; Text popup; float popupT;
@@ -46,7 +46,9 @@ namespace MoominAction.UI
                 u.affinity = Txt(u.frame.transform, "", 18, Color.white, TextAnchor.LowerCenter, FontStyle.Bold); Set(u.affinity.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(.5f, 0), new Vector2(0, 4), new Vector2(0, 24)); slots.Add(u);   // 조준 대상과의 상성
             }
             enemyPanels = new EnemySkillPanels(); enemyPanels.Build(hudRoot);   // 적 스킬 패널(머리 위)
-            coinDisplay = new CoinDisplay(); coinDisplay.Build(hudRoot, ex, stats);
+            playerPanel = new SkillPanel(); playerPanel.Build(hudRoot); playerPanel.Pin(new Vector2(0, 0), new Vector2(30, 120)); playerPanel.FixedScale = 0.55f; playerPanel.Bind(ex);   // 내 스킬 패널(왼쪽 아래)
+            canvasForPanels = canvasRect;
+            playerStatus = Txt(core, "", 20, UITheme.Cream); Set(playerStatus.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(44, -128), new Vector2(520, 26));   // 내 상태이상
             // 클래시
             var kp = Img(hudRoot, "ClashPanel", UITheme.Frame, Color.white); clashPanel = kp.gameObject; clashGroup = clashPanel.AddComponent<CanvasGroup>(); At(kp.rectTransform, new Vector2(.5f, .7f), Vector2.zero, new Vector2(620, 240));
             clashTitle = Txt(kp.transform, "클래시", 34, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Bold); Set(clashTitle.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(.5f, 1), new Vector2(0, -12), new Vector2(-40, 44));
@@ -90,7 +92,8 @@ namespace MoominAction.UI
                 u.cdFill.anchorMax = new Vector2(1, lacking ? 1 : k); u.cd.text = cd > 0 ? Mathf.CeilToInt(cd).ToString() : ""; u.cost.color = lacking ? new Color(.95f, .4f, .4f) : new Color(.6f, .7f, 1f);
                 u.frame.color = ex.CurrentSkill == u.skill || (u == slots[0] && ex.CurrentSkill != null && ex.CurrentSkill.skillId.StartsWith("BASIC")) ? UITheme.GoldBright : Color.Lerp(Color.white, SkillAttributes.ColorOf(u.skill.attribute), 0.55f);
             }
-            coinDisplay.Update(dt); enemyPanels.Update(dt);
+            playerPanel.Tick(Camera.main, canvasForPanels, dt); enemyPanels.Update(dt);
+            var pse = stats.GetComponent<StatusEffects>(); playerStatus.text = pse != null ? pse.Summary() : "";
             // 클래시
             if (clash != null)
             {
@@ -108,7 +111,7 @@ namespace MoominAction.UI
             if (t != null)
             {
                 float r = t.Stats.HealthRatio; targetHp.SetFill(r); targetTrail = r < targetTrail ? Mathf.MoveTowards(targetTrail, r, .4f * dt) : r; targetHp.SetTrail(targetTrail);
-                targetName.text = t.Stats.displayName + (t.Stats.IsVulnerable ? "   <color=#E8C97A><size=20>경직 — 반격 기회</size></color>" : "") + $"   <size=18><color=#9E9178>정신력 {t.Stats.currentSanity:+0;-0;0} · {SkillAttributes.Names[(int)t.Stats.attribute]} 속성 · {SkillAttributes.WeaknessText(t.Stats.attribute)}</color></size>";
+                targetName.text = t.Stats.displayName + (t.Stats.IsVulnerable ? "   <color=#E8C97A><size=20>경직 — 반격 기회</size></color>" : "") + $"   <size=18><color=#9E9178>정신력 {t.Stats.currentSanity:+0;-0;0} · {SkillAttributes.Names[(int)t.Stats.attribute]} 속성 · {SkillAttributes.WeaknessText(t.Stats.attribute)}</color></size>" + (t.GetComponent<StatusEffects>() is StatusEffects tse && tse.Summary().Length > 0 ? "   <size=18>" + tse.Summary() + "</size>" : "");
                 var s = t.Executor.CurrentSkill; var brain = t.GetComponent<EnemyBrain>();
                 if (s != null) targetIntent.text = (t.Executor.Phase == SkillPhase.Windup ? "<color=#E06060>예고</color> " : "<color=#E06060>공격</color> ") + $"{s.skillName} · 기본 {s.basePower} · 코인 {s.coinCount}개 +{s.coinPower}" + (s.unblockable ? "  <color=#B070FF>방어 불가</color>" : "");
                 else targetIntent.text = t.IsStaggered ? "경직" : t.Stats.Guarding ? "방어" : t.IsDodging ? "회피" : brain != null ? brain.LastAction switch { EnemyAction.Approach => "접근", EnemyAction.Attack => "공격 준비", EnemyAction.Guard => "방어", EnemyAction.Dodge => "회피", _ => "관찰" } : "";

@@ -90,6 +90,8 @@ namespace MoominAction
             target.TakeDamage(dmg, hitPoint, to.normalized * skill.knockback + Vector3.up * 1.5f);
             if (wasInvulnerable) return;   // 회피됨
             attack.isHit = true; stats.ChangeSanity(CharacterStats.HitLanded, "명중");
+            var se = target.GetComponent<StatusEffects>(); if (se == null) se = target.gameObject.AddComponent<StatusEffects>();   // 상태이상: 진동 발동 → 새로 부여
+            se.OnHitTaken(); se.Apply(skill.onHitStatus, skill.onHitStacks);
             SparkBurst.Spawn(hitPoint, -to.normalized + Vector3.up * 0.5f, attack.isHeads ? 40 : 22, attack.isHeads ? 7f : 4.5f, attack.isHeads ? SparkBurst.Gold : (stats.team == Team.Enemy ? SparkBurst.Crimson : (Color?)null));
             DamageDealt?.Invoke(attack, target, dmg);
         }

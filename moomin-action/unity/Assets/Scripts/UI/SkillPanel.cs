@@ -6,67 +6,102 @@ using static MoominAction.UI.UIFactory;
 namespace MoominAction.UI
 {
     /// <summary>
-    /// 적이 스킬을 쓸 때 머리 위에 뜨는 스킬 패널(림버스 스타일).
-    ///   위:  +코인 위력 · 위력 범위(최소~최대)
-    ///   가운데: 속성색 육각형 안의 기본 위력 · 속성색 이름 띠 · 스킬 일러스트
-    ///   맨 아래(일러스트 밑): 코인별 결과와 <b>최종 합계 위력</b>(코인이 판정될 때마다 갱신)
+    /// 스킬 패널 v2(보내 주신 컨셉 이미지 기준). 적은 머리 위, 플레이어는 화면 왼쪽 아래.
+    ///   위: 큰 <b>+코인 위력</b> · 아이콘 3개(코인 수 / 최소 합계 / 최대 합계)
+    ///   가운데: 속성색 거친 육각형 안의 <b>기본 위력</b> · 붓으로 끈 이름 띠 · 거친 테두리 안의 <b>스킬 일러스트</b>
+    ///   아래: 팔각 코인 결과 · "적중 시 ○○ n 부여" · 빛나는 <b>최종 위력</b>
+    ///   오른쪽: <b>개별 코인 결과</b>(앞면/뒷면 목록)
     /// </summary>
     public class SkillPanel
     {
         public SkillExecutor Owner { get; private set; }
-        RectTransform root; CanvasGroup group; Image hexFill, hexRing, banner, art, frame; Text basePower, plus, range, skillName, total, totalLabel, attr;
-        readonly List<Image> coins = new(); SkillDefinition shown; float punch;
+        public bool FollowOwner = true; public float FixedScale = 0.55f;
+        RectTransform root; CanvasGroup group;
+        Image frame, hexRing, hexGlow, banner, art, artFrame, totalGlow, statusIcon, sideFrame;
+        Text plus, skillName, baseText, totalLabel, total, status, attrLine, sideTitle; Text[] statNum = new Text[3]; Image[] statIcon = new Image[3];
+        readonly List<Image> coins = new(); readonly List<Image> sideCoins = new(); readonly List<Text> sideText = new(); RectTransform side;
+        SkillDefinition shown; float punch;
 
         public void Build(Transform parent)
         {
-            root = NewRect("SkillPanel", parent); root.anchorMin = root.anchorMax = new Vector2(.5f, .5f); root.pivot = new Vector2(.5f, 0); root.sizeDelta = new Vector2(380, 300);
-            group = root.gameObject.AddComponent<CanvasGroup>(); group.blocksRaycasts = false;
-            var tl = new Vector2(0, 1);
-            // 이름 띠(육각형 뒤)
-            banner = Img(root, "Banner", SkillIllustration.Banner, Color.white, true); Set(banner.rectTransform, tl, tl, tl, new Vector2(70, -42), new Vector2(300, 46));
-            skillName = Txt(banner.transform, "", 26, Color.white, TextAnchor.MiddleLeft, FontStyle.Bold); Set(skillName.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(18, 0), new Vector2(-40, 0));
-            attr = Txt(root, "", 16, UITheme.Cream, TextAnchor.MiddleRight); Set(attr.rectTransform, tl, tl, tl, new Vector2(150, -18), new Vector2(220, 24));
+            root = NewRect("SkillPanel", parent); root.anchorMin = root.anchorMax = new Vector2(.5f, .5f); root.pivot = new Vector2(.5f, 0); root.sizeDelta = new Vector2(760, 440);
+            group = root.gameObject.AddComponent<CanvasGroup>(); group.blocksRaycasts = false; var tl = new Vector2(0, 1);
+            // 본체(어두운 바탕 + 거친 테두리)
+            var fill = Img(root, "Fill", SkillPanelArt.Fill, Color.white, true); Set(fill.rectTransform, tl, tl, tl, new Vector2(120, -150), new Vector2(460, 280));
+            frame = Img(fill.transform, "Frame", SkillPanelArt.Frame, Color.white, true); Stretch(frame.rectTransform, -6);
             // 일러스트
-            frame = Img(root, "ArtFrame", UITheme.Slot, Color.white, true); Set(frame.rectTransform, tl, tl, tl, new Vector2(96, -94), new Vector2(270, 112));
-            art = Img(frame.transform, "Art", null, Color.white, false); Stretch(art.rectTransform, 4); art.preserveAspect = false;
+            artFrame = Img(fill.transform, "ArtFrame", SkillPanelArt.Frame, Color.white, true); Set(artFrame.rectTransform, tl, tl, tl, new Vector2(22, -16), new Vector2(416, 158));
+            art = Img(artFrame.transform, "Art", null, Color.white, false); Stretch(art.rectTransform, 8);
+            // 이름 띠
+            banner = Img(root, "Banner", SkillPanelArt.Banner, Color.white, true); Set(banner.rectTransform, tl, tl, tl, new Vector2(128, -78), new Vector2(470, 74));
+            skillName = Txt(banner.transform, "", 40, Color.white, TextAnchor.MiddleLeft, FontStyle.Bold); Set(skillName.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(40, 0), new Vector2(-110, 0));
+            skillName.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, .8f);
             // 육각형(기본 위력)
-            hexFill = Img(root, "Hex", SkillIllustration.Hex, new Color(0.08f, 0.07f, 0.07f, 0.95f), false); Set(hexFill.rectTransform, tl, tl, tl, new Vector2(0, -16), new Vector2(104, 104));
-            hexRing = Img(hexFill.transform, "Ring", SkillIllustration.HexRing, Color.white, false); Stretch(hexRing.rectTransform);
-            basePower = Txt(hexFill.transform, "", 50, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold); Stretch(basePower.rectTransform); basePower.gameObject.AddComponent<Outline>().effectDistance = new Vector2(2, -2);
-            // 위: +코인 위력, 범위
-            plus = Txt(root, "", 30, Color.white, TextAnchor.LowerLeft, FontStyle.Bold); Set(plus.rectTransform, tl, tl, tl, new Vector2(4, 22), new Vector2(80, 36));
-            range = Txt(root, "", 20, Color.white, TextAnchor.LowerLeft, FontStyle.Bold); Set(range.rectTransform, tl, tl, tl, new Vector2(70, 18), new Vector2(160, 30));
-            // 맨 아래(일러스트 밑): 코인 결과 + 최종 합계 위력
-            for (int i = 0; i < 5; i++) { var c = Img(root, "Coin" + i, CoinDisplay.Coin(CoinDisplay.Look.Pending), Color.white, false); Set(c.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(112 + i * 30, -228), new Vector2(26, 26)); coins.Add(c); }
-            totalLabel = Txt(root, "최종 위력", 16, UITheme.Muted, TextAnchor.LowerRight); Set(totalLabel.rectTransform, tl, tl, new Vector2(1, 1), new Vector2(366, -210), new Vector2(140, 22));
-            total = Txt(root, "", 54, Color.white, TextAnchor.UpperRight, FontStyle.Bold); Set(total.rectTransform, tl, tl, new Vector2(1, 1), new Vector2(368, -236), new Vector2(200, 66)); total.gameObject.AddComponent<Outline>().effectDistance = new Vector2(2, -2);
+            hexGlow = Img(root, "HexGlow", SkillPanelArt.Glow, Color.white, false); Set(hexGlow.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(88, -138), new Vector2(230, 230));
+            var hex = Img(root, "Hex", SkillPanelArt.HexFill, new Color(.05f, .045f, .04f, .97f), false); Set(hex.rectTransform, tl, tl, tl, new Vector2(10, -60), new Vector2(156, 156));
+            hexRing = Img(hex.transform, "Ring", SkillPanelArt.HexRing, Color.white, false); Stretch(hexRing.rectTransform);
+            baseText = Txt(hex.transform, "", 74, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold); Stretch(baseText.rectTransform); baseText.gameObject.AddComponent<Outline>().effectDistance = new Vector2(3, -3);
+            // 위: +코인 위력, 아이콘 3개
+            plus = Txt(root, "", 62, Color.white, TextAnchor.LowerLeft, FontStyle.BoldAndItalic); Set(plus.rectTransform, tl, tl, tl, new Vector2(20, 2), new Vector2(140, 72)); plus.gameObject.AddComponent<Outline>().effectDistance = new Vector2(2, -2);
+            for (int i = 0; i < 3; i++)
+            {
+                statIcon[i] = Img(root, "StatIcon" + i, i == 0 ? SkillPanelArt.IconCoin : i == 1 ? SkillPanelArt.IconMin : SkillPanelArt.IconMax, Color.white, false); Set(statIcon[i].rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(178 + i * 56, -14), new Vector2(30, 30));
+                statNum[i] = Txt(root, "", 24, Color.white, TextAnchor.UpperCenter, FontStyle.Bold); Set(statNum[i].rectTransform, tl, tl, new Vector2(.5f, 1), new Vector2(178 + i * 56, -30), new Vector2(60, 30));
+            }
+            attrLine = Txt(root, "", 18, UITheme.Cream, TextAnchor.LowerRight); Set(attrLine.rectTransform, tl, tl, new Vector2(1, 1), new Vector2(590, -56), new Vector2(330, 24));
+            // 아래: 코인 · 적중 효과 · 최종 위력
+            for (int i = 0; i < 5; i++) { var c = Img(root, "Coin" + i, SkillPanelArt.Coin(0), Color.white, false); Set(c.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(166 + i * 50, -370), new Vector2(44, 44)); coins.Add(c); }
+            statusIcon = Img(root, "StatusIcon", SkillPanelArt.StatusIcon(StatusType.Bleed), Color.white, false); Set(statusIcon.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(232, -412), new Vector2(24, 24));
+            status = Txt(root, "", 22, UITheme.Cream, TextAnchor.MiddleLeft); Set(status.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(148, -412), new Vector2(330, 30));
+            totalGlow = Img(root, "TotalGlow", SkillPanelArt.Glow, Color.white, false); Set(totalGlow.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(500, -385), new Vector2(240, 150));
+            totalLabel = Txt(root, "최종 위력", 24, Color.white, TextAnchor.LowerRight, FontStyle.Bold); Set(totalLabel.rectTransform, tl, tl, new Vector2(1, 1), new Vector2(572, -330), new Vector2(200, 30));
+            total = Txt(root, "", 92, Color.white, TextAnchor.UpperRight, FontStyle.BoldAndItalic); Set(total.rectTransform, tl, tl, new Vector2(1, 1), new Vector2(580, -356), new Vector2(260, 100));
+            total.gameObject.AddComponent<Outline>().effectDistance = new Vector2(3, -3); total.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(5, -5);
+            // 오른쪽: 개별 코인 결과
+            var sf = Img(root, "Side", SkillPanelArt.Fill, Color.white, true); side = sf.rectTransform; Set(side, tl, tl, tl, new Vector2(592, -186), new Vector2(160, 250));
+            sideFrame = Img(sf.transform, "Frame", SkillPanelArt.Frame, Color.white, true); Stretch(sideFrame.rectTransform, -4);
+            sideTitle = Txt(sf.transform, "개별 코인 결과", 18, UITheme.Cream, TextAnchor.MiddleCenter, FontStyle.Bold); Set(sideTitle.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(.5f, 1), new Vector2(0, -8), new Vector2(-10, 28));
+            for (int i = 0; i < 5; i++)
+            {
+                var c = Img(sf.transform, "SC" + i, SkillPanelArt.Coin(1), Color.white, false); Set(c.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(36, -60 - i * 40), new Vector2(30, 30)); sideCoins.Add(c);
+                var t = Txt(sf.transform, "", 22, UITheme.Cream, TextAnchor.MiddleLeft); Set(t.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(60, -60 - i * 40), new Vector2(96, 30)); sideText.Add(t);
+            }
             group.alpha = 0; root.gameObject.SetActive(false);
         }
 
         public void Bind(SkillExecutor ex) { Owner = ex; shown = null; }
         public void Release() { Owner = null; shown = null; root.gameObject.SetActive(false); }
+        /// <summary>고정 위치(플레이어용).</summary>
+        public void Pin(Vector2 anchor, Vector2 pos) { FollowOwner = false; root.anchorMin = root.anchorMax = anchor; root.pivot = new Vector2(0, 0); root.anchoredPosition = pos; }
 
-        /// <summary>매 프레임: 위치(머리 위)·내용·투명도. 보여 줄 게 없으면 false.</summary>
+        /// <summary>매 프레임: 위치·내용·투명도. 보여 줄 게 없으면 false.</summary>
         public bool Tick(Camera cam, RectTransform canvas, float dt)
         {
-            if (Owner == null || cam == null) return false;
+            if (Owner == null) return false;
             var s = Owner.IsExecuting ? Owner.CurrentSkill : Owner.LastSkill; float since = Time.time - Owner.LastFinishTime;
-            bool visible = s != null && (Owner.IsExecuting || since < 1.6f) && Owner.stats != null;
+            bool visible = s != null && (Owner.IsExecuting || since < 1.6f);
             if (!visible) { root.gameObject.SetActive(false); return false; }
-            var ecc = Owner.GetComponent<EnemyCombatController>(); float h = ecc != null ? ecc.AimHeight * 2f + 0.5f : 2f;
-            Vector3 sp = cam.WorldToScreenPoint(Owner.transform.position + Vector3.up * h); float dist = Vector3.Distance(cam.transform.position, Owner.transform.position);
-            if (sp.z <= 0 || dist > 32f || !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, sp, null, out var lp)) { root.gameObject.SetActive(false); return true; }
-            root.gameObject.SetActive(true); root.anchoredPosition = lp + new Vector2(-150, 0); root.localScale = Vector3.one * Mathf.Clamp(9f / Mathf.Max(1f, dist), 0.55f, 1f) * (1f + punch);
-            punch = Mathf.MoveTowards(punch, 0f, dt * 1.5f);
+            float scale = FixedScale;
+            if (FollowOwner)
+            {
+                if (cam == null) return false;
+                var ecc = Owner.GetComponent<EnemyCombatController>(); float h = ecc != null ? ecc.AimHeight * 2f + 0.5f : 2f;
+                Vector3 sp = cam.WorldToScreenPoint(Owner.transform.position + Vector3.up * h); float dist = Vector3.Distance(cam.transform.position, Owner.transform.position);
+                if (sp.z <= 0 || dist > 32f || !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, sp, null, out var lp)) { root.gameObject.SetActive(false); return true; }
+                root.anchoredPosition = lp; scale = Mathf.Clamp(6f / Mathf.Max(1f, dist), 0.32f, 0.62f);
+            }
+            root.gameObject.SetActive(true); root.localScale = Vector3.one * scale * (1f + punch); punch = Mathf.MoveTowards(punch, 0f, dt * 1.5f);
             if (s != shown) Show(s);
-            // 코인 결과·최종 합계 위력
             var res = Owner.results; int sum = 0; for (int i = 0; i < res.Count; i++) sum += res[i].power;
+            bool broken = !Owner.IsExecuting && !Owner.LastCompleted;
             for (int i = 0; i < coins.Count; i++)
             {
-                bool on = i < s.coinCount; coins[i].gameObject.SetActive(on); if (!on) continue;
-                coins[i].sprite = CoinDisplay.Coin(i < res.Count ? (res[i].isHeads ? CoinDisplay.Look.Heads : CoinDisplay.Look.Tails) : (!Owner.IsExecuting && !Owner.LastCompleted ? CoinDisplay.Look.Broken : CoinDisplay.Look.Pending));
+                bool on = i < s.coinCount; coins[i].gameObject.SetActive(on); sideCoins[i].gameObject.SetActive(on && i < res.Count); sideText[i].gameObject.SetActive(on && i < res.Count); if (!on) continue;
+                int look = i < res.Count ? (res[i].isHeads ? 1 : 2) : broken ? 3 : 0; coins[i].sprite = SkillPanelArt.Coin(look);
+                if (i < res.Count) { sideCoins[i].sprite = SkillPanelArt.Coin(look); sideText[i].text = (res[i].isHeads ? "앞면" : "뒷면") + $"  <size=18>{res[i].power}</size>"; }
             }
-            string t = res.Count == 0 ? "?" : sum.ToString(); if (total.text != t) { if (res.Count > 0) punch = 0.12f; total.text = t; }
+            side.gameObject.SetActive(res.Count > 0); side.sizeDelta = new Vector2(160, 52 + 40 * Mathf.Max(1, res.Count));
+            string t = res.Count == 0 ? "?" : sum.ToString(); if (total.text != t) { if (res.Count > 0) punch = 0.1f; total.text = t; }
             totalLabel.text = !Owner.IsExecuting ? (Owner.LastCompleted ? "최종 위력" : "중단") : Owner.Phase == SkillPhase.Windup ? "공격 예고" : $"위력 {res.Count}/{s.coinCount}";
             group.alpha = Owner.IsExecuting ? 1f : Mathf.Clamp01((1.6f - since) / 0.5f);
             return true;
@@ -74,17 +109,23 @@ namespace MoominAction.UI
 
         void Show(SkillDefinition s)
         {
-            shown = s; var c = SkillAttributes.ColorOf(s.attribute); var light = Color.Lerp(c, Color.white, 0.35f);
-            banner.color = new Color(c.r * 0.8f, c.g * 0.8f, c.b * 0.8f, 0.95f); hexRing.color = light; frame.color = Color.Lerp(Color.white, c, 0.5f);
-            basePower.text = s.basePower.ToString(); basePower.GetComponent<Outline>().effectColor = c * 0.6f;
-            plus.text = "+" + s.coinPower; plus.color = light; range.text = $"{s.basePower * s.coinCount}  {(s.basePower + s.coinPower) * s.coinCount}"; range.color = light;
-            skillName.text = s.skillName; attr.text = SkillAttributes.Names[(int)s.attribute] + " 속성 · " + SkillAttributes.WeaknessText(s.attribute) + (s.unblockable ? " · 방어 불가" : "");
-            art.sprite = SkillIllustration.Get(s); art.color = Color.Lerp(Color.white, c, 0.15f);
-            total.color = light; total.GetComponent<Outline>().effectColor = c * 0.5f; total.text = "?"; punch = 0.2f;
+            shown = s; var c = SkillAttributes.ColorOf(s.attribute); var light = Color.Lerp(c, Color.white, 0.35f); var deep = c * 0.55f; deep.a = 1f;
+            frame.color = artFrame.color = sideFrame.color = light; hexRing.color = light; hexGlow.color = new Color(c.r, c.g, c.b, .45f); totalGlow.color = new Color(c.r, c.g, c.b, .5f);
+            banner.color = new Color(c.r * .85f, c.g * .85f, c.b * .85f, .96f); skillName.text = s.skillName;
+            baseText.text = s.basePower.ToString(); baseText.GetComponent<Outline>().effectColor = deep;
+            plus.text = "+" + s.coinPower; plus.color = light; plus.GetComponent<Outline>().effectColor = deep;
+            int[] stats = { s.coinCount, s.basePower * s.coinCount, (s.basePower + s.coinPower) * s.coinCount };
+            for (int i = 0; i < 3; i++) { statNum[i].text = stats[i].ToString(); statNum[i].color = light; statIcon[i].color = light; }
+            attrLine.text = SkillAttributes.Names[(int)s.attribute] + " 속성 · " + SkillAttributes.WeaknessText(s.attribute) + (s.unblockable ? " · <color=#C080FF>방어 불가</color>" : "");
+            art.sprite = SkillIllustration.Get(s);
+            bool hasStatus = s.onHitStatus != StatusType.None && s.onHitStacks > 0; statusIcon.gameObject.SetActive(hasStatus);
+            if (hasStatus) { var sc = StatusInfo.ColorOf(s.onHitStatus); statusIcon.sprite = SkillPanelArt.StatusIcon(s.onHitStatus); statusIcon.color = sc; status.text = $"적중 시      <color=#{ColorUtility.ToHtmlStringRGB(sc)}>{StatusInfo.Name(s.onHitStatus)}</color> {s.onHitStacks} 부여"; }
+            else status.text = s.description != null && s.description.Length > 0 ? "<size=18>" + s.description + "</size>" : "";
+            totalLabel.color = light; total.color = Color.Lerp(Color.white, c, 0.55f); total.GetComponent<Outline>().effectColor = deep; total.text = "?"; punch = 0.15f;
         }
     }
 
-    /// <summary>스킬을 쓰는 적마다 SkillPanel 을 붙여 줌(풀링).</summary>
+    /// <summary>스킬을 쓰는 적마다 SkillPanel 을 머리 위에 붙여 줌(풀링).</summary>
     public class EnemySkillPanels
     {
         readonly List<SkillPanel> active = new(), pool = new(); Transform parent; RectTransform canvas;
@@ -100,11 +141,7 @@ namespace MoominAction.UI
                 bool has = false; foreach (var p in active) if (p.Owner == ex) { has = true; break; }
                 if (!has) { var p = pool.Count > 0 ? pool[pool.Count - 1] : null; if (p != null) pool.RemoveAt(pool.Count - 1); else { p = new SkillPanel(); p.Build(parent); } p.Bind(ex); active.Add(p); }
             }
-            for (int i = active.Count - 1; i >= 0; i--)
-            {
-                var p = active[i];
-                if (p.Owner == null || !p.Tick(cam, canvas, dt)) { p.Release(); active.RemoveAt(i); pool.Add(p); }
-            }
+            for (int i = active.Count - 1; i >= 0; i--) { var p = active[i]; if (p.Owner == null || !p.Tick(cam, canvas, dt)) { p.Release(); active.RemoveAt(i); pool.Add(p); } }
         }
     }
 }
