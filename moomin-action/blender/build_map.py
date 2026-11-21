@@ -215,9 +215,9 @@ write_report()
 
 # ── 4. 합치기·단위·위치 ───────────────────────────────
 # bpy.ops.object.join 은 물체 2만 개에서 제곱으로 느려져서, 정점·면·UV·재질 번호를 numpy 로 모아 새 메시를 직접 만든다.
-GAME = bpy.data.scenes.new("Game"); S = args.scale
+GAME = bpy.data.scenes.new("Game"); S = args.scale; DUP = {}
 Tm = np.array(Matrix.Diagonal((S, S, S, 1)) @ Matrix.Translation((-CENTER[0], -CENTER[1], -GROUND_Z)))
-def merge(objs, name, with_mats=True):
+def merge(objs, name, with_mats=True, double_sided=False):
     cos, lvs, lts, uvs, fms = [], [], [], [], []; voff = 0
     for o in objs:
         me = o.data; nv, nl, npy = len(me.vertices), len(me.loops), len(me.polygons)
@@ -232,6 +232,20 @@ def merge(objs, name, with_mats=True):
             ls = np.concatenate([[0], np.cumsum(lt)[:-1]]); idx = np.concatenate([np.arange(st + t - 1, st - 1, -1) for st, t in zip(ls, lt)]); lv, uv = lv[idx], uv[idx]
         cos.append(co); lvs.append(lv + voff); lts.append(lt); uvs.append(uv); fms.append(fm); voff += nv
     co, lv, lt, uv, fm = np.concatenate(cos), np.concatenate(lvs), np.concatenate(lts), np.concatenate(uvs), np.concatenate(fms)
+    # 겹친 면 제거: 원본에 같은 부품이 같은 자리에 두 벌씩 놓인 곳이 있어(그룹#115·#117 등) 같은 위치의 면이 두 장 →
+    # 렌더러에서는 서로 그림자를 드리워 검게, Unity 에서는 깜빡이는 줄무늬(z-fighting)로 보임. 꼭짓점 위치(5mm 단위)가 같은 면은 하나만 남김.
+    ls = np.concatenate([[0], np.cumsum(lt)[:-1]]); q = np.round(co / 0.005).astype(np.int64)
+    seen = set(); keep = np.ones(len(lt), bool)
+    for i in range(len(lt)):
+        key = tuple(sorted(map(tuple, q[lv[ls[i]:ls[i] + lt[i]]].tolist())))
+        if key in seen: keep[i] = False
+        else: seen.add(key)
+    if not keep.all():
+        lkeep = np.repeat(keep, lt); lv, uv, lt, fm = lv[lkeep], uv[lkeep], lt[keep], fm[keep]
+    DUP[name] = int((~keep).sum())
+    if double_sided:   # 평면 나무: 겹친 앞뒷면을 지웠으니 뒤집은 사본을 붙여 확실한 양면으로(Unity 는 뒷면을 그리지 않음)
+        ls = np.concatenate([[0], np.cumsum(lt)[:-1]]); idx = np.concatenate([np.arange(st + t - 1, st - 1, -1) for st, t in zip(ls, lt)])
+        lv, uv, lt, fm = np.concatenate([lv, lv[idx]]), np.concatenate([uv, uv[idx]]), np.concatenate([lt, lt]), np.concatenate([fm, fm])
     me = bpy.data.meshes.new(name); me.vertices.add(len(co)); me.vertices.foreach_set("co", co.ravel())
     me.loops.add(len(lv)); me.loops.foreach_set("vertex_index", lv); me.polygons.add(len(lt)); me.polygons.foreach_set("loop_start", np.concatenate([[0], np.cumsum(lt)[:-1]]).astype(np.int32))
     me.update(calc_edges=True); uvl = me.uv_layers.new(name="UVMap"); uvl.data.foreach_set("uv", uv.ravel())
@@ -242,9 +256,9 @@ def merge(objs, name, with_mats=True):
 fol = [o for o in meshes if cats.get(o.name) == "foliage"]; rest = [o for o in meshes if cats.get(o.name) != "foliage"]
 def diag(o):
     ws = [o.matrix_world @ Vector(c) for c in o.bound_box]; return (Vector((max(w.x for w in ws), max(w.y for w in ws), max(w.z for w in ws))) - Vector((min(w.x for w in ws), min(w.y for w in ws), min(w.z for w in ws)))).length
-city = merge(rest, "City"); foliage = merge(fol, "Foliage") if fol else None
+city = merge(rest, "City"); foliage = merge(fol, "Foliage", double_sided=True) if fol else None
 collision = merge([o for o in rest if diag(o) >= 30], "City_Collision", with_mats=False)   # 작은 장식(대각 30단위 미만)·나무 제외
-log("합침", len(city.data.polygons), "면 / 나무", len(foliage.data.polygons) if foliage else 0, "/ 충돌", len(collision.data.polygons))
+log("합침", len(city.data.polygons), "면 / 나무", len(foliage.data.polygons) if foliage else 0, "/ 충돌", len(collision.data.polygons), "/ 겹친 면 제거", DUP)
 
 # ── 5. 상자 투영 UV(월드 좌표, 미터 기준 반복 크기) ─────
 me = city.data
