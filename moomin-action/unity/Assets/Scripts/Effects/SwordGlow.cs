@@ -2,10 +2,10 @@ using UnityEngine;
 
 namespace MoominAction
 {
-    /// <summary>칼날 가장자리(재질 이름에 "Sword_Edge")를 무지개색으로 순환시키고 맥동시킴. 공격 중엔 더 밝게.</summary>
+    /// <summary>칼날 가장자리(재질 이름에 "Sword_Edge")를 빛나게 함. 기본은 무지개색 순환, 무기마다 고정 색 지정 가능(hueOverride ≥ 0). 공격 중엔 더 밝게.</summary>
     public class SwordGlow : MonoBehaviour
     {
-        public float hueSpeed = 0.25f, intensity = 3.5f, attackBoost = 2f;
+        public float hueSpeed = 0.25f, intensity = 3.5f, attackBoost = 2f, hueOverride = -1f;
         public bool Attacking;
         Material edge; static readonly int Emission = Shader.PropertyToID("_EmissionColor"), Base = Shader.PropertyToID("_BaseColor");
 
@@ -17,7 +17,8 @@ namespace MoominAction
         void Update()
         {
             if (edge == null) return;
-            var c = Color.HSVToRGB(Mathf.Repeat(Time.time * hueSpeed, 1f), 0.75f, 1f);
+            float hue = hueOverride >= 0 ? hueOverride : Mathf.Repeat(Time.time * hueSpeed, 1f);
+            var c = Color.HSVToRGB(hue, 0.75f, 1f);
             float k = intensity * (1f + 0.15f * Mathf.Sin(Time.time * 7f)) * (Attacking ? attackBoost : 1f);
             edge.SetColor(Emission, c * k); if (edge.HasProperty(Base)) edge.SetColor(Base, c);
         }

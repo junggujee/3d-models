@@ -25,7 +25,7 @@ namespace MoominAction.EditorTools
             var imp = AssetImporter.GetAtPath(Models + "Moomin.fbx") as ModelImporter; if (imp == null) { Debug.LogError("Assets/Models/Moomin.fbx 가 없습니다."); return; }
             imp.animationType = ModelImporterAnimationType.Generic; imp.importAnimation = true; imp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
             var clips = imp.defaultClipAnimations;
-            foreach (var c in clips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; }
+            foreach (var c in clips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run"; if (c.name == "Roll") c.loopTime = false; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; }
             imp.clipAnimations = clips; imp.SaveAndReimport();
             foreach (var n in new[] { "StarSparkSword.fbx", "ShadowBlob.fbx" }) { var m = AssetImporter.GetAtPath(Models + n) as ModelImporter; if (m != null) { m.materialImportMode = ModelImporterMaterialImportMode.ImportStandard; m.SaveAndReimport(); } }
         }
@@ -41,7 +41,7 @@ namespace MoominAction.EditorTools
             ac.CreateBlendTreeInController("Locomotion", out BlendTree tree); tree.blendParameter = "Speed";
             tree.AddChild(Clip("Idle"), 0f); tree.AddChild(Clip("Walk"), 0.5f); tree.AddChild(Clip("Run"), 1f);
             var sm = ac.layers[0].stateMachine;
-            foreach (var n in new[] { "Attack1", "Attack2", "Attack3", "Hit", "Death" }) { var s = sm.AddState(n); s.motion = Clip(n); if (n.StartsWith("Attack") || n == "Hit") { var t = s.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f; } }
+            foreach (var n in new[] { "Roll", "Attack1", "Attack2", "Attack3", "Hit", "Death" }) { var s = sm.AddState(n); s.motion = Clip(n); if (n.StartsWith("Attack") || n == "Hit" || n == "Roll") { var t = s.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f; } }
             AssetDatabase.SaveAssets();
         }
 
@@ -55,7 +55,7 @@ namespace MoominAction.EditorTools
             var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Models + "Moomin.fbx")); player.name = "Player"; player.tag = "Player";
             var cc = player.AddComponent<CharacterController>(); cc.height = 1.3f; cc.radius = 0.35f; cc.center = new Vector3(0, 0.65f, 0); cc.stepOffset = 0.3f;
             var anim = player.GetComponentInChildren<Animator>(); anim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "Moomin.controller"); anim.applyRootMotion = false;
-            player.AddComponent<Health>().maxHealth = 100f; player.AddComponent<PlayerController>(); player.AddComponent<PlayerHealth>();
+            player.AddComponent<Health>().maxHealth = 100f; player.AddComponent<Stamina>(); player.AddComponent<Inventory>(); player.AddComponent<PlayerController>(); player.AddComponent<PlayerHealth>();
             var combo = player.AddComponent<SwordCombat>();
             var hand = Find(player.transform, "hand.R");
             if (hand != null)

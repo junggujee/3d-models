@@ -8,7 +8,7 @@ namespace MoominAction
     {
         public Animator animator; Health hp; PlayerController pc;
         void Awake() { hp = GetComponent<Health>(); pc = GetComponent<PlayerController>(); if (!animator) animator = GetComponentInChildren<Animator>(); hp.Damaged += OnDamaged; hp.Died += OnDied; }
-        void OnDamaged(float a, Vector3 p, Vector3 k) { if (hp.IsDead) return; if (animator) animator.CrossFadeInFixedTime("Hit", 0.04f); pc?.Knockback(k); StopAllCoroutines(); StartCoroutine(Stun(0.4f)); }
+        void OnDamaged(float a, Vector3 p, Vector3 k) { if (hp.IsDead) return; pc?.CancelRoll(); GetComponent<SwordCombat>()?.CancelAttack(); if (animator) animator.CrossFadeInFixedTime("Hit", 0.04f); pc?.Knockback(k); StopAllCoroutines(); StartCoroutine(Stun(0.4f)); }
         System.Collections.IEnumerator Stun(float s) { if (pc) pc.locked = true; yield return new WaitForSeconds(s); if (pc && !hp.IsDead) pc.locked = false; }
         void OnDied() { if (pc) pc.locked = true; if (animator) animator.CrossFadeInFixedTime("Death", 0.05f); }
     }

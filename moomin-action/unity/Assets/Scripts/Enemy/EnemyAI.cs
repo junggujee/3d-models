@@ -9,11 +9,21 @@ namespace MoominAction
         public float speed = 2.4f, aggroRange = 25f, attackRange = 1.25f, windup = 0.55f, attackCooldown = 1.4f, damage = 9f, gravity = -20f; public int score = 10;
         public Transform visual; Transform target; CharacterController cc; Health hp; Vector3 knock, vel; float nextAttack, windupT = -1, deadT = -1;
 
-        void Awake() { cc = GetComponent<CharacterController>(); hp = GetComponent<Health>(); if (!visual) visual = transform.childCount > 0 ? transform.GetChild(0) : transform; hp.Damaged += (a, p, k) => { knock = k; }; hp.Died += () => { deadT = 0; GameManager.Instance?.AddScore(score); }; }
+        void Awake() { cc = GetComponent<CharacterController>(); hp = GetComponent<Health>(); if (!visual) visual = transform.childCount > 0 ? transform.GetChild(0) : transform; hp.Damaged += (a, p, k) => { knock = k; }; hp.Died += () => { deadT = 0; GameManager.Instance?.AddScore(score); DropLoot(); }; }
+        /// <summary>드랍: 금화 항상, 별조각 40%, 붉은 약병 25%, 불꽃 가루 30%, 은빛 깃털 8%, 무기 3%.</summary>
+        void DropLoot()
+        {
+            Vector3 p = transform.position + Vector3.up * 0.5f;
+            ItemPickup.Spawn("gold", Random.Range(5, 16), p);
+            if (Random.value < 0.40f) ItemPickup.Spawn("shard_star", 1, p); if (Random.value < 0.25f) ItemPickup.Spawn("potion_red", 1, p);
+            if (Random.value < 0.30f) ItemPickup.Spawn("dust_fire", Random.Range(1, 4), p); if (Random.value < 0.08f) ItemPickup.Spawn("feather_silver", 1, p);
+            if (Random.value < 0.03f) ItemPickup.Spawn("sword_ember", 1, p);
+        }
         void Start() { var p = GameObject.FindGameObjectWithTag("Player"); if (p) target = p.transform; }
 
         void Update()
         {
+            if (UIState.Paused) return;
             if (deadT >= 0) { deadT += Time.deltaTime; visual.localScale = Vector3.one * Mathf.Max(0, 1 - deadT * 2.5f); if (deadT > 0.4f) Destroy(gameObject); return; }
             knock = Vector3.Lerp(knock, Vector3.zero, 8f * Time.deltaTime);
             Vector3 move = Vector3.zero; float bob = 0;
