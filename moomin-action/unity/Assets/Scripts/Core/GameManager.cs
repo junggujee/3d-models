@@ -38,17 +38,33 @@ namespace MoominAction
             if (!waveActive && Time.time >= nextWave && enemyPrefab && player) SpawnWave();
         }
 
+        /// <summary>
+        /// 적 생성 위치: 플레이어 둘레에서 플레이어와 비슷한 높이의 걸을 수 있는 곳(NavMesh)만 고름 — 건물 지붕·벽 안·산 위에 생기지 않게.
+        /// NavMesh 가 없으면 플레이어 높이에서 아래로 쏜 레이로 대체.
+        /// </summary>
+        Vector3 SpawnPoint(float radius)
+        {
+            Vector3 c = player.transform.position;
+            for (int tryN = 0; tryN < 16; tryN++)
+            {
+                float a = UnityEngine.Random.value * Mathf.PI * 2, r = radius * (tryN < 8 ? 1f : 0.6f); Vector3 p = c + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * r;
+                if (UnityEngine.AI.NavMesh.SamplePosition(p, out var nh, 4f, UnityEngine.AI.NavMesh.AllAreas) && Mathf.Abs(nh.position.y - c.y) < 3f
+                    && !UnityEngine.AI.NavMesh.Raycast(c, nh.position, out _, UnityEngine.AI.NavMesh.AllAreas)) return nh.position + Vector3.up * 0.1f;   // 플레이어와 길로 이어진 곳
+            }
+            Vector3 q = c + new Vector3(radius, 0, 0);
+            return Physics.Raycast(q + Vector3.up * 2f, Vector3.down, out var h, 10f) ? h.point + Vector3.up * 0.2f : c + Vector3.forward * 3f;
+        }
+
         void SpawnWave()
         {
             Wave++; waveActive = true; if (player) player.inCombat = true; bool boss = bossEvery > 0 && Wave % bossEvery == 0; int n = boss ? Mathf.Max(1, firstWave - 1) + Wave / bossEvery : firstWave + (Wave - 1) * perWave;
             for (int i = 0; i < n; i++)
             {
-                float a = UnityEngine.Random.value * Mathf.PI * 2; Vector3 p = player.transform.position + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * (spawnRadius + UnityEngine.Random.value * 4f);
-                if (Physics.Raycast(p + Vector3.up * 30f, Vector3.down, out var h, 80f)) p = h.point + Vector3.up * 0.2f;
+                Vector3 p = SpawnPoint(spawnRadius + UnityEngine.Random.value * 4f);
                 var prefab = enemyPrefabs.Count > 0 ? enemyPrefabs[UnityEngine.Random.Range(0, enemyPrefabs.Count)] : enemyPrefab; if (prefab == null) prefab = enemyPrefab;
                 alive.Add(Instantiate(prefab, p, Quaternion.identity));
             }
-            if (boss) { Vector3 bp = player.transform.position + player.transform.forward * spawnRadius; var b = Instantiate(enemyPrefab, bp, Quaternion.identity); b.GetComponent<EnemyCombatController>()?.ConfigureBoss(); alive.Add(b); }
+            if (boss) { Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(enemyPrefab, bp, Quaternion.identity); b.GetComponent<EnemyCombatController>()?.ConfigureBoss(); alive.Add(b); }
             WaveStarted?.Invoke(Wave);
         }
     }

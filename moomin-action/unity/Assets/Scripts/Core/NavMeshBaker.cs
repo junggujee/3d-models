@@ -10,7 +10,7 @@ namespace MoominAction
     /// </summary>
     public class NavMeshBaker : MonoBehaviour
     {
-        public float size = 260f; public int agentTypeID = 0;
+        public float size = 420f; public int agentTypeID = 0;   // size: 성벽 안 전체(약 360m)
         NavMeshDataInstance instance; public bool Built { get; private set; }
 
         public void Build()

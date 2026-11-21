@@ -18,3 +18,8 @@ python blender/build_city.py <도시.obj|.fbx|.glb> --preview
 ```
 → 미터 단위·바닥 0·가운데 원점 정리, 재질별 병합, 삼각형이 많으면 단순화(기본 40만), 충돌용 `City_Collision`, 시작 위치 `PlayerSpawn` 자동 탐색
 → `unity/Assets/City/City.fbx` 생성 → Unity 메뉴 **Moomin ▸ 4. 메인 씬 만들기** 를 다시 실행하면 도시가 깔리고 민미가 `PlayerSpawn` 에서 시작합니다.
+
+## 3D 월드 맵(3dwolrdnew.glb) — 완료
+- `python blender/build_map.py <3dwolrdnew.glb> --preview` → `unity/Assets/City/City.fbx` + `Textures/` (약 3분)
+- 결과물은 원본 모델에서 나온 것이라 공개 저장소에 올리지 않음(`.gitignore`). 스크립트로 언제든 다시 생성.
+- 분석 보고서: `docs/map_analysis.md` · 미리보기: `previews/map_overview.png`, `map_town.png`, `map_castle.png`
