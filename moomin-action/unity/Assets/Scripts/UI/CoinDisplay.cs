@@ -62,6 +62,7 @@ namespace MoominAction.UI
         void Refresh()
         {
             var s = shown; if (s == null) return; var res = ex.results; int n = Mathf.Min(s.coinCount, Max), total = 0;
+            title.color = Color.Lerp(UITheme.GoldBright, SkillAttributes.ColorOf(s.attribute), 0.5f);
             title.text = s.skillName + $"   <size=20><color=#9E9178>정신력 {(stats.currentSanity >= 0 ? "+" : "")}{stats.currentSanity} · 앞면 {Mathf.RoundToInt(stats.GetCoinProbability() * 100)}%</color></size>";
             for (int i = 0; i < Max; i++)
             {

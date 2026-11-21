@@ -13,7 +13,7 @@ namespace MoominAction.UI
     {
         class SlotUI { public SkillDefinition skill; public Text name, cd, cost; public RectTransform cdFill; public Image frame; }
         UIRoot ui; CharacterStats stats; SkillExecutor ex; CombatManager cm; LockOnSystem lockOn;
-        RectTransform sanityPos, sanityNeg, canvasRect; Text sanityLabel; readonly List<SlotUI> slots = new(); CoinDisplay coinDisplay;
+        RectTransform sanityPos, sanityNeg, canvasRect; Text sanityLabel; readonly List<SlotUI> slots = new(); CoinDisplay coinDisplay; EnemySkillPanels enemyPanels;
         GameObject clashPanel; CanvasGroup clashGroup; Text clashTitle, clashRows, clashResult; ClashOutcome clash; float clashT;
         GameObject targetPanel; Text targetName, targetIntent, targetCoins; Gauge targetHp; float targetTrail = 1f; Image lockMarker; EnemyCombatController lastTarget;
         readonly List<string> enemyCoins = new(); float enemyCoinT; Text popup; float popupT;
@@ -44,6 +44,7 @@ namespace MoominAction.UI
                 var ov = Box(u.frame.transform, "Cooldown", new Color(0, 0, 0, .7f)); u.cdFill = ov.rectTransform; Set(u.cdFill, Vector2.zero, new Vector2(1, 0), new Vector2(.5f, 0), Vector2.zero, Vector2.zero);
                 u.cd = Txt(u.frame.transform, "", 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold); Stretch(u.cd.rectTransform); slots.Add(u);
             }
+            enemyPanels = new EnemySkillPanels(); enemyPanels.Build(hudRoot);   // 적 스킬 패널(머리 위)
             coinDisplay = new CoinDisplay(); coinDisplay.Build(hudRoot, ex, stats);
             // 클래시
             var kp = Img(hudRoot, "ClashPanel", UITheme.Frame, Color.white); clashPanel = kp.gameObject; clashGroup = clashPanel.AddComponent<CanvasGroup>(); At(kp.rectTransform, new Vector2(.5f, .7f), Vector2.zero, new Vector2(620, 240));
@@ -81,9 +82,9 @@ namespace MoominAction.UI
             {
                 if (u.skill == null) continue; float cd = ex.CooldownLeft(u.skill), k = u.skill.cooldown > 0 ? cd / u.skill.cooldown : 0f; bool lacking = stats.currentSanity < u.skill.sanityCost;
                 u.cdFill.anchorMax = new Vector2(1, lacking ? 1 : k); u.cd.text = cd > 0 ? Mathf.CeilToInt(cd).ToString() : ""; u.cost.color = lacking ? new Color(.95f, .4f, .4f) : new Color(.6f, .7f, 1f);
-                u.frame.color = ex.CurrentSkill == u.skill || (u == slots[0] && ex.CurrentSkill != null && ex.CurrentSkill.skillId.StartsWith("BASIC")) ? UITheme.GoldBright : Color.white;
+                u.frame.color = ex.CurrentSkill == u.skill || (u == slots[0] && ex.CurrentSkill != null && ex.CurrentSkill.skillId.StartsWith("BASIC")) ? UITheme.GoldBright : Color.Lerp(Color.white, SkillAttributes.ColorOf(u.skill.attribute), 0.55f);
             }
-            coinDisplay.Update(dt);
+            coinDisplay.Update(dt); enemyPanels.Update(dt);
             // 클래시
             if (clash != null)
             {

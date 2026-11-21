@@ -20,6 +20,8 @@ namespace MoominAction
         public bool useAnimationEvents = false; public float eventGrace = 0.15f; public float weaponMultiplier = 1f;
 
         public SkillDefinition CurrentSkill { get; private set; }
+        /// <summary>마지막으로 쓴 스킬(끝난 뒤에도 남음 — 스킬 패널이 결과를 잠시 보여 줄 때 사용).</summary>
+        public SkillDefinition LastSkill { get; private set; } public float LastFinishTime { get; private set; } = -99f; public bool LastCompleted { get; private set; }
         public AttackContext CurrentAttack { get; private set; }
         public SkillPhase Phase { get; private set; }
         public bool IsExecuting => isExecuting;
@@ -51,7 +53,7 @@ namespace MoominAction
             if (stats.currentSanity < skill.sanityCost) { SkillRefused?.Invoke(skill, $"정신력 {skill.sanityCost} 필요"); return false; }
             if (isExecuting) Finish(false);
             stats.ChangeSanity(-skill.sanityCost, skill.skillName);
-            CurrentSkill = skill; currentCoin = 0; t = 0; results.Clear(); CurrentAttack = null; isExecuting = true; hitboxHeld = false;
+            CurrentSkill = LastSkill = skill; currentCoin = 0; t = 0; results.Clear(); CurrentAttack = null; isExecuting = true; hitboxHeld = false;
             if (skill.cooldown > 0) readyAt[skill] = Time.time + skill.cooldown;
             Phase = skill.windup > 0 ? SkillPhase.Windup : SkillPhase.Attacking; if (Phase == SkillPhase.Attacking) BeginStage();
             SkillStarted?.Invoke(skill); return true;
@@ -117,7 +119,7 @@ namespace MoominAction
 
         void Finish(bool completed)
         {
-            var s = CurrentSkill; isExecuting = false; Phase = SkillPhase.None; CurrentSkill = null; hitboxHeld = false;
+            var s = CurrentSkill; isExecuting = false; Phase = SkillPhase.None; CurrentSkill = null; hitboxHeld = false; LastFinishTime = Time.time; LastCompleted = completed;
             if (CurrentAttack != null) CurrentAttack.activeUntil = Mathf.Min(CurrentAttack.activeUntil, Time.time);
             if (animator && animator.HasState(0, Animator.StringToHash("Locomotion"))) animator.CrossFadeInFixedTime("Locomotion", 0.15f);
             SkillFinished?.Invoke(s, completed);

@@ -3,6 +3,21 @@ using UnityEngine;
 namespace MoominAction
 {
     public enum CoinEffect { None, StaggerOnAllHeads, SanityOnAllHeads }
+    /// <summary>스킬 속성(색). 스킬 패널·슬롯·이펙트 색에 쓰임.</summary>
+    public enum SkillAttribute { Red, Blue, Yellow, Green, Orange, Purple, Black }
+    /// <summary>일러스트를 따로 넣지 않았을 때 코드로 그리는 스케치의 동작 종류.</summary>
+    public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry }
+
+    public static class SkillAttributes
+    {
+        public static readonly string[] Names = { "빨강", "파랑", "노랑", "초록", "주황", "보라", "검정" };
+        public static Color ColorOf(SkillAttribute a) => a switch
+        {
+            SkillAttribute.Red => new Color(0.86f, 0.16f, 0.2f), SkillAttribute.Blue => new Color(0.2f, 0.45f, 0.95f), SkillAttribute.Yellow => new Color(0.95f, 0.78f, 0.15f),
+            SkillAttribute.Green => new Color(0.3f, 0.75f, 0.3f), SkillAttribute.Orange => new Color(0.98f, 0.5f, 0.12f), SkillAttribute.Purple => new Color(0.6f, 0.3f, 0.9f),
+            _ => new Color(0.32f, 0.3f, 0.34f),
+        };
+    }
 
     /// <summary>
     /// 스킬 데이터(명세 v2 3-2). Project 창 ▸ Create ▸ Combat ▸ Skill Definition 으로 만들고 Inspector 에서 수정.
@@ -14,6 +29,8 @@ namespace MoominAction
         public string skillId = "SKILL_000";
         public string skillName = "스킬";
 
+        [Header("Look")] public SkillAttribute attribute = SkillAttribute.Red; public SkillMotif motif = SkillMotif.Slash;
+        [Tooltip("스킬 일러스트(비우면 motif 로 스케치를 자동 생성)")] public Sprite illustration;
         [Header("Coin Settings")] public int basePower = 10; public int coinPower = 3; public int coinCount = 3;
         [Header("Attack Settings")] public float damageMultiplier = 1.0f; public float cooldown = 5f; public int sanityCost = 0;
         [Header("Clash Settings")] public bool clashEnabled = true; public bool unblockable;

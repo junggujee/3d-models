@@ -74,6 +74,20 @@
 | 바다괴물형 | (예정) | | | | |
 `EnemyCombatController.archetype` 으로 구분. 애니메이터가 있는 적은 Windup·Attack·Guard·Dodge·Hit·Death 동작을 재생하고, 없는 적은 몸을 늘였다 줄이는 연출을 씀.
 
+## 스킬 속성과 적 스킬 패널
+- 모든 스킬에 **속성(색)**: 빨강·파랑·노랑·초록·주황·보라·검정(`SkillDefinition.attribute`). 패널·스킬 슬롯·코인 표시 색에 쓰임.
+| 스킬 | 속성 | | 스킬 | 속성 |
+|---|---|---|---|---|
+| 베기 / 되베기 / 이어 베기 | 노랑 / 초록 / 파랑 | | 솜주먹 연타 / 베개 내려찍기 / 졸음 돌진(곰) | 노랑 / 파랑 / 초록 |
+| 연속 베기 / 불꽃 찌르기 / 별빛 난무 | 빨강 / 주황 / 보라 | | 몸통 박치기 / 내려찍기(그림자) | 검정 / 보라 |
+| | | | 보스 돌진 / 난타 / 방어 부수기 | 빨강 / 주황 / 검정 |
+- **적 스킬 패널**(`UI/SkillPanel.cs`): 적이 스킬을 쓰는 순간(예고부터) 머리 위에 뜨고, 끝난 뒤 1.6초 동안 결과를 보여 줌. 거리에 따라 크기 조절, 30m 밖·화면 뒤는 숨김.
+  - 위: `+코인 위력` · 위력 범위(최소 합계 / 최대 합계)
+  - 가운데: 속성색 육각형 안의 **기본 위력** · 속성색 이름 띠(+속성·방어 불가 표시) · **스킬 일러스트**
+  - 맨 아래: 코인별 결과(앞/뒤/대기/중단)와 **최종 합계 위력**(코인이 판정될 때마다 갱신)
+  - 미리보기: `previews/enemy_skill_panel_mock.png`(같은 배치로 그린 목업)
+- **스킬 일러스트**: `SkillDefinition.illustration` 에 그림을 넣으면 그걸 쓰고, 비어 있으면 `motif`(베기·찌르기·내려찍기·돌진·연타)로 흑백 붓 획 스케치를 코드로 생성(`UI/SkillIllustration.cs`, 미리보기 `previews/skill_illustrations.png`).
+
 ## Unity 연결(명세 9장) — 메뉴 Moomin ▸ 한 번에 설정이 자동으로 해 줌
 - **Player**: CharacterController, PlayerController, CharacterStats, CoinSystem, SkillExecutor(이벤트 사용), CombatResolver(대상 = Enemy 레이어), CombatManager(스킬 에셋 연결), Stamina, Inventory, LockOnSystem
 - **Enemy**: CapsuleCollider, NavMeshAgent, CharacterStats, CoinSystem, SkillExecutor(타이머), CombatResolver(대상 = Player 레이어), EnemyBrain, EnemyCombatController
