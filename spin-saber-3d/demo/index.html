@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>회전 쌍검 광선검 3D</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; color: #eef6ff; font-family: -apple-system, "Noto Sans KR", system-ui, sans-serif;
+    background: radial-gradient(circle at 50% 45%, #10305a 0%, #050b18 70%); }
+  #stage { position: fixed; inset: 0; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 14px; z-index: 2; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 0 16px; }
+  .top { position: fixed; left: 0; right: 0; top: 12px; z-index: 2; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; padding: 0 16px; }
+  button { font: 700 15px/1 inherit; border: 0; border-radius: 999px; padding: 11px 16px; cursor: pointer; background: rgba(255,255,255,.14); color: #fff; }
+  button.on, button[aria-pressed="true"] { background: #5fe1ff; color: #05202b; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 6px; box-shadow: 0 0 8px currentColor; }
+  .hint { position: fixed; top: 56px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .7; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div class="top">
+  <button data-theme="silver" aria-pressed="true">실버</button>
+  <button data-theme="gold" aria-pressed="false">골드</button>
+  <button data-theme="blue" aria-pressed="false">블루</button>
+</div>
+<div class="hint">드래그 = 360° 돌려 보기 · 휠/두 손가락 = 확대</div>
+<div class="bar">
+  <button id="spin">🌀 회전</button>
+  <button id="blade" class="on">⚡ 칼날</button>
+  <button id="color"><span class="swatch" id="sw"></span>색 바꾸기 <span id="ci">13/24</span></button>
+</div>
+<script type="module">
+  import { createSpinSaber, PALETTE } from "../src/spinSaber.js";
+  import { Viewer360 } from "../src/viewer360.js";
+  const q = new URLSearchParams(location.search);
+  const v = new Viewer360(document.getElementById("stage"));
+  let saber, theme = q.get("theme") || "silver", colorIndex = +(q.get("color") ?? 12);
+  const $ = (id) => document.getElementById(id);
+  const refresh = () => {
+    const s = saber.userData.api.state;
+    $("spin").classList.toggle("on", s.spinning); $("blade").classList.toggle("on", s.bladeOn);
+    $("sw").style.background = $("sw").style.color = "#" + PALETTE[colorIndex].getHexString();
+    $("ci").textContent = `${colorIndex + 1}/24`;
+    document.querySelectorAll("[data-theme]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.theme === theme)));
+  };
+  const build = () => {
+    const spinning = saber ? saber.userData.api.state.spinning : q.has("spin");
+    saber = createSpinSaber({ theme, color: colorIndex, spinning });
+    v.open(saber); refresh();
+  };
+  $("spin").onclick = () => { saber.userData.api.toggleSpin(); refresh(); };
+  $("blade").onclick = () => { saber.userData.api.toggleBlade(); refresh(); };
+  $("color").onclick = () => { colorIndex = saber.userData.api.nextColor(); refresh(); };
+  document.querySelectorAll("[data-theme]").forEach((b) => b.onclick = () => { theme = b.dataset.theme; build(); });
+  build();
+  if (q.has("yaw")) { v.yaw = +q.get("yaw"); v.pitch = +(q.get("pitch") || 0); v.idle = -1e9; }
+  window.viewer = v; window.saber = () => saber; window.ok = true;
+</script>
+</body>
+</html>

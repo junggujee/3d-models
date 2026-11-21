@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>민미 3D</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; color: #33415c; font-family: -apple-system, "Noto Sans KR", system-ui, sans-serif;
+    background: radial-gradient(circle at 50% 45%, #eaf4ff 0%, #bcd6ee 75%); }
+  #stage { position: fixed; inset: 0; }
+  .hint { position: fixed; top: 14px; left: 0; right: 0; text-align: center; font-size: 13px; opacity: .7; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div class="hint"><a href="?" style="pointer-events:auto;color:inherit">엎드린 모습</a> · <a href="?pose=standing" style="pointer-events:auto;color:inherit">서 있는 모습</a><br>드래그 = 360° 돌려 보기 · 휠/두 손가락 = 확대</div>
+<script type="module">
+  import { createMoomin } from "../src/moomin.js";
+  import { Viewer360 } from "../src/viewer360.js";
+  const q = new URLSearchParams(location.search);
+  const v = new Viewer360(document.getElementById("stage"));
+  const m = createMoomin({ pose: q.get('pose') === 'standing' ? 'standing' : 'lying' });
+  v.open(m);
+  if (q.has("yaw")) { v.yaw = +q.get("yaw"); v.pitch = +(q.get("pitch") || 0.15); v.idle = -1e9; }
+  v.dist = q.has('dist') ? +q.get('dist') : 0.85;
+  window.viewer = v; window.ok = true;
+</script>
+</body>
+</html>

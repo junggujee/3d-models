@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>하프물범 · 스파크 검 3D 데모</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; color: #f4f1ff; font-family: -apple-system, "Noto Sans KR", system-ui, sans-serif;
+    background: radial-gradient(circle at 50% 42%, #2f2766 0%, #120f26 72%); }
+  #stage { position: fixed; inset: 0; }
+  .bar { position: fixed; top: 12px; left: 0; right: 0; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 0 16px; z-index: 2; }
+  button { font: 700 15px/1 inherit; border: 0; border-radius: 999px; padding: 11px 16px; cursor: pointer; background: rgba(255,255,255,.14); color: #fff; }
+  button[aria-pressed="true"] { background: #ffd54a; color: #2b1a00; }
+  .hint { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 13px; opacity: .8; pointer-events: none; }
+</style>
+<!-- three.js r160 (CDN). npm 프로젝트라면 이 importmap 대신 `npm i three@0.160.0` 후 그대로 import 하면 됩니다. -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div class="bar">
+  <button id="seal" aria-pressed="true">🦭 하프물범 필통</button>
+  <button id="sword" aria-pressed="false">⚔️ 스타 스파크 검</button>
+</div>
+<div class="hint">드래그 = 360° 회전 · 휠/두 손가락 = 확대 · 가만히 두면 자동 회전</div>
+<script type="module">
+  import { Viewer360 } from "../src/viewer360.js";
+  const v = new Viewer360(document.getElementById("stage"));
+  const show = (k) => { v.open(k); for (const id of ["seal", "sword"]) document.getElementById(id).setAttribute("aria-pressed", String(id === k)); };
+  document.getElementById("seal").onclick = () => show("seal");
+  document.getElementById("sword").onclick = () => show("sword");
+  show(location.hash === "#sword" ? "sword" : "seal");
+  window.viewer = v; window.ok = true;
+</script>
+</body>
+</html>
