@@ -63,7 +63,16 @@ namespace MoominAction.EditorTools
                 foreach (var c in mc) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
                 mi.clipAnimations = mc; mi.SaveAndReimport();
             }
-            if (AssetImporter.GetAtPath(Models + "Textures/Pebble_Normal.png") is TextureImporter pn) { pn.textureType = TextureImporterType.NormalMap; pn.wrapMode = TextureWrapMode.Repeat; pn.SaveAndReimport(); }   // 핑크큐브 오돌도돌 표면
+            foreach (var t in new[] { "Pebble_Normal", "Weave_Normal", "Fur_Normal" })   // 핑크큐브 오돌도돌 · 땅콩빵 짜임 · 물범 털결
+                if (AssetImporter.GetAtPath(Models + "Textures/" + t + ".png") is TextureImporter pn) { pn.textureType = TextureImporterType.NormalMap; pn.wrapMode = TextureWrapMode.Repeat; pn.SaveAndReimport(); }
+            // 펫 하프물범(루프 = Idle·Walk·Run·Guard·Sleep)
+            if (AssetImporter.GetAtPath(Models + "Seal.fbx") is ModelImporter si)
+            {
+                si.animationType = ModelImporterAnimationType.Generic; si.importAnimation = true; si.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                var sclips = si.defaultClipAnimations;
+                foreach (var c in sclips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "Sleep"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
+                si.clipAnimations = sclips; si.SaveAndReimport();
+            }
             // 맵(City.fbx): 애니메이션·카메라·조명 없음, 충돌용으로 읽기 가능, 메시 최적화 · 텍스처: 밉맵 + 2048 + 고품질 압축 + 비스듬히 봐도 선명하게
             foreach (var cg in AssetDatabase.FindAssets("City", new[] { "Assets/City" }))
             if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(cg)) is ModelImporter cityImp)
@@ -117,6 +126,8 @@ namespace MoominAction.EditorTools
                 if (AssetImporter.GetAtPath(Models + n + ".fbx") == null) { Debug.LogWarning($"Assets/Models/{n}.fbx 가 없습니다."); continue; }
                 MakeController(n + ".fbx", Anims + n + ".controller", new[] { "Windup", "Attack1", "Attack2", "Guard", "Dodge", "Hit", "Death" }, new[] { "Attack1", "Attack2", "Dodge", "Hit" });
             }
+            if (AssetImporter.GetAtPath(Models + "Seal.fbx") != null)   // 펫: 전투 상태 + 먹기·기뻐하기·자기(Death = 기절)
+                MakeController("Seal.fbx", Anims + "Seal.controller", new[] { "Windup", "Attack1", "Attack2", "Guard", "Dodge", "Hit", "Death", "Happy", "Eat", "Sleep" }, new[] { "Attack1", "Attack2", "Dodge", "Hit", "Happy", "Eat" });
         }
 
         [MenuItem("Moomin/2. Animator Controller 만들기")]
@@ -162,6 +173,7 @@ namespace MoominAction.EditorTools
             System.IO.Directory.CreateDirectory(Prefabs); ExportSkills();
             int playerLayer = EnsureLayer("Player"), enemyLayer = EnsureLayer("Enemy");
             int enemyMask = enemyLayer >= 0 ? 1 << enemyLayer : ~0, playerMask = playerLayer >= 0 ? 1 << playerLayer : ~0;
+            int petLayer = EnsureLayer("Pet"); if (petLayer >= 0 && playerLayer >= 0) playerMask |= 1 << petLayer;   // 적 공격이 펫(막아서기)에게도 맞게 — 장비 화면 카메라는 Player 레이어만 그림
 
             // ── 플레이어: CharacterController · PlayerController · CharacterStats · CoinSystem · SkillExecutor · CombatResolver · CombatManager ...
             var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Models + "Moomin.fbx")); player.name = "Player"; player.tag = "Player";
@@ -246,6 +258,33 @@ namespace MoominAction.EditorTools
             var green = BuildMonster("GreenBlock", "그린볼런", SkillAttribute.Green, 85f, 140f, 1.5f, 0.36f, 0.66f, 60, 18, 2, 2, playerMask,
                                      new[] { "BLOCK_GEAR", "BLOCK_RAM" });
             if (green != null) { ApplyMaterial(green, "Block_Green", PlasticMaterial("GreenBlock_Plastic", new Color(0.08f, 0.5f, 0.06f), 0.82f)); ApplyMaterial(green, "Block_Gear", PlasticMaterial("GreenBlock_Gear", new Color(0.12f, 0.58f, 0.09f), 0.85f)); Save(green, "GreenBlock"); }
+            // ── 자원: 땅콩빵(부수면 땅콩빵 조각) — 적 레이어 · 팀 Enemy 라 플레이어 공격이 맞음, 조준·웨이브에는 안 들어감
+            var peanutModel = AssetDatabase.LoadAssetAtPath<GameObject>(Models + "PeanutBread.fbx");
+            if (peanutModel != null)
+            {
+                var pn = new GameObject("PeanutBread"); var pm = (GameObject)PrefabUtility.InstantiatePrefab(peanutModel, pn.transform); pm.name = "Model";
+                var pc = pn.AddComponent<BoxCollider>(); pc.center = new Vector3(0, 0.17f, 0); pc.size = new Vector3(1.0f, 0.34f, 0.5f);
+                var ps = pn.AddComponent<CharacterStats>(); ps.displayName = "땅콩빵"; ps.team = Team.Enemy; ps.hasSanity = false; ps.maxHealth = ps.currentHealth = 30f; ps.invulnerableTime = 0.05f; ps.maxStagger = 9999f;
+                pn.AddComponent<ResourceNode>();
+                ApplyMaterial(pn, "Peanut_Cloth", NormalMapped("PeanutBread_Cloth", new Color(0.95f, 0.94f, 0.9f), "Weave_Normal", 6f, 0.25f, 1.2f));
+                Save(pn, "PeanutBread");
+            }
+            // ── 펫: 하프물범(야생 → 땅콩빵 조각으로 길들임). 펫 레이어(적 공격이 맞음) · 팀 Player(민미 공격은 안 맞음)
+            var sealModel = AssetDatabase.LoadAssetAtPath<GameObject>(Models + "Seal.fbx");
+            if (sealModel != null)
+            {
+                var sg = (GameObject)PrefabUtility.InstantiatePrefab(sealModel); sg.name = "Seal";
+                var sa = sg.GetComponentInChildren<Animator>(); if (sa == null) sa = sg.AddComponent<Animator>(); sa.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "Seal.controller"); sa.applyRootMotion = false;
+                var scol = sg.AddComponent<CapsuleCollider>(); scol.direction = 2; scol.center = new Vector3(0, 0.22f, 0); scol.radius = 0.22f; scol.height = 0.8f;
+                var sag = sg.AddComponent<UnityEngine.AI.NavMeshAgent>(); sag.radius = 0.3f; sag.height = 0.45f; sag.speed = 3.3f; sag.stoppingDistance = 0.5f;
+                var sst = sg.AddComponent<CharacterStats>(); sst.displayName = "하프물범"; sst.team = Team.Player; sst.attribute = SkillAttribute.Blue; sst.maxHealth = sst.currentHealth = 60f; sst.invulnerableTime = 0.1f;
+                sg.AddComponent<CoinSystem>(); sg.AddComponent<StatusEffectManager>(); sg.AddComponent<DefenseController>(); sg.AddComponent<EnergyManager>(); var sr = sg.AddComponent<CombatResolver>(); sr.targetMask = enemyMask;
+                var sex = sg.AddComponent<SkillExecutor>(); sex.useAnimationEvents = false; sex.animator = sa;
+                var pet = sg.AddComponent<PetSeal>(); pet.bump = SkillAsset("SEAL_BUMP"); pet.bubble = SkillAsset("SEAL_BUBBLE");
+                var fur = NormalMapped("Seal_Fur", new Color(0.93f, 0.93f, 0.95f), "Fur_Normal", 8f, 0.15f, 0.9f); ApplyMaterial(sg, "Seal_Fur", fur);
+                ApplyMaterial(sg, "Seal_Nose", NormalMapped("Seal_Nose", new Color(0.5f, 0.5f, 0.55f), "Fur_Normal", 8f, 0.1f, 0.9f));
+                SetLayer(sg, petLayer >= 0 ? petLayer : playerLayer); PrefabUtility.SaveAsPrefabAsset(sg, Prefabs + "Seal.prefab"); Object.DestroyImmediate(sg);
+            }
             AssetDatabase.SaveAssets();
             void Save(GameObject g, string n) { SetLayer(g, enemyLayer); PrefabUtility.SaveAsPrefabAsset(g, Prefabs + n + ".prefab"); Object.DestroyImmediate(g); }
         }
@@ -292,6 +331,14 @@ namespace MoominAction.EditorTools
             if (nm != null) { m.SetTexture("_BumpMap", nm); m.SetFloat("_BumpScale", 0.8f); m.SetTextureScale("_MainTex", new Vector2(6, 6)); m.EnableKeyword("_NORMALMAP"); }
             m.SetColor("_EmissionColor", new Color(0.22f, 0.03f, 0.08f)); m.EnableKeyword("_EMISSION"); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             return SaveMat(m, "PinkCube_Jelly");
+        }
+        /// <summary>노멀 맵 재질(천·털): 색 · 노멀 맵(Models/Textures) · 타일 · 광택 · 노멀 세기.</summary>
+        static Material NormalMapped(string name, Color c, string normal, float tile, float gloss, float bump)
+        {
+            var m = new Material(Shader.Find("Standard")) { name = name, color = c }; m.SetFloat("_Glossiness", gloss); m.SetFloat("_Metallic", 0f);
+            var nm = AssetDatabase.LoadAssetAtPath<Texture2D>(Models + "Textures/" + normal + ".png");
+            if (nm != null) { m.SetTexture("_BumpMap", nm); m.SetFloat("_BumpScale", bump); m.SetTextureScale("_MainTex", new Vector2(tile, tile)); m.EnableKeyword("_NORMALMAP"); }
+            return SaveMat(m, name);
         }
         /// <summary>그린볼런: 단단하고 매끈한 플라스틱(높은 광택).</summary>
         static Material PlasticMaterial(string name, Color c, float gloss)
@@ -376,6 +423,7 @@ namespace MoominAction.EditorTools
             player.GetComponent<PlayerController>().cam = camGo.transform;
             var gmGo = new GameObject("GameManager"); var gm = gmGo.AddComponent<GameManager>(); gmGo.AddComponent<NavMeshBaker>(); gmGo.AddComponent<ClashManager>();
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
+            gm.peanutPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "PeanutBread.prefab"); gm.sealPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Seal.prefab");   // 자연: 땅콩빵 · 야생 하프물범
             foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");
             RegisterScenes();

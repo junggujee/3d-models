@@ -90,3 +90,10 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 장비 3D 모양은 **민미 모델 공간(기본 자세)** 에서 만들어 내보내고, EquipmentVisuals 가 스킨 메시 bindpose 로 뼈에 붙임(blender/build_headband.py 참고). 아이콘은 Resources/ItemIcons/<id>.png 우선.
 - 장비 화면 `UI/EquipmentMenu.cs`(C 키) + `EquipmentPreview`(플레이어 레이어만 그리는 카메라 → RenderTexture). 배치를 바꾸면 `tools/equipment_mock.py` 도.
 - **한 줄에 `코드; // 설명 코드;` 쓰지 말 것** — 주석 뒤 코드가 사라짐(실제로 4군데 있었음). unity_audit 4b 가 잡음.
+
+## 자원 · 펫 · 집 장비 (상세: docs/PET_RESOURCE.md)
+- 땅콩빵 `blender/build_peanut.py`(초타원체 + 잘록 + 짜임 노멀 `tools/fabric_normals.py`, LobeL·LobeR 두 물체) → `World/ResourceNode.cs`(적 레이어·팀 Enemy CharacterStats 로 플레이어 공격이 맞음, EnemyCombatController 가 없어 조준·웨이브 밖). 조각 `peanut_piece`.
+- 생성 자리 `blender/build_spawn_points.py` → `Resources/World/SpawnPoints.json`(peaks/nature, Blender 좌표) → `World/NatureSpawner.cs`(GameManager.peanutPrefab/sealPrefab 이 있으면 붙음, MapPlaces.BlenderToWorld + NavMesh 로 맞춤, testNearStart 로 시작 근처에도 1개씩).
+- 펫 `blender/build_seal.py`(gift-3d-models createSeal 치수 그대로, 뼈 body→chest/hips + 지느러미 4) → `World/PetSeal.cs`(야생 → F 로 조각 3개 → 길들임, G 따라오기/기다려, 보조 공격·막아서기·응원·물어 오기·냄새 맡기·기절·친밀도·레벨). 막아서기 = `CombatResolver.Interceptor` + `SkillExecutor.TimeToFirstHit` 에 맞춘 박치기. Pet 레이어(적 targetMask 에 포함). HUD `UI/PetHUD.cs`, 저장 `SaveData.pet` → `SaveSystem.LoadedPet`.
+- 한국어 조사는 `PetSeal.Josa(단어, 받침 있을 때, 없을 때)` — "(이)가" 같은 괄호 쓰지 말 것.
+- 집 장비 `blender/build_home_gear.py`(민미 공간, 부품마다 FBX) · `ItemDef.model = "경로@뼈|경로@뼈"`(EquipmentVisuals 가 부품마다 붙임). EquipStats 에 guard·evadePower·moveSpeed. 얻는 법 `HomeGear.Random`(적 4% · 땅콩빵 6%).

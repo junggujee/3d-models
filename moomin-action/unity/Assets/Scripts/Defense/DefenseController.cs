@@ -35,14 +35,15 @@ namespace MoominAction
         // ── 가드
         public void StartGuard() { if (stats == null || stats.Guarding) return; stats.Guarding = true; stats.GuardStartTime = Time.time; }
         public void StopGuard() { if (stats != null) stats.Guarding = false; }
-        public float GetDamageMultiplier() => DefenseRules.GuardMultiplier(isGuarding, guardReduction);
+        public float GetDamageMultiplier() => DefenseRules.GuardMultiplier(isGuarding, Mathf.Clamp(guardReduction + (stats != null ? stats.equipGuard : 0f), 0f, 0.9f));   // 장비(각티슈 방패 등) 가드 보너스
 
         // ── 회피: 시작할 때 코인 한 번
         public void StartEvade()
         {
             if (stats == null) return;
             var r = coinSystem != null ? coinSystem.Toss(stats, 0) : new CoinResult { heads = CoinMath.Toss(stats.currentSanity) };
-            int power = coinSystem != null ? coinSystem.CalculatePower(evadeBasePower, evadeCoinPower, r.heads) : CoinMath.Power(evadeBasePower, evadeCoinPower, r.heads);
+            int eb = evadeBasePower + (stats != null ? stats.equipEvadePower : 0);   // 장비 회피 코인 위력
+            int power = coinSystem != null ? coinSystem.CalculatePower(eb, evadeCoinPower, r.heads) : CoinMath.Power(eb, evadeCoinPower, r.heads);
             evade.Start(power, r.heads); EvadeStarted?.Invoke(power, r.heads);
         }
         /// <summary>공격 위력과 비교. true = 회피 성공(피해 없음, 회피 유지).</summary>

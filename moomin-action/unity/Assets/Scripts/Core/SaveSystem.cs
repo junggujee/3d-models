@@ -18,7 +18,12 @@ namespace MoominAction
         // 진행
         public int wave, score, kills, bossKills, clashWins, clashLosses, bestPower;
         public Inventory.State inventory;
+        public PetData pet;
     }
+
+    /// <summary>길들인 하프물범(없으면 tamed = false).</summary>
+    [Serializable]
+    public class PetData { public bool tamed; public string name; public int level = 1; public long exp; public float affection, health; }
 
     /// <summary>
     /// 저장·불러오기. 슬롯 = 기록 1~3(휴식 메뉴에서 수동) + 자동 저장(웨이브를 끝낼 때마다).
@@ -31,6 +36,8 @@ namespace MoominAction
         public const string GameScene = "Main", TitleScene = "Title";
         /// <summary>다음 Main 씬에 적용할 저장(새 게임이면 null).</summary>
         public static SaveData Pending;
+        /// <summary>불러온 저장의 펫 — NatureSpawner 가 시작할 때 곁에 데려오고 비움.</summary>
+        public static PetData LoadedPet;
         /// <summary>이번 여정의 플레이 시간(초). GameManager 가 일시정지 아닐 때만 더함.</summary>
         public static double PlayTime;
         /// <summary>저장했을 때(슬롯) — HUD 알림.</summary>
@@ -120,14 +127,17 @@ namespace MoominAction
             };
             if (p.TryGetComponent<Experience>(out var xp)) { d.level = xp.level; d.exp = xp.exp; }
             if (p.TryGetComponent<Inventory>(out var inv)) d.inventory = inv.Export();
+            var pet = PetSeal.Current;
+            if (pet != null) d.pet = new PetData { tamed = true, name = pet.petName, level = pet.level, exp = pet.exp, affection = pet.affection, health = pet.Stats.currentHealth };
             return d;
         }
 
         /// <summary>Pending 을 지금 씬에 적용(GameManager.Start 가 부름). 가방은 Inventory.Awake 가 먼저 가져감.</summary>
         public static void ApplyPending(GameManager gm)
         {
-            var d = Pending; Pending = null;
+            var d = Pending; Pending = null; LoadedPet = null;
             if (d == null) { RunStats.Reset(); return; }
+            LoadedPet = d.pet;
             PlayTime = d.playSeconds;
             RunStats.Kills = d.kills; RunStats.BossKills = d.bossKills; RunStats.ClashWins = d.clashWins; RunStats.ClashLosses = d.clashLosses; RunStats.BestPower = d.bestPower;
             gm.RestoreProgress(d.wave, d.score);

@@ -35,6 +35,17 @@ namespace MoominAction
 
         void BuildVisual(bool heads)
         {
+            if (skill.projectileKind == ProjectileKind.Bubble)
+            {   // 물방울: 반투명 하늘색 공 + 흰 반짝임
+                var b = GameObject.CreatePrimitive(PrimitiveType.Sphere); Destroy(b.GetComponent<Collider>()); b.transform.SetParent(transform, false); b.transform.localScale = Vector3.one * skill.projectileRadius * 1.6f; spin = null;
+                var sh = Shader.Find("Standard"); var m = new Material(sh) { color = new Color(0.55f, 0.82f, 1f, 0.55f) };
+                m.SetFloat("_Mode", 3); m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha); m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha); m.SetInt("_ZWrite", 0);
+                m.EnableKeyword("_ALPHABLEND_ON"); m.renderQueue = 3000; m.SetFloat("_Glossiness", 0.95f); b.GetComponent<Renderer>().sharedMaterial = m;
+                var hi = GameObject.CreatePrimitive(PrimitiveType.Sphere); Destroy(hi.GetComponent<Collider>()); hi.transform.SetParent(b.transform, false); hi.transform.localPosition = new Vector3(-0.2f, 0.25f, -0.25f); hi.transform.localScale = Vector3.one * 0.25f;
+                var hm = new Material(sh) { color = Color.white }; hm.EnableKeyword("_EMISSION"); hm.SetColor("_EmissionColor", Color.white * 0.8f); hi.GetComponent<Renderer>().sharedMaterial = hm;
+                var trB = gameObject.AddComponent<TrailRenderer>(); trB.time = 0.15f; trB.startWidth = skill.projectileRadius; trB.endWidth = 0f; trB.material = new Material(Shader.Find("Sprites/Default")); trB.startColor = new Color(0.7f, 0.9f, 1f, 0.5f); trB.endColor = new Color(1, 1, 1, 0);
+                return;
+            }
             var v = new GameObject("Gear"); v.transform.SetParent(transform, false); v.transform.localRotation = Quaternion.Euler(0, 90, 0); spin = v.transform;   // 톱니 면이 옆을 봄 → 바퀴처럼 세로로 돌며 날아감
             v.AddComponent<MeshFilter>().sharedMesh = GearMesh();
             var mr = v.AddComponent<MeshRenderer>(); mr.sharedMaterial = GearMaterial(); mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;

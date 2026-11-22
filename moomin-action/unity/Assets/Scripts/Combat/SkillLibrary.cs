@@ -74,6 +74,9 @@ namespace MoominAction
             Add(S("BLOCK_RAM", "블럭 박치기", 9, 4, 1, 1.0f, 3.5f, 0, 0.5f, 0.37f, 0.9f, new[] { "Attack1" }, 1.7f, 90, 9f, windup: 0.8f, lunge: 5f, desc: "단단한 몸을 기울여 쿵 들이받는다."));
             Add(S("BLOCK_GEAR", "톱니 던지기", 7, 3, 2, 0.7f, 5f, 0, 0.8f, 0.37f, 0.7f, new[] { "Attack2" }, 9f, 40, 3f, windup: 0.6f,
                   desc: "톱니바퀴를 상대에게 날린다(원거리). 근접 공격으로는 합할 수 없고, 다른 원거리 공격과만 공중에서 합한다. 맞으면 베여 출혈."));
+            // ── 펫: 하프물범(위력이 낮음 — 합은 할 수 있지만 대개 지므로 일방 공격이 더 좋음)
+            Add(S("SEAL_BUMP", "몽실 박치기", 4, 2, 1, 0.6f, 2.5f, 0, 0.5f, 0.37f, 0.5f, new[] { "Attack1" }, 1.5f, 100, 3f, windup: 0.25f, lunge: 4f, desc: "통통한 몸으로 들이받는다. 주인을 노리는 공격을 가로막아 대신 합하기도 한다."));
+            Add(S("SEAL_BUBBLE", "물방울 뿜기", 3, 2, 2, 0.5f, 4f, 0, 0.5f, 0.37f, 0.5f, new[] { "Attack2" }, 7f, 40, 1f, windup: 0.3f, desc: "코에서 물방울을 뿜어 멀리 있는 적을 적신다(원거리). 맞으면 침잠."));
             // ── 적(같은 SkillExecutor 사용). windup = 바닥 경고 시간
             Add(S("ENEMY_BUMP", "몸통 박치기", 7, 3, 2, 0.7f, 1.2f, 0, 0.35f, 0.12f, 0.8f, A1, 1.6f, 100, 4f, windup: 0.65f, lunge: 5f));
             Add(S("ENEMY_SLAM", "내려찍기", 9, 4, 2, 0.8f, 4f, 0, 0.45f, 0.15f, 1.1f, A1, 2.0f, 360, 7f, windup: 1.0f, lunge: 1f));
@@ -116,6 +119,11 @@ namespace MoominAction
             if (map.TryGetValue("CUBE_TRIPLE", out var ct)) { ct.lungeDelay = 0.13f; ct.lungeTime = 0.23f; }
             if (map.TryGetValue("BLOCK_RAM", out var br)) { br.lungeDelay = 0.2f; br.lungeTime = 0.17f; }
             if (map.TryGetValue("BLOCK_GEAR", out var bg)) { bg.isProjectile = true; bg.projectileKind = ProjectileKind.Gear; bg.projectileSpeed = 10f; bg.projectileRadius = 0.3f; bg.projectileHoming = 25f; }
+            foreach (var id in new[] { "SEAL_BUMP", "SEAL_BUBBLE" }) if (map.TryGetValue(id, out var ss)) ss.subject = IllustrationSubject.Seal;
+            Look("SEAL_BUMP", SkillAttribute.Blue, SkillMotif.Rush); Look("SEAL_BUBBLE", SkillAttribute.Blue, SkillMotif.Throw);
+            if (map.TryGetValue("SEAL_BUMP", out var sb)) { sb.lungeDelay = 0.15f; sb.lungeTime = 0.2f; }
+            if (map.TryGetValue("SEAL_BUBBLE", out var sbb)) { sbb.isProjectile = true; sbb.projectileKind = ProjectileKind.Bubble; sbb.projectileSpeed = 9f; sbb.projectileRadius = 0.25f; sbb.projectileHoming = 40f; }
+            St("SEAL_BUBBLE", StatusType.Sinking, 1, 1);
             St("CUBE_STRETCH", StatusType.PowerDown, 1, 1); St("CUBE_TRIPLE", StatusType.Tremor, 1, 1);
             St("BLOCK_RAM", StatusType.Tremor, 2, 1, 1, 1); St("BLOCK_GEAR", StatusType.Bleed, 1, 2, 1, 1);
             // 에너지: (소비, 명중 시 추가 획득, 진동 폭발)

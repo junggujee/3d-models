@@ -18,12 +18,19 @@ namespace MoominAction
         public float health;
         /// <summary>받는 피해 감소(0.1 = 10%). 여러 개면 곱으로 겹침.</summary>
         public float damageReduction;
+        /// <summary>가드 피해 감소율 +(0.15 → 기본 50% 가 65%)</summary>
+        public float guard;
+        /// <summary>회피 코인 위력 +(구르기 판정이 더 잘 성공)</summary>
+        public int evadePower;
+        /// <summary>이동 속도 +(0.1 = 10%)</summary>
+        public float moveSpeed;
         public static EquipStats operator +(EquipStats a, EquipStats b) => new EquipStats
         {
             finalPower = a.finalPower + b.finalPower, attack = a.attack + b.attack, health = a.health + b.health,
             damageReduction = 1f - (1f - a.damageReduction) * (1f - b.damageReduction),
+            guard = a.guard + b.guard, evadePower = a.evadePower + b.evadePower, moveSpeed = a.moveSpeed + b.moveSpeed,
         };
-        public bool IsEmpty => finalPower == 0 && attack == 0 && health == 0 && damageReduction == 0;
+        public bool IsEmpty => finalPower == 0 && attack == 0 && health == 0 && damageReduction == 0 && guard == 0 && evadePower == 0 && moveSpeed == 0;
     }
 
     /// <summary>
@@ -65,6 +72,9 @@ namespace MoominAction
             if (s.attack != 0) o.Add($"공격력 {(s.attack > 0 ? "+" : "")}{s.attack:0.#}");
             if (s.health != 0) o.Add($"최대 체력 {(s.health > 0 ? "+" : "")}{s.health:0.#}");
             if (s.damageReduction != 0) o.Add($"받는 피해 -{s.damageReduction * 100:0.#}%");
+            if (s.guard != 0) o.Add($"가드 피해 감소 +{s.guard * 100:0.#}%");
+            if (s.evadePower != 0) o.Add($"회피 코인 위력 {(s.evadePower > 0 ? "+" : "")}{s.evadePower}");
+            if (s.moveSpeed != 0) o.Add($"이동 속도 +{s.moveSpeed * 100:0.#}%");
             return o;
         }
 

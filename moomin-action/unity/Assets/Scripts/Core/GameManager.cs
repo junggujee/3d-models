@@ -20,6 +20,7 @@ namespace MoominAction
         /// <summary>웨이브 진행 중(적이 남아 있음) — 이때는 저장 불가.</summary>
         public bool InWave => waveActive;
         [Tooltip("웨이브를 끝낼 때마다 자동 저장 슬롯에 저장")] public bool autoSave = true;
+        [Header("자연")] [Tooltip("땅콩빵(자원) · 야생 하프물범(펫) — 비우면 생성 안 함")] public GameObject peanutPrefab, sealPrefab;
         readonly List<GameObject> alive = new(); float nextWave = 2f; bool waveActive;
 
         void Awake() { Instance = this; }
@@ -48,6 +49,7 @@ namespace MoominAction
             bool hasUi = FindObjectOfType<UI.UIRoot>() != null;
 #endif
             if (!hasUi) { var go = new GameObject("UIRoot"); var ui = go.AddComponent<UI.UIRoot>(); ui.player = player; }
+            if ((peanutPrefab != null || sealPrefab != null) && !TryGetComponent<NatureSpawner>(out _)) { var ns = gameObject.AddComponent<NatureSpawner>(); ns.peanutPrefab = peanutPrefab; ns.sealPrefab = sealPrefab; }   // NavMesh 를 구운 뒤
         }
         public void AddScore(int s) { Score += s; }
         void OnDestroy() { RunStats.Unhook(); if (Instance == this) Instance = null; }

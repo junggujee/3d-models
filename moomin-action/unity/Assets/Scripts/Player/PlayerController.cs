@@ -38,7 +38,7 @@ namespace MoominAction
 
             float mult = cm != null ? cm.MoveMultiplier : 1f;
             bool run = InputAdapter.SprintHeld() && mv.sqrMagnitude > 0.01f && stamina.Current > 1f && mult >= 1f; if (run) stamina.Drain(sprintDrain);
-            float target = (run ? runSpeed : walkSpeed) * mv.magnitude * mult;
+            float target = (run ? runSpeed : walkSpeed) * mv.magnitude * mult * (1f + health.equipMoveSpeed);   // 털 슬리퍼 등
             bool locked = lockOn != null && lockOn.Target != null;
             if (locked && mult > 0f) { Vector3 to = lockOn.Target.transform.position - transform.position; to.y = 0; if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), turnSpeed * Time.deltaTime); }
             else if (dir.sqrMagnitude > 0.001f && mult > 0.4f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), turnSpeed * Time.deltaTime);

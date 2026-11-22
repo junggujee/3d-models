@@ -37,7 +37,7 @@ namespace MoominAction.UI
             }
             WhalePose? wp = null; CubePose? cp = null;
             if (s.subject == IllustrationSubject.Whale) { wp = WhaleScene(s.motif, fx); pose = null; }
-            else if (s.subject == IllustrationSubject.Slime || s.subject == IllustrationSubject.Block) { cp = CubeScene(s.motif, fx, s.subject == IllustrationSubject.Block); pose = null; }
+            else if (s.subject == IllustrationSubject.Slime || s.subject == IllustrationSubject.Block || s.subject == IllustrationSubject.Seal) { var cc = CubeScene(s.motif, fx, s.subject == IllustrationSubject.Block); cc.seal = s.subject == IllustrationSubject.Seal; cp = cc; pose = null; }
             else switch (s.motif)
             {
                 case SkillMotif.Slash:
@@ -186,8 +186,8 @@ namespace MoominAction.UI
         // ── 일반 몬스터 실루엣(핑크큐브말랑이 · 그린볼런) — tools/illustration_preview.py 의 cube()/gear() 와 같은 도형
         struct CubePose
         {
-            public float cx, cy, s, sx, sy, tilt; public bool block; public bool gear; public float gx, gy, gr;
-            public CubePose(float cx, float cy, float s, float sx, float sy, float tiltDeg, bool block) { this.cx = cx; this.cy = cy; this.s = s; this.sx = sx; this.sy = sy; tilt = tiltDeg * Mathf.Deg2Rad; this.block = block; gear = false; gx = gy = gr = 0; }
+            public float cx, cy, s, sx, sy, tilt; public bool block, seal; public bool gear; public float gx, gy, gr;
+            public CubePose(float cx, float cy, float s, float sx, float sy, float tiltDeg, bool block) { this.cx = cx; this.cy = cy; this.s = s; this.sx = sx; this.sy = sy; tilt = tiltDeg * Mathf.Deg2Rad; this.block = block; seal = false; gear = false; gx = gy = gr = 0; }
         }
         static Vector2 CP(CubePose c, float lx, float ly) { float ct = Mathf.Cos(c.tilt), st = Mathf.Sin(c.tilt); return new Vector2(c.cx + (lx * c.sx * ct - ly * c.sy * st) * c.s, c.cy + (lx * c.sx * st + ly * c.sy * ct) * c.s); }
         static float SMin(float a, float b, float k) { float h = Mathf.Clamp01(0.5f + 0.5f * (b - a) * k); return b * (1 - h) + a * h - h * (1 - h) / k; }
@@ -196,6 +196,13 @@ namespace MoominAction.UI
         {
             float ct = Mathf.Cos(c.tilt), st = Mathf.Sin(c.tilt), dx = x - c.cx, dy = y - c.cy;
             float u = (dx * ct + dy * st) / (c.s * c.sx), v = (-dx * st + dy * ct) / (c.s * c.sy), k = c.s * Mathf.Min(c.sx, c.sy);
+            if (c.seal)
+            {   // 하프물범 옆모습: 통통한 타원 몸 + 앞·뒤 지느러미(오른쪽을 봄)
+                float d0 = (Mathf.Sqrt(u * u / (.3f * .3f) + (v + .02f) * (v + .02f) / (.19f * .19f)) - 1f) * .19f;
+                d0 = Mathf.Min(d0, (Mathf.Sqrt((u - .08f) * (u - .08f) / (.09f * .09f) + (v + .2f) * (v + .2f) / (.035f * .035f)) - 1f) * .035f);
+                d0 = Mathf.Min(d0, (Mathf.Sqrt((u + .32f) * (u + .32f) / (.08f * .08f) + (v + .08f) * (v + .08f) / (.03f * .03f)) - 1f) * .03f);
+                return d0 * k;
+            }
             if (!c.block)
             {   // 혹 3×3 이 부드럽게 뭉친 네모
                 float d = float.MaxValue;
@@ -256,7 +263,12 @@ namespace MoominAction.UI
             {
                 float d = CubeSdf(x, y, c); float rim = Mathf.Clamp01(1 - Mathf.Abs(d) * H * 0.35f) * Mathf.Clamp01(glow[idx]);
                 if (d < 0) lum[idx] = 0.02f + 0.15f * rim; lum[idx] = Mathf.Max(lum[idx], rim * 0.8f);
-                if (!c.block)
+                if (c.seal)
+                {   // 검은 자수 눈 대신 흰 점 눈(실루엣 위) · 회색 퐁퐁 코
+                    var e = CP(c, .2f, .03f); if ((x - e.x) * (x - e.x) + (y - e.y) * (y - e.y) < (.022f * c.s) * (.022f * c.s)) lum[idx] = 0.92f;
+                    var n = CP(c, .29f, -.04f); if ((x - n.x) * (x - n.x) + (y - n.y) * (y - n.y) < (.03f * c.s) * (.03f * c.s)) lum[idx] = 0.6f;
+                }
+                else if (!c.block)
                 {
                     for (int sg = -1; sg <= 1; sg += 2)
                     {
@@ -270,7 +282,11 @@ namespace MoominAction.UI
                         if (Seg(x, y, a.x, a.y, b.x, b.y, out _) < .012f * c.s) lum[idx] = 0.85f;
                     }
                 }
-                if (c.gear)
+                if (c.gear && c.seal)
+                {   // 날아가는 물방울(밝은 원 + 어두운 반짝임 자리)
+                    float dd = (x - c.gx) * (x - c.gx) + (y - c.gy) * (y - c.gy); if (dd < c.gr * c.gr) lum[idx] = dd < (c.gr * .55f) * (c.gr * .55f) ? 0.75f : 0.92f;
+                }
+                else if (c.gear)
                 {
                     if (GearSdf(x, y, c.gx, c.gy, c.gr) < 0) lum[idx] = 0.9f;
                     if ((x - c.gx) * (x - c.gx) + (y - c.gy) * (y - c.gy) < (c.gr * .3f) * (c.gr * .3f)) lum[idx] = 0.05f;

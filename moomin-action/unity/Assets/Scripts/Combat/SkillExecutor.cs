@@ -30,6 +30,8 @@ namespace MoominAction
         public bool CanCancel => !isExecuting || Phase == SkillPhase.Recovery;   // 회복 구간은 회피·다음 공격으로 취소 가능
         public int CurrentCoin => currentCoin;
         public float PhaseTime => t - stageStart;
+        /// <summary>첫 타격까지 남은 시간(예고 중이면 남은 예고 + hitTime, 아니면 0) — 펫이 맞받아칠 때 맞춤.</summary>
+        public float TimeToFirstHit => isExecuting && Phase == SkillPhase.Windup && CurrentSkill != null ? Mathf.Max(0, CurrentSkill.windup - t) + CurrentSkill.hitTime : 0f;
         public readonly List<AttackContext> results = new();   // 이번 스킬의 공격별 결과(HUD)
 
         public event Action<SkillDefinition> SkillStarted; public event Action<AttackContext> CoinAttacked; public event Action<SkillDefinition, bool> SkillFinished; public event Action<SkillDefinition, string> SkillRefused;

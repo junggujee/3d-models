@@ -14,7 +14,7 @@ namespace MoominAction.UI
         UIRoot ui; GameObject hudRoot, coreRoot; CombatHUD combat; CharacterStats hp; Stamina st; Inventory inv;
         Gauge stBar; VitalBars vitals; Text objective, scoreText, goldText, weaponText;
         Image[] qIcon = new Image[4]; Text[] qCount = new Text[4]; Image flash;
-        Text banner; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver;
+        Text banner; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver; PetHUD pet;
         class Toast { public RectTransform rt; public Text text; public Image icon; public CanvasGroup cg; public float t; }
         readonly List<Toast> toasts = new(); readonly List<Toast> pool = new(); Transform toastParent;
 
@@ -45,7 +45,7 @@ namespace MoominAction.UI
             // 좌하단
             var bl = new Vector2(0, 0);
             goldText = Txt(core.transform, "", 28, UITheme.GoldBright); Set(goldText.rectTransform, bl, bl, bl, new Vector2(44, 70), new Vector2(400, 40));
-            var hint = Txt(core.transform, "Space 회피   좌클릭 공격   우클릭 방어   Q·E·R 스킬   Tab 조준   I 가방   C 장비   M 지도   1~4 퀵슬롯   Esc 휴식", 21, UITheme.Muted); Set(hint.rectTransform, bl, bl, bl, new Vector2(44, 28), new Vector2(980, 34));
+            var hint = Txt(core.transform, "Space 회피   좌클릭 공격   우클릭 방어   Q·E·R 스킬   Tab 조준   I 가방   C 장비   F 상호작용   G 펫   M 지도   1~4   Esc 휴식", 21, UITheme.Muted); Set(hint.rectTransform, bl, bl, bl, new Vector2(44, 28), new Vector2(1100, 34));
             // 획득 알림(우상단)
             var tp = NewRect("Toasts", hudRoot.transform); Stretch(tp); toastParent = tp;
             // 중앙 배너·피격 번쩍임·쓰러짐
@@ -60,6 +60,7 @@ namespace MoominAction.UI
             gameOver = new GameOverScreen(); gameOver.Build(hudRoot.transform, hp);   // 쓰러짐 띠 → 결과 화면(맨 위에 그려지게 마지막에)
             hp.Died += gameOver.Show;
             SaveSystem.Saved += OnSaved;
+            pet = new PetHUD(); pet.Build(core.transform, hudRoot.transform); PetSeal.Notice += OnPetNotice;
         }
 
         void OnPicked(ItemDef d, int n) { if (d == null) Toast_Item(null, "금화  +" + n); else Toast_Item(d, d.name + (n > 1 ? "  ×" + n : "")); }
@@ -79,7 +80,8 @@ namespace MoominAction.UI
         }
 
         void OnSaved(int slot) => Toast_Text(slot == SaveFormat.AutoSlot ? "자동 저장했다" : SaveFormat.SlotName(slot) + "에 저장했다");
-        public void Dispose() { combat?.Dispose(); SaveSystem.Saved -= OnSaved; }
+        void OnPetNotice(string m) => Toast_Text(m);
+        public void Dispose() { combat?.Dispose(); SaveSystem.Saved -= OnSaved; PetSeal.Notice -= OnPetNotice; }
 
         public void Update()
         {
@@ -99,7 +101,7 @@ namespace MoominAction.UI
             // 배너
             if (bannerT > 0) { bannerT -= dt; float k = bannerT / bannerDur, a = Mathf.Clamp01(Mathf.Min(k * 3f, (1f - k) * 5f)); banner.color = new Color(bannerCol.r, bannerCol.g, bannerCol.b, a); } else banner.color = new Color(0, 0, 0, 0);
             flash.color = new Color(.6f, 0, 0, Mathf.MoveTowards(flash.color.a, 0, 0.9f * dt));
-            gameOver.Update(dt);
+            gameOver.Update(dt); pet.Update(dt);
         }
     }
 }

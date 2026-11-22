@@ -65,8 +65,8 @@ namespace MoominAction.UI
             // ── 오른쪽: 능력치
             var sp = Img(P, "Stats", UITheme.Slot, new Color(1, 1, 1, .9f), true); Place(sp.rectTransform, RightX, 112, RightW, 230);
             var st = Txt(sp.transform, "능력치", 28, UITheme.GoldBright, TextAnchor.MiddleLeft, FontStyle.Bold); Place(st.rectTransform, 24, 10, 300, 40);
-            statText = Txt(sp.transform, "", 25, UITheme.Muted, TextAnchor.UpperLeft); Place(statText.rectTransform, 24, 58, 260, 170); statText.lineSpacing = 1.12f;
-            statNums = Txt(sp.transform, "", 25, UITheme.Cream, TextAnchor.UpperLeft); Place(statNums.rectTransform, 210, 58, RightW - 230, 170); statNums.lineSpacing = 1.12f;
+            statText = Txt(sp.transform, "", 23, UITheme.Muted, TextAnchor.UpperLeft); Place(statText.rectTransform, 24, 54, 260, 172); statText.lineSpacing = 1.0f;
+            statNums = Txt(sp.transform, "", 23, UITheme.Cream, TextAnchor.UpperLeft); Place(statNums.rectTransform, 210, 54, RightW - 230, 172); statNums.lineSpacing = 1.0f;
             // ── 장비 목록(고른 칸에 낄 수 있는 것)
             candTitle = Txt(P, "", 26, UITheme.GoldBright, TextAnchor.MiddleLeft, FontStyle.Bold); Place(candTitle.rectTransform, RightX, 356, RightW, 40);
             for (int i = 0; i < CandMax; i++)
@@ -141,11 +141,12 @@ namespace MoominAction.UI
             cpText.text = "전투력  <color=#9BE86A>" + EquipmentMath.CombatPower(stats.Attack, stats.equipFinalPower, stats.maxHealth, stats.equipDamageReduction, lv).ToString("N0") + "</color>";
             // 능력치
             var w = ItemDatabase.Get(inv.equippedWeapon); float wm = w != null ? w.damageMultiplier : 1f;
-            statText.text = "공격력\n코인 최종 위력\n무기 배율\n최대 체력\n받는 피해";
+            statText.text = "공격력\n코인 최종 위력\n무기 배율\n최대 체력\n받는 피해\n장비 보너스";
             statNums.text = $"{stats.Attack:0.#}   <size=20><color=#9E927A>기본 {stats.attack:0.#} · 레벨 +{stats.levelAttack:0.#} · 장비 +{stats.equipAttack:0.#}</color></size>\n"
                           + (stats.equipFinalPower != 0 ? $"<color=#9BE86A>{(stats.equipFinalPower > 0 ? "+" : "")}{stats.equipFinalPower}</color>" : "+0") + "   <size=20><color=#9E927A>공격마다(앞면·뒷면 모두)</color></size>\n"
                           + $"×{wm:0.00}\n{stats.maxHealth:0}" + (stats.equipHealth != 0 ? $"   <size=20><color=#9BE86A>장비 +{stats.equipHealth:0}</color></size>" : "") + "\n"
-                          + (stats.equipDamageReduction > 0 ? $"<color=#9BE86A>-{stats.equipDamageReduction * 100:0.#}%</color>" : "-0%");
+                          + (stats.equipDamageReduction > 0 ? $"<color=#9BE86A>-{stats.equipDamageReduction * 100:0.#}%</color>" : "-0%") + "\n"
+                          + Bonus(stats);
             // 장비 목록
             var slot = Sel.slot; cands.Clear();
             foreach (var s in inv.slots) if (!s.Empty && s.Def != null && s.Def.Equippable && s.Def.Slot == slot && !cands.Contains(s.id)) cands.Add(s.id);
@@ -168,6 +169,14 @@ namespace MoominAction.UI
             if (cur != null && cur.type == ItemType.Weapon) fx.Insert(0, "공격력 ×" + cur.damageMultiplier.ToString("0.00"));
             detailFx.text = string.Join("   ·   ", fx); detailDesc.text = cur != null ? cur.description : "";
             for (int i = 0; i < Inventory.PresetCount; i++) { bool on = i == inv.preset; presetBtn[i].color = on ? new Color(.55f, .75f, 1f) : Color.white; presetTxt[i].color = on ? Color.white : UITheme.Muted; }
+        }
+
+        /// <summary>가드·회피 코인·이동 속도 보너스 한 줄(없으면 "—").</summary>
+        static string Bonus(CharacterStats s)
+        {
+            var o = new List<string>();
+            if (s.equipGuard > 0) o.Add($"가드 +{s.equipGuard * 100:0}%"); if (s.equipEvadePower != 0) o.Add($"회피 코인 +{s.equipEvadePower}"); if (s.equipMoveSpeed > 0) o.Add($"이동 +{s.equipMoveSpeed * 100:0}%");
+            return o.Count > 0 ? "<color=#9BE86A>" + string.Join(" · ", o) + "</color>" : "—";
         }
 
         void EquipCandidate()

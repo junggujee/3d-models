@@ -51,6 +51,9 @@ namespace MoominAction
             }
         }
 
+        /// <summary>지금 주인 대신 공격을 받아 주는 펫(막아서기 중일 때만, PetSeal 이 설정).</summary>
+        public static CharacterStats Interceptor;
+
         /// <summary>투사체가 나가는 곳(검 끝 · 공격 지점 · 몸 앞 가슴 높이).</summary>
         Vector3 LaunchPoint => sparkOrigin ? sparkOrigin.position : attackPoint ? attackPoint.position : transform.position + transform.forward * 0.5f * transform.lossyScale.z + Vector3.up * 0.45f * transform.lossyScale.y;
         /// <summary>조준 대상: 플레이어 = 락온, 적 = 쫓는 대상. 없으면 null(앞으로 직선).</summary>
@@ -96,6 +99,9 @@ namespace MoominAction
             // 단일 공격: 조준 대상(플레이어 = 락온, 적 = 쫓는 대상)이 범위 안이면 그 대상, 아니면 가장 가까운 적 한 명
             CharacterStats want = lockOn != null && lockOn.Target != null ? lockOn.Target.Stats : enemy != null && enemy.Target != null ? enemy.Target.GetComponentInParent<CharacterStats>() : null;
             CharacterStats best = picked.Contains(want) ? want : null; float bd = float.MaxValue;
+            // 막아서기: 펫이 가로막고 있으면(PetSeal) 노리던 대상보다 가까운 펫이 대신 맞음 → 펫 공격이 열려 있으면 합
+            if (Interceptor != null && Interceptor.IsAlive && best != null && Interceptor.team == best.team && picked.Contains(Interceptor)
+                && (Interceptor.transform.position - transform.position).sqrMagnitude <= (best.transform.position - transform.position).sqrMagnitude + 0.3f) best = Interceptor;
             if (best == null) foreach (var t in picked) { float d = (t.transform.position - transform.position).sqrMagnitude; if (d < bd) { bd = d; best = t; } }
             picked.Clear(); picked.Add(best); return picked;
         }

@@ -190,6 +190,7 @@ namespace MoominAction
             for (int i = 0; i < ArtifactCount; i++) if (!string.IsNullOrEmpty(artifacts[i]) && !Contains(artifacts[i])) artifacts[i] = null;
             if (health == null) health = GetComponent<CharacterStats>(); if (health == null) return;
             var t = TotalStats; health.equipAttack = t.attack; health.equipFinalPower = t.finalPower; health.equipDamageReduction = Mathf.Clamp(t.damageReduction, 0f, 0.8f);
+            health.equipGuard = t.guard; health.equipEvadePower = t.evadePower; health.equipMoveSpeed = t.moveSpeed;
             float delta = t.health - health.equipHealth; health.equipHealth = t.health; health.maxHealth = Mathf.Max(1f, health.maxHealth + delta);
             if (!initial && delta > 0) health.currentHealth += delta;
             health.currentHealth = Mathf.Min(health.currentHealth, health.maxHealth);

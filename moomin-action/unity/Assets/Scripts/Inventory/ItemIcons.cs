@@ -45,6 +45,8 @@ namespace MoominAction
                     layers.Add(((x, y) => Mathf.Abs(Ell(.5f, .53f, .3f, .21f, x, y)) - .02f, light)); break;
                 case IconKind.Artifact:   // 빛나는 보석
                     layers.Add(((x, y) => Circ(.5f, .5f, .3f, x, y), new Color(c.r, c.g, c.b, .35f))); layers.Add(((x, y) => Diamond(.5f, .5f, .2f, x, y), c)); layers.Add(((x, y) => Diamond(.46f, .55f, .07f, x, y), light)); break;
+                case IconKind.Peanut:   // 땅콩 모양 조각
+                    layers.Add(((x, y) => Mathf.Min(Ell(.38f, .5f, .2f, .17f, x, y), Ell(.64f, .5f, .2f, .17f, x, y)), c)); layers.Add(((x, y) => Seg(.3f, .58f, .7f, .58f, .012f, x, y), light)); break;
                 case IconKind.Key:
                     layers.Add(((x, y) => Ring(.34f, .64f, .15f, .04f, x, y), c)); layers.Add(((x, y) => Seg(.45f, .53f, .78f, .2f, .035f, x, y), c));
                     layers.Add(((x, y) => Seg(.68f, .3f, .76f, .38f, .03f, x, y), c)); layers.Add(((x, y) => Seg(.6f, .38f, .67f, .45f, .03f, x, y), c)); break;

@@ -9,13 +9,13 @@ namespace MoominAction
     /// <summary>일러스트를 따로 넣지 않았을 때 코드로 그리는 스케치의 동작 종류.</summary>
     public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry, Beam, Leap, Spout, Throw }
     /// <summary>일러스트 주인공 실루엣: 사람(민미·곰 등) / 고래고래.</summary>
-    public enum IllustrationSubject { Humanoid, Whale, Slime, Block }
+    public enum IllustrationSubject { Humanoid, Whale, Slime, Block, Seal }
     /// <summary>광역 모양: 원 = 공격자 중심 반경 areaRadius · 직선 = 앞으로 길이 areaRadius, 폭 areaWidth(빔).</summary>
     public enum AreaShape { Circle, Line }
     /// <summary>코인 판정 순간의 특수 연출(Effects/SkillVfx).</summary>
     public enum SkillVfx { None, WhaleBeam, Shockwave, WaterSpout }
     /// <summary>원거리 투사체 모양(Combat/Projectile 이 코드로 만듦).</summary>
-    public enum ProjectileKind { Gear }
+    public enum ProjectileKind { Gear, Bubble }
 
     public static class SkillAttributes
     {

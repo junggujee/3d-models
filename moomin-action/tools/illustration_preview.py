@@ -70,6 +70,10 @@ def cube(X, Y, c, s, sx, sy, tilt, kind):
     t = math.radians(tilt); ct, st = math.cos(t), math.sin(t); dx, dy = X - c[0], Y - c[1]
     u = (dx * ct + dy * st) / (s * sx); v = (-dx * st + dy * ct) / (s * sy); k = s * min(sx, sy)
     P = lambda lx, ly: (c[0] + (lx * sx * ct - ly * sy * st) * s, c[1] + (lx * sx * st + ly * sy * ct) * s)
+    if kind == "seal":   # 하프물범 옆모습(C# CubeSdf seal 과 같음)
+        d = (np.hypot(u / .3, (v + .02) / .19) - 1) * .19
+        d = np.minimum(d, (np.hypot((u - .08) / .09, (v + .2) / .035) - 1) * .035); d = np.minimum(d, (np.hypot((u + .32) / .08, (v + .08) / .03) - 1) * .03)
+        return d * k, P
     if kind == "slime":
         d = None
         for i in (-1, 0, 1):
@@ -133,7 +137,7 @@ def render(motif, seed, accent, subject="human"):
             arc((fx + .05, .35), .62, .42, 200, 40, .045, 1, .3, n=26)
             for k in range(7): arc((fx + .05 + R(-.05, .05), .35 + R(-.05, .05)), R(.5, .7), R(.32, .48), R(190, 215), R(30, 60), R(.002, .009), R(.5, .9), R(0, 1) > .6)
         pose = None
-    elif subject in ("slime", "block"):   # 일반 몬스터: 핑크큐브말랑이 · 그린볼런
+    elif subject in ("slime", "block", "seal"):   # 일반 몬스터: 핑크큐브말랑이 · 그린볼런 · 펫 하프물범
         kind = subject; G_ = None
         if motif == "Thrust":    # 쭈욱 늘어나 찌르기: 오른쪽으로 길게
             C_ = ((fx + .28, .36), 1.0, 2.1, .68, 0); tip = (fx + .28 + .21 * 2.1, .36)
@@ -188,7 +192,7 @@ def render(motif, seed, accent, subject="human"):
     if W_ is not None: d, _, hole, _ = whale(X, Y, *W_[:3], W_[3], W_[4]); wd = np.full_like(X, 1.0)
     elif C_ is not None:
         d, P = cube(X, Y, C_[0], C_[1], C_[2], C_[3], C_[4], subject); wd = np.full_like(X, 1.0)
-        if subject == "block" and G_ is None: d = np.minimum(d, gear(X, Y, P(.24, 0), .085 * C_[1]))   # 옆에 붙은 톱니
+        if subject == "block" and G_ is None and subject != "seal": d = np.minimum(d, gear(X, Y, P(.24, 0), .085 * C_[1]))   # 옆에 붙은 톱니
     else: d, wd, tip = figure(X, Y, pose, fx, 1.0)
     rim = np.clip(1 - np.abs(d) * H * 0.35, 0, 1) * np.clip(glow, 0, 1)
     lum = np.where(d < 0, 0.02 + 0.15 * rim, lum); lum = np.maximum(lum, rim * 0.8)
@@ -204,6 +208,10 @@ def render(motif, seed, accent, subject="human"):
             t0, t1 = -1 + 2 * k / 14, -1 + 2 * (k + 1) / 14; a, b = P(.11 * t0, -.045 + .035 * t0 * t0), P(.11 * t1, -.045 + .035 * t1 * t1)
             pax, pay = X - a[0], Y - a[1]; bax, bay = b[0] - a[0], b[1] - a[1]; h = np.clip((pax * bax + pay * bay) / max(1e-9, bax * bax + bay * bay), 0, 1)
             lum = np.where(np.hypot(pax - bax * h, pay - bay * h) < .012 * C_[1], 0.85, lum)
+    if C_ is not None and subject == "seal":   # 물범: 흰 점 눈 · 회색 코
+        e = P(.2, .03); lum = np.where(np.hypot(X - e[0], Y - e[1]) < .022 * C_[1], 0.92, lum); n = P(.29, -.04); lum = np.where(np.hypot(X - n[0], Y - n[1]) < .03 * C_[1], 0.6, lum)
+    if G_ is not None and subject == "seal":   # 물방울
+        dd = np.hypot(X - G_[0][0], Y - G_[0][1]); lum = np.where(dd < G_[1], np.where(dd < G_[1] * .55, 0.75, 0.92), lum); G_ = None
     if G_ is not None:   # 날아가는 톱니(밝게, 가운데 구멍은 어둡게)
         gd = gear(X, Y, G_[0], G_[1]); lum = np.where(gd < 0, 0.9, lum); lum = np.where(np.hypot(X - G_[0][0], Y - G_[0][1]) < G_[1] * .3, 0.05, lum)
     vig = np.clip(1 - (np.hypot((X / ASP - .5) * 1.6, (Y - .5) * 1.6) - .5) * 0.9, .5, 1); lum = lum * vig   # 비네트
@@ -229,3 +237,7 @@ if __name__ == "__main__":
     out = Image.new("RGB", (W * 3 + 16, H * 2 + 12), (30, 30, 30))
     for i, (m, sub, ac) in enumerate(MON): out.paste(render(m, 41 + i, ac, sub), (4 + (i % 3) * (W + 4), 4 + (i // 3) * (H + 4)))
     out.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "previews", "monster_skill_illustrations.png"))
+    # 펫 하프물범 기술 2종(몽실 박치기 Rush · 물방울 뿜기 Throw)
+    out = Image.new("RGB", (W * 2 + 12, H + 8), (30, 30, 30))
+    for i, m in enumerate(["Rush", "Throw"]): out.paste(render(m, 61 + i, (51, 115, 242), "seal"), (4 + i * (W + 4), 4))
+    out.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "previews", "seal_skill_illustrations.png"))

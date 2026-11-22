@@ -10,7 +10,7 @@ namespace MoominAction
     /// </summary>
     public class EquipmentVisuals : MonoBehaviour
     {
-        readonly Dictionary<string, GameObject> shown = new();
+        readonly Dictionary<string, List<GameObject>> shown = new();
 
         public static void Sync(Inventory inv)
         {
@@ -23,25 +23,33 @@ namespace MoominAction
         {
             var want = new HashSet<string>();
             foreach (var id in inv.EquippedIds()) { var d = ItemDatabase.Get(id); if (d != null && !string.IsNullOrEmpty(d.model)) want.Add(id); }
-            foreach (var id in new List<string>(shown.Keys)) if (!want.Contains(id)) { if (shown[id] != null) Destroy(shown[id]); shown.Remove(id); }
-            foreach (var id in want) if (!shown.ContainsKey(id) || shown[id] == null) shown[id] = Attach(ItemDatabase.Get(id));
+            foreach (var id in new List<string>(shown.Keys)) if (!want.Contains(id)) { foreach (var g in shown[id]) if (g != null) Destroy(g); shown.Remove(id); }
+            foreach (var id in want)
+            {
+                if (shown.ContainsKey(id)) continue; var d = ItemDatabase.Get(id); var list = new List<GameObject>();
+                foreach (var part in d.model.Split('|'))   // "경로@뼈" 여러 개(예: 슬리퍼 왼쪽@leg.L|오른쪽@leg.R)
+                {
+                    var bits = part.Split('@'); var g = Attach(d, bits[0].Trim(), bits.Length > 1 ? bits[1].Trim() : d.attachBone); if (g != null) list.Add(g);
+                }
+                shown[id] = list;
+            }
         }
 
-        GameObject Attach(ItemDef d)
+        GameObject Attach(ItemDef d, string path, string boneName)
         {
-            var prefab = Resources.Load<GameObject>(d.model); if (prefab == null) { Debug.LogWarning($"[장비] 모델 없음: Resources/{d.model}"); return null; }
+            var prefab = Resources.Load<GameObject>(path); if (prefab == null) { Debug.LogWarning($"[장비] 모델 없음: Resources/{path}"); return null; }
             // 뼈와 그 뼈의 bindpose 를 가진 스킨 메시 찾기
             Transform bone = null; Matrix4x4 bind = Matrix4x4.identity; Transform meshSpace = null;
             foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 var bones = smr.bones; var binds = smr.sharedMesh != null ? smr.sharedMesh.bindposes : null; if (binds == null) continue;
-                for (int i = 0; i < bones.Length && i < binds.Length; i++) if (bones[i] != null && bones[i].name == d.attachBone) { bone = bones[i]; bind = binds[i]; meshSpace = smr.transform; break; }
+                for (int i = 0; i < bones.Length && i < binds.Length; i++) if (bones[i] != null && bones[i].name == boneName) { bone = bones[i]; bind = binds[i]; meshSpace = smr.transform; break; }
                 if (bone != null) break;
             }
-            var go = Instantiate(prefab); go.name = "Equip_" + d.id;
+            var go = Instantiate(prefab); go.name = "Equip_" + d.id + "_" + prefab.name;
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = gameObject.layer;   // 장비 화면 카메라(플레이어 레이어)에 같이 보이게
             foreach (var c in go.GetComponentsInChildren<Collider>(true)) Destroy(c);
-            if (bone == null) { Debug.LogWarning($"[장비] 뼈 '{d.attachBone}' 를 찾지 못해 몸에 그대로 붙임"); go.transform.SetParent(transform, false); return go; }
+            if (bone == null) { Debug.LogWarning($"[장비] 뼈 '{boneName}' 를 찾지 못해 몸에 그대로 붙임"); go.transform.SetParent(transform, false); return go; }
             // 장비 메시(자식)의 '장비 루트 → 메시' 변환 H. 원하는 것: 메시 월드 = 뼈 월드 × bindpose  ⇒  장비 루트(뼈 기준) = bindpose × H⁻¹
             var mf = go.GetComponentInChildren<MeshFilter>(); Matrix4x4 H = mf != null ? go.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix : Matrix4x4.identity;
             Matrix4x4 local = bind * H.inverse;

@@ -48,6 +48,14 @@ namespace MoominAction
             b2w = w2b.inverse;
         }
 
+        /// <summary>Blender 좌표(x, y) → 게임 좌표(높이는 위에서 쏜 레이, 맞지 않으면 0).</summary>
+        public static Vector3 BlenderToWorld(float bx, float by)
+        {
+            Calibrate(); var pos = b2w.MultiplyPoint3x4(new Vector3(bx, by, 0)); pos.y = 0;
+            if (Physics.Raycast(pos + Vector3.up * 400f, Vector3.down, out var hit, 800f)) pos.y = hit.point.y;
+            return pos;
+        }
+
         /// <summary>장소 id(castle·plaza·highland·east·west)의 게임 좌표. 높이는 위에서 아래로 쏜 레이로(맞지 않으면 0). 없으면 false.</summary>
         public static bool TryWorldPosition(string id, out Vector3 pos)
         {

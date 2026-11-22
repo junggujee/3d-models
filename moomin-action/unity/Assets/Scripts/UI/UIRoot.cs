@@ -29,7 +29,7 @@ namespace MoominAction.UI
             inventory = player.GetComponent<Inventory>(); if (inventory == null) inventory = player.gameObject.AddComponent<Inventory>();
             hud = new HUD(); hud.Build(this, canvas.transform);
             pausePage = new PauseMenu(); settingsPage = new SettingsMenu(); inventoryPage = new InventoryMenu();
-            controlsPage = new InfoPage("조작법", new[] { "W A S D / Shift", "Space", "좌클릭", "우클릭", "Q / E / R", "Tab", "I  ·  1~4", "C", "M", "Esc" }, new[] { "이동 / 달리기", "회피 — 회피 코인으로 판정", "일반 공격 (코인 1~2개, 3연타)", "방어 — 피해 감소, 누른 직후는 패링", "연속 베기 · 불꽃 찌르기 · 별빛 난무", "타깃 고정 / 해제", "가방 · 퀵슬롯 사용", "장비(머리·가슴·다리·발·아티팩트)", "지도 펼치기 · 접기", "휴식 메뉴" });
+            controlsPage = new InfoPage("조작법", new[] { "W A S D / Shift", "Space", "좌클릭", "우클릭", "Q / E / R", "Tab", "I  ·  1~4", "C", "F  ·  G", "M", "Esc" }, new[] { "이동 / 달리기", "회피 — 회피 코인으로 판정", "일반 공격 (코인 1~2개, 3연타)", "방어 — 피해 감소, 누른 직후는 패링", "연속 베기 · 불꽃 찌르기 · 별빛 난무", "타깃 고정 / 해제", "가방 · 퀵슬롯 사용", "장비(머리·가슴·다리·발·아티팩트)", "상호작용(물범 길들이기·쓰다듬기) · 펫 기다려/따라와", "지도 펼치기 · 접기", "휴식 메뉴" });
             savePage = new SaveSlotPage(SaveSlotPage.Mode.Save, UITheme.InGame, false); loadPage = new SaveSlotPage(SaveSlotPage.Mode.Load, UITheme.InGame, true);
             equipmentPage = new EquipmentMenu();
             foreach (var pg in new MenuPage[] { pausePage, settingsPage, inventoryPage, controlsPage, savePage, loadPage, equipmentPage }) pg.Build(this, canvas.transform);

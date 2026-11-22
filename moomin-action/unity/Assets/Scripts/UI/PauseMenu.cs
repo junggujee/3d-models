@@ -54,7 +54,7 @@ namespace MoominAction.UI
         {
             base.Build(ui, canvas);
             var dim = UIFactory.Box(canvas, "InfoRoot_" + title, UITheme.Dim); UIFactory.Stretch(dim.rectTransform); dim.raycastTarget = true; root = dim.gameObject;
-            var panel = UIFactory.Panel(root.transform, "Panel", new Vector2(1000, 760)); UIFactory.Header(panel.transform, title, 1000);
+            var panel = UIFactory.Panel(root.transform, "Panel", new Vector2(1040, Mathf.Max(760, 230 + left.Length * 62))); UIFactory.Header(panel.transform, title, 1040);
             for (int i = 0; i < left.Length; i++)
             {
                 var k = UIFactory.Txt(panel.transform, left[i], 32, UITheme.Gold, TextAnchor.MiddleRight); UIFactory.Set(k.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(60, -150 - i * 62), new Vector2(380, 56));

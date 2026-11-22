@@ -210,6 +210,13 @@ namespace MoominAction
     }
 
     /// <summary>처치 보상: 금화 항상, 별조각 40% · 붉은 약병 25% · 불꽃 가루 30% · 은빛 깃털 8% · 무기 3%(보스는 4번 굴리고 무기 25%).</summary>
+    /// <summary>집에서 찾은 장비 5종(이불 로브·각티슈 방패·수면 모자·수면 바지·털 슬리퍼) — 적·땅콩빵에서 가끔.</summary>
+    public static class HomeGear
+    {
+        public static readonly string[] Ids = { "robe_blanket", "shield_tissue", "cap_sleep", "pants_pajama", "slippers_fuzzy" };
+        public static string Random() => Ids[UnityEngine.Random.Range(0, Ids.Length)];
+    }
+
     public static class EnemyLoot
     {
         public static void Drop(Vector3 p, bool boss)
@@ -220,6 +227,7 @@ namespace MoominAction
                 if (Random.value < 0.40f) ItemPickup.Spawn("shard_star", 1, p); if (Random.value < 0.25f) ItemPickup.Spawn("potion_red", 1, p);
                 if (Random.value < 0.30f) ItemPickup.Spawn("dust_fire", Random.Range(1, 4), p); if (Random.value < 0.08f) ItemPickup.Spawn("feather_silver", 1, p);
                 if (Random.value < (boss ? 0.25f : 0.03f)) ItemPickup.Spawn(Random.value < 0.5f ? "sword_ember" : "sword_frost", 1, p);
+                if (Random.value < (boss ? 0.3f : 0.04f)) ItemPickup.Spawn(HomeGear.Random(), 1, p);   // 집에서 찾은 장비
             }
         }
     }

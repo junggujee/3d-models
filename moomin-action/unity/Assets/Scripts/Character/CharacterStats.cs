@@ -19,7 +19,7 @@ namespace MoominAction
         [Header("Health")] public float maxHealth = 100f; public float currentHealth = 100f;
         [Header("Attack")] [Tooltip("기본 공격력. 피해 = 공격력 × (최종 위력 ÷ 10) × 배율 (EquipmentMath.Damage) — 10 이면 예전 공식과 같음")] public float attack = 10f;
         /// <summary>레벨(Experience)·장비(Inventory)가 더하는 값. 장비 체력은 maxHealth 에 이미 더해져 있고 equipHealth 로 기억(저장 시 뺌).</summary>
-        [NonSerialized] public float levelAttack, equipAttack, equipHealth, equipDamageReduction; [NonSerialized] public int equipFinalPower;
+        [NonSerialized] public float levelAttack, equipAttack, equipHealth, equipDamageReduction, equipGuard, equipMoveSpeed; [NonSerialized] public int equipFinalPower, equipEvadePower;
         /// <summary>최종 공격력 = 기본 + 레벨 + 장비.</summary>
         public float Attack => attack + levelAttack + equipAttack;
         [Header("Sanity")] [Tooltip("끄면 침잠이 정신력 대신 StatusEffectManager.OnSinkingWithoutSanity 효과를 줌")] public bool hasSanity = true; public int maxSanity = 45; public int minSanity = -45; public int currentSanity = 0; public float sanityRecoverPerSecond = 3f;

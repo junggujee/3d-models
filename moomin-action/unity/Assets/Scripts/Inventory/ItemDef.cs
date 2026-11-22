@@ -4,7 +4,7 @@ using UnityEngine;
 namespace MoominAction
 {
     public enum ItemType { Consumable, Weapon, Material, Key, Armor, Artifact }
-    public enum IconKind { Potion, Bread, Dust, Shard, Feather, Sword, Key, Headband, Artifact }
+    public enum IconKind { Potion, Bread, Dust, Shard, Feather, Sword, Key, Headband, Artifact, Peanut }
 
     /// <summary>아이템 정의(데이터). 새 아이템은 ItemDatabase 목록에 한 줄 추가하면 됨.</summary>
     public class ItemDef
@@ -13,7 +13,7 @@ namespace MoominAction
         public float heal, stamina;                 // 소모품 효과
         public float damageMultiplier = 1f; public float hue = -1f;   // 무기: 공격력 배율, 칼날 색(-1 = 무지개)
         [Header("장비")] public EquipSlot slot = EquipSlot.None; [Tooltip("등급 S · A · B · C")] public string grade = ""; public EquipStats stats;
-        [Tooltip("몸에 붙는 3D 모양(Resources 경로, 비우면 없음) · 붙는 뼈")] public string model; public string attachBone = "head";
+        [Tooltip("몸에 붙는 3D 모양(Resources 경로, 비우면 없음) · 붙는 뼈. 여러 부품이면 \"경로@뼈|경로@뼈\" (예: 로브 몸통@hips|두건@head)")] public string model; public string attachBone = "head";
         public bool Stackable => type != ItemType.Weapon && type != ItemType.Key && type != ItemType.Armor && type != ItemType.Artifact;
         public bool Equippable => type == ItemType.Weapon || type == ItemType.Armor || type == ItemType.Artifact;
         public EquipSlot Slot => type == ItemType.Weapon ? EquipSlot.Weapon : type == ItemType.Artifact ? EquipSlot.Artifact : slot;
@@ -48,6 +48,25 @@ namespace MoominAction
             Add(new ItemDef { id = "headband_blue", name = "파란 머리띠", type = ItemType.Armor, slot = EquipSlot.Head, grade = "B", icon = IconKind.Headband, color = new Color(0.62f, 0.82f, 0.95f), maxStack = 1, value = 80,
                               stats = new EquipStats { finalPower = 1 }, model = "Equipment/Headband_Blue", attachBone = "head",
                               description = "보송보송한 하늘색 머리띠. 쓰고 있으면 마음이 차분해져 코인을 한 번 더 힘껏 던진다." });
+            // ── 집에서 찾은 장비(blender/build_home_gear.py — 3D 모양·아이콘)
+            Add(new ItemDef { id = "robe_blanket", name = "이불 로브", type = ItemType.Armor, slot = EquipSlot.Chest, grade = "A", icon = IconKind.Artifact, color = new Color(0.66f, 0.6f, 0.85f), maxStack = 1, value = 150,
+                              stats = new EquipStats { health = 25, damageReduction = 0.08f }, model = "Equipment/Robe_Body@hips|Equipment/Robe_Hood@head",
+                              description = "누빔 이불을 통째로 두른 로브. 두건까지 폭 덮으면 웬만한 공격은 푹신하게 받아낸다." });
+            Add(new ItemDef { id = "shield_tissue", name = "각티슈 방패", type = ItemType.Artifact, grade = "B", icon = IconKind.Artifact, color = new Color(0.95f, 0.6f, 0.68f), maxStack = 1, value = 90,
+                              stats = new EquipStats { guard = 0.15f }, model = "Equipment/TissueShield@arm.L",
+                              description = "왼팔에 끼우는 꽃무늬 각티슈 상자. 막을 때 피해를 더 줄여 준다. 급할 땐 한 장 뽑아 쓴다." });
+            Add(new ItemDef { id = "cap_sleep", name = "수면 모자", type = ItemType.Armor, slot = EquipSlot.Head, grade = "C", icon = IconKind.Artifact, color = new Color(0.12f, 0.17f, 0.42f), maxStack = 1, value = 60,
+                              stats = new EquipStats { evadePower = 2 }, model = "Equipment/NightCap@head",
+                              description = "끝에 방울이 달린 남색 고깔. 졸린 듯 흐느적거리는 몸놀림 덕에 구를 때 더 잘 피한다." });
+            Add(new ItemDef { id = "pants_pajama", name = "수면 바지", type = ItemType.Armor, slot = EquipSlot.Legs, grade = "B", icon = IconKind.Artifact, color = new Color(0.42f, 0.62f, 0.9f), maxStack = 1, value = 80,
+                              stats = new EquipStats { health = 15, evadePower = 1 }, model = "Equipment/PajamaShorts@hips",
+                              description = "하늘색 체크무늬 잠옷 반바지. 허리 고무줄이 넉넉해서 움직이기 편하다." });
+            Add(new ItemDef { id = "slippers_fuzzy", name = "털 슬리퍼", type = ItemType.Armor, slot = EquipSlot.Feet, grade = "B", icon = IconKind.Artifact, color = new Color(0.98f, 0.66f, 0.76f), maxStack = 1, value = 80,
+                              stats = new EquipStats { moveSpeed = 0.1f, evadePower = 1 }, model = "Equipment/Slipper_L@leg.L|Equipment/Slipper_R@leg.R",
+                              description = "분홍 털이 복슬복슬한 실내화. 미끄러지듯 빨리 걷게 된다." });
+            // ── 자원
+            Add(new ItemDef { id = "peanut_piece", name = "땅콩빵 조각", type = ItemType.Material, icon = IconKind.Peanut, color = new Color(0.95f, 0.88f, 0.66f), maxStack = 99, value = 6,
+                              description = "땅콩빵을 부수면 나오는 말랑한 조각. 산꼭대기에 많다. 하프물범이 아주 좋아한다(가까이에서 F 로 건네 길들이기)." });
         }
     }
 }
