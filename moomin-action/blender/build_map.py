@@ -320,9 +320,9 @@ def mesh_arrays(me):
     if me.uv_layers.active: me.uv_layers.active.data.foreach_get("uv", uv)
     return co.reshape(-1, 3), lv, lt, uv.reshape(-1, 2), mi
 def build_mesh(name, co, lv, lt, uv, mi, mats, parent):
-    used, inv = np.unique(lv, return_inverse=True); co = co[used]; lv = inv.astype(np.int32)   # 안 쓰는 정점 정리
+    used, inv = np.unique(lv, return_inverse=True); co = co[used]; lv = inv.astype(np.int32).ravel()   # 안 쓰는 정점 정리
     me = bpy.data.meshes.new(name); me.vertices.add(len(co)); me.vertices.foreach_set("co", co.ravel())
-    me.loops.add(len(lv)); me.loops.foreach_set("vertex_index", lv); me.polygons.add(len(lt)); me.polygons.foreach_set("loop_start", np.concatenate([[0], np.cumsum(lt)[:-1]]).astype(np.int32))
+    me.loops.add(len(lv)); me.loops.foreach_set("vertex_index", lv); me.polygons.add(len(lt)); me.polygons.foreach_set("loop_start", (np.cumsum(lt) - lt).astype(np.int32))   # 면이 0개여도 안전
     me.update(calc_edges=True); me.uv_layers.new(name="UVMap").data.foreach_set("uv", uv.ravel())
     for m in mats: me.materials.append(m)
     me.polygons.foreach_set("material_index", mi); me.update()
@@ -330,13 +330,16 @@ def build_mesh(name, co, lv, lt, uv, mi, mats, parent):
 def strip_small(src, name, min_diag, parent):
     """작은 장식 덩어리(창틀·등불·울타리 조각 등, 연결된 면 묶음의 크기 < min_diag m)를 통째로 뺀 사본 — 큰 면에 구멍이 나지 않음."""
     co, lv, lt, uv, mi = mesh_arrays(src.data); nF = len(lt); ls = np.concatenate([[0], np.cumsum(lt)[:-1]])
-    lab = np.arange(len(co))                                       # 정점 묶음 번호(최솟값 전파 = 연결 요소)
+    if nF == 0: return build_mesh(name, co, lv, lt, uv, mi, list(src.data.materials), parent)
+    # 원본(SketchUp)은 면마다 꼭짓점이 따로라서, 번호가 아니라 '위치'(5mm)가 같은 꼭짓점을 같은 점으로 보고 연결 덩어리를 찾음
+    _, pid = np.unique(np.round(co / 0.005).astype(np.int64), axis=0, return_inverse=True); pid = pid.ravel(); plv = pid[lv]
+    lab = np.arange(pid.max() + 1)                                 # 위치 묶음 번호(최솟값 전파 = 연결 요소)
     for _ in range(400):
-        fmin = np.minimum.reduceat(lab[lv], ls); new = lab.copy(); np.minimum.at(new, lv, np.repeat(fmin, lt))
+        fmin = np.minimum.reduceat(lab[plv], ls); new = lab.copy(); np.minimum.at(new, plv, np.repeat(fmin, lt))
         new = new[new]                                             # 경로 압축(빨리 수렴)
         if np.array_equal(new, lab): break
         lab = new
-    comp = lab[lv[ls]]; uniq, ci = np.unique(comp, return_inverse=True)
+    comp = lab[plv[ls]]; uniq, ci = np.unique(comp, return_inverse=True)
     lo = np.full((len(uniq), 3), np.inf, np.float32); hi = np.full((len(uniq), 3), -np.inf, np.float32); vc = np.repeat(ci, lt)
     np.minimum.at(lo, vc, co[lv]); np.maximum.at(hi, vc, co[lv]); keepc = np.linalg.norm(hi - lo, axis=1) >= min_diag
     keep = keepc[ci]
