@@ -85,7 +85,8 @@ namespace MoominAction
         {
             if (s.windup <= 0f) return; HideTelegraph(); Play(string.IsNullOrEmpty(s.windupAnimation) ? "Windup" : s.windupAnimation, 0.1f);
             if (s.vfx == SkillVfx.WhaleBeam) WhaleChargeFx.Play(transform, s.windup);   // 고래빔 기 모으기
-            Color tc = !s.canBeGuarded ? new Color(0.65f, 0.2f, 1f, 0.45f) : !s.canBeClashed ? new Color(0.2f, 0.55f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f);   // 보라 = 방어 불가 · 파랑 = 합 불가 · 빨강 = 일반
+            Color tc = !s.canBeGuarded ? new Color(0.65f, 0.2f, 1f, 0.45f) : !s.canBeClashed ? new Color(0.2f, 0.55f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f);   // 보라 = 방어 불가 · 파랑 = 합 불가 · 빨강 = 일반 · 초록 직선 = 원거리
+            if (s.isProjectile) { tele = TelegraphIndicator.ShowLine(transform, s.range / transform.localScale.z, s.projectileRadius * 2.2f / transform.localScale.x, s.windup, new Color(0.45f, 0.95f, 0.3f, 0.42f)); return; }   // 초록 직선 = 원거리(날아오는 길)
             if (s.isAreaAttack && s.areaShape == AreaShape.Line) { tele = TelegraphIndicator.ShowLine(transform, s.areaRadius / transform.localScale.z, s.areaWidth / transform.localScale.x, s.windup, tc); return; }
             bool aoe = s.isAreaAttack || s.angle >= 360f; float r = (aoe ? s.Reach : Mathf.Max(1f, s.range * 0.6f)) / transform.localScale.x;
             float travel = s.lunge * s.lungeTime * 0.7f;   // 돌진하며 내려찍는 기술(점프)은 착지할 자리에 예고

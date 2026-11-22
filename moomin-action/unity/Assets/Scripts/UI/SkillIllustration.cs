@@ -35,8 +35,9 @@ namespace MoominAction.UI
                 float x = (i + .5f) / W * ASP, y = (j + .5f) / H, dx = x - fx - .35f, dy = y - .5f;
                 lum[j * W + i] += 0.22f * Mathf.Exp(-(dx * dx / .25f + dy * dy / .35f)) * (0.6f + 0.8f * SkillPanelArt.Noise(x * 6, y * 6 + 3));
             }
-            WhalePose? wp = null;
+            WhalePose? wp = null; CubePose? cp = null;
             if (s.subject == IllustrationSubject.Whale) { wp = WhaleScene(s.motif, fx); pose = null; }
+            else if (s.subject == IllustrationSubject.Slime || s.subject == IllustrationSubject.Block) { cp = CubeScene(s.motif, fx, s.subject == IllustrationSubject.Block); pose = null; }
             else switch (s.motif)
             {
                 case SkillMotif.Slash:
@@ -72,7 +73,7 @@ namespace MoominAction.UI
                 if (v > .15f && v < .6f) { float gx = i % 6 - 3f, gy = j % 6 - 3f; v += Mathf.Sqrt(gx * gx + gy * gy) < v * 6f * 0.75f ? .15f : -.08f; }
                 lum[idx] = v;
             }
-            if (wp.HasValue) WhaleFigure(wp.Value); else Figure(pose, fx);
+            if (wp.HasValue) WhaleFigure(wp.Value); else if (cp.HasValue) CubeFigure(cp.Value); else Figure(pose, fx);
             // 색 입히기
             var c = SkillAttributes.ColorOf(s.attribute); var px = new Color[W * H];
             for (int k = 0; k < px.Length; k++)
@@ -178,6 +179,101 @@ namespace MoominAction.UI
                 {
                     float dx = k == 0 ? 0f : k == 1 ? .03f : -.03f, dy = k == 0 ? .05f : k == 1 ? .075f : .07f, rr = (k == 0 ? .018f : .012f) * w.s;
                     float px = hole.x + dx * w.s, py = hole.y + dy * w.s; if ((x - px) * (x - px) + (y - py) * (y - py) < rr * rr) lum[idx] = 0.9f;
+                }
+            });
+        }
+
+        // ── 일반 몬스터 실루엣(핑크큐브말랑이 · 그린볼런) — tools/illustration_preview.py 의 cube()/gear() 와 같은 도형
+        struct CubePose
+        {
+            public float cx, cy, s, sx, sy, tilt; public bool block; public bool gear; public float gx, gy, gr;
+            public CubePose(float cx, float cy, float s, float sx, float sy, float tiltDeg, bool block) { this.cx = cx; this.cy = cy; this.s = s; this.sx = sx; this.sy = sy; tilt = tiltDeg * Mathf.Deg2Rad; this.block = block; gear = false; gx = gy = gr = 0; }
+        }
+        static Vector2 CP(CubePose c, float lx, float ly) { float ct = Mathf.Cos(c.tilt), st = Mathf.Sin(c.tilt); return new Vector2(c.cx + (lx * c.sx * ct - ly * c.sy * st) * c.s, c.cy + (lx * c.sx * st + ly * c.sy * ct) * c.s); }
+        static float SMin(float a, float b, float k) { float h = Mathf.Clamp01(0.5f + 0.5f * (b - a) * k); return b * (1 - h) + a * h - h * (1 - h) / k; }
+        static float BoxD(float u, float v, float hx, float hy) { float qx = Mathf.Abs(u) - hx, qy = Mathf.Abs(v) - hy; return new Vector2(Mathf.Max(qx, 0), Mathf.Max(qy, 0)).magnitude + Mathf.Min(Mathf.Max(qx, qy), 0); }
+        static float CubeSdf(float x, float y, CubePose c)
+        {
+            float ct = Mathf.Cos(c.tilt), st = Mathf.Sin(c.tilt), dx = x - c.cx, dy = y - c.cy;
+            float u = (dx * ct + dy * st) / (c.s * c.sx), v = (-dx * st + dy * ct) / (c.s * c.sy), k = c.s * Mathf.Min(c.sx, c.sy);
+            if (!c.block)
+            {   // 혹 3×3 이 부드럽게 뭉친 네모
+                float d = float.MaxValue;
+                for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) { float e = new Vector2(u - i * .13f, v - j * .13f).magnitude - .085f; d = d == float.MaxValue ? e : SMin(d, e, 40f); }
+                return d * k;
+            }
+            float b = BoxD(u, v, .2f, .2f);
+            for (int i = -1; i <= 1; i += 2) for (int j = -1; j <= 1; j += 2) b = Mathf.Max(b, -BoxD(u - i * .2f, v - j * .2f, .055f, .055f));   // 계단 모서리
+            b = Mathf.Max(b, -BoxD(u, v, .07f, .07f)) * k;                                                                                         // 가운데 구멍
+            if (!c.gear) { var g = CP(c, .24f, 0f); b = Mathf.Min(b, GearSdf(x, y, g.x, g.y, .085f * c.s)); }                                     // 옆에 붙은 톱니
+            return b;
+        }
+        static float GearSdf(float x, float y, float cx, float cy, float r)
+        {
+            float dx = x - cx, dy = y - cy, rr = Mathf.Sqrt(dx * dx + dy * dy), th = Mathf.Atan2(dy, dx);
+            float R = Mathf.Cos(8 * th) > 0.3f ? r : r * .74f; return Mathf.Max(rr - R, -(rr - r * .3f));
+        }
+        /// <summary>일반 몬스터 기술별 연출(획) + 자세. Rush 말랑 박치기 · Thrust 쭈욱 늘이기 · Flurry 통통 연속 · Smash 블럭 박치기 · Throw 톱니 던지기.</summary>
+        static CubePose CubeScene(SkillMotif m, float fx, bool block)
+        {
+            CubePose c;
+            switch (m)
+            {
+                case SkillMotif.Thrust:
+                {
+                    c = new CubePose(fx + .28f, .36f, 1f, 2.1f, .68f, 0f, block); float tx = fx + .28f + .21f * 2.1f, ty = .36f;
+                    for (int k = 0; k < 18; k++) { float y = R(.15f, .75f); Stroke(R(tx - .1f, ASP), y, ASP + .2f, .36f + (y - .36f) * .3f, R(.002f, .008f), R(.4f, .9f), R(0, 1) > .7f ? 1 : 0, true); }
+                    for (int k = 0; k < 12; k++) { float a = R(-70f, 70f) * Mathf.Deg2Rad; Stroke(tx, ty, tx + Mathf.Cos(a) * R(.08f, .22f), ty + Mathf.Sin(a) * R(.08f, .22f), R(.005f, .015f), R(.7f, 1f), R(0, 1) > .6f ? 1 : 0, true); }
+                    break;
+                }
+                case SkillMotif.Flurry:
+                    c = new CubePose(fx + .38f, .5f, .85f, .88f, 1.18f, -6f, block);
+                    for (int k = 0; k < 3; k++) Arc(fx - .45f + k * .3f, .22f, .15f, .2f + k * .03f, 180f, 0f, .012f, .9f, .4f, 16);
+                    for (int k = 0; k < 3; k++) Arc(fx - .3f + k * .3f, .12f, .07f, .02f, 0f, 360f, .006f, .6f, .2f, 12);
+                    break;
+                case SkillMotif.Smash:
+                {
+                    c = new CubePose(fx + .25f, .4f, 1f, 1f, 1f, -22f, block); float ix = fx + .55f, iy = .2f;
+                    for (int k = 0; k < 22; k++) { float a = R(-60f, 120f) * Mathf.Deg2Rad, l = R(.15f, .5f); Stroke(ix, iy, ix + Mathf.Cos(a) * l, iy + Mathf.Sin(a) * l, R(.008f, .03f), R(.6f, 1f), R(0, 1) > .6f ? 1 : 0, true); }
+                    break;
+                }
+                case SkillMotif.Throw:
+                    c = new CubePose(fx - .1f, .38f, .9f, 1f, 1f, 8f, block) { gear = true, gx = fx + .62f, gy = .55f, gr = .09f };
+                    for (int k = 0; k < 16; k++) { float y = R(.42f, .68f), x0 = R(fx + .05f, fx + .5f); Stroke(x0, y, x0 - R(.15f, .45f), y - .04f, R(.002f, .01f), R(.4f, .9f), R(0, 1) > .6f ? 1 : 0, true); }
+                    for (int k = 0; k < 3; k++) { float a0 = R(0f, 90f) + 120f * k; Arc(c.gx, c.gy, .13f + k * .03f, .13f + k * .03f, a0, a0 + 70f, .006f, .9f, .5f, 10); }
+                    break;
+                default:   // Rush: 옆으로 눌리며 들이받음 + 속도선
+                    c = new CubePose(fx + .3f, .4f, 1f, 1.25f, .84f, -8f, block);
+                    for (int k = 0; k < 34; k++) { float y = R(.1f, .9f), x0 = R(0, fx); Stroke(x0, y, x0 - R(.3f, .8f), y, R(.002f, .012f), R(.3f, .9f), R(0, 1) > .75f ? 1 : 0, true); }
+                    break;
+            }
+            return c;
+        }
+        /// <summary>실루엣(검정) + 가장자리 빛. 핑크큐브 = 흰 눈알·검은 눈동자·흰 미소, 던진 톱니 = 밝게(구멍은 어둡게).</summary>
+        static void CubeFigure(CubePose c)
+        {
+            ForBox(0f, 0f, ASP, 1f, (idx, x, y) =>
+            {
+                float d = CubeSdf(x, y, c); float rim = Mathf.Clamp01(1 - Mathf.Abs(d) * H * 0.35f) * Mathf.Clamp01(glow[idx]);
+                if (d < 0) lum[idx] = 0.02f + 0.15f * rim; lum[idx] = Mathf.Max(lum[idx], rim * 0.8f);
+                if (!c.block)
+                {
+                    for (int sg = -1; sg <= 1; sg += 2)
+                    {
+                        var e = CP(c, sg * .052f, .06f); float ex = x - e.x, ey = y - e.y;
+                        if (ex * ex + ey * ey < (.036f * c.s) * (.036f * c.s)) lum[idx] = 0.92f;
+                        if ((ex - .004f) * (ex - .004f) + ey * ey < (.015f * c.s) * (.015f * c.s)) lum[idx] = 0.03f;
+                    }
+                    for (int k = 0; k < 14; k++)
+                    {
+                        float t0 = -1 + 2f * k / 14, t1 = -1 + 2f * (k + 1) / 14; var a = CP(c, .11f * t0, -.045f + .035f * t0 * t0); var b = CP(c, .11f * t1, -.045f + .035f * t1 * t1);
+                        if (Seg(x, y, a.x, a.y, b.x, b.y, out _) < .012f * c.s) lum[idx] = 0.85f;
+                    }
+                }
+                if (c.gear)
+                {
+                    if (GearSdf(x, y, c.gx, c.gy, c.gr) < 0) lum[idx] = 0.9f;
+                    if ((x - c.gx) * (x - c.gx) + (y - c.gy) * (y - c.gy) < (c.gr * .3f) * (c.gr * .3f)) lum[idx] = 0.05f;
                 }
             });
         }

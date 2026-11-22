@@ -26,13 +26,14 @@ namespace MoominAction
         public void ResolveAttack(AttackContext attack, SkillDefinition skill)
         {
             if (skill.vfx != SkillVfx.None) SkillVfxPlayer.Play(skill, transform, attack.isHeads);   // 빔·충격파·물기둥(코인마다 한 번)
+            if (skill.isProjectile) { Projectile.Launch(this, attack, AimTarget(), LaunchPoint); return; }   // 원거리: 맞히는 건 투사체가(ApplyHit)
             Tick(attack, skill);
             if (!attack.isHit && !attack.clashed && sparkOrigin) SparkBurst.Spawn(sparkOrigin.position, transform.forward, 8, 3f, attack.isHeads ? SparkBurst.Gold : (Color?)null);   // 헛스윙
         }
 
         public void Tick(AttackContext attack, SkillDefinition skill)
         {
-            if (attack.cancelled || !stats.IsAlive || (executor != null && executor.Held)) return;
+            if (attack.cancelled || !stats.IsAlive || (executor != null && executor.Held) || skill.isProjectile) return;
             if (!skill.isAreaAttack && attack.hitTargets.Count > 0) return;   // 단일 공격: 이 코인은 이미 한 명에게 판정됨
             foreach (var target in FindTargets(skill))
             {
@@ -41,13 +42,23 @@ namespace MoominAction
                 // 클래시: 양쪽 공격이 동시에 활성화되어 있을 때만
                 var other = target.GetComponent<SkillExecutor>();
                 var theirs = other != null ? other.CurrentAttack : null;
-                if (skill.canBeClashed && theirs != null && theirs.HitboxOpen && !theirs.clashed && !attack.clashed && theirs.skill.canBeClashed && other.resolver.IsTargeting(stats, theirs.skill))
+                if (skill.MeleeClashable && theirs != null && theirs.HitboxOpen && !theirs.clashed && !attack.clashed && theirs.skill.MeleeClashable && other.resolver.IsTargeting(stats, theirs.skill))
                 {
                     ClashManager.Instance.Resolve(attack, theirs);
                     return;   // 이 공격은 합으로 넘어감(결과는 ClashManager 가 연출 뒤 적용)
                 }
                 ApplyHit(attack, target);
             }
+        }
+
+        /// <summary>투사체가 나가는 곳(검 끝 · 공격 지점 · 몸 앞 가슴 높이).</summary>
+        Vector3 LaunchPoint => sparkOrigin ? sparkOrigin.position : attackPoint ? attackPoint.position : transform.position + transform.forward * 0.5f * transform.lossyScale.z + Vector3.up * 0.45f * transform.lossyScale.y;
+        /// <summary>조준 대상: 플레이어 = 락온, 적 = 쫓는 대상. 없으면 null(앞으로 직선).</summary>
+        CharacterStats AimTarget()
+        {
+            if (lockOn != null && lockOn.Target != null) return lockOn.Target.Stats;
+            if (enemy != null && enemy.Target != null) return enemy.Target.GetComponentInParent<CharacterStats>();
+            return null;
         }
 
         /// <summary>직선 광역(빔) 안인가: 앞으로 0 ~ areaRadius, 옆으로 ±areaWidth/2 (+여유).</summary>

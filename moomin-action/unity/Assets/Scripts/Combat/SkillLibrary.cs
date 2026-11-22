@@ -66,6 +66,14 @@ namespace MoominAction
             Add(S("WHALE_FLIPPER", "지느러미 연타", 7, 3, 3, 0.8f, 3f, 0, 0.5f, 0.37f, 0.6f, new[] { "Attack2" }, 3.0f, 110, 4f, windup: 0.45f, lunge: 2f));
             Add(S("WHALE_TAIL", "꼬리 휘두르기", 10, 4, 2, 0.9f, 6f, 0, 0.9f, 0.47f, 0.7f, new[] { "Attack3" }, 3.6f, 360, 8f, windup: 0.55f));
             Add(S("WHALE_SPOUT", "물기둥", 9, 3, 2, 0.8f, 9f, 0, 0.9f, 0.53f, 0.8f, new[] { "Spout" }, 5f, 360, 5f, windup: 0.8f, desc: "숨구멍으로 물기둥을 뿜어 주위를 적신다."));
+            // ── 일반 몬스터 ①: 핑크큐브말랑이(약하고 빠름, 통통 튀며 몸통박치기 · 길게 늘어나 찌르기). 타격 = 클립 11프레임(0.37초)
+            Add(S("CUBE_BOUNCE", "말랑 박치기", 6, 3, 1, 0.7f, 1.6f, 0, 0.5f, 0.37f, 0.6f, new[] { "Attack1" }, 1.5f, 100, 5f, windup: 0.5f, lunge: 6f, desc: "통통 튀어 올라 몸통으로 철퍽 들이받는다."));
+            Add(S("CUBE_STRETCH", "쭈욱 늘이기", 9, 4, 1, 0.8f, 4f, 0, 0.5f, 0.37f, 0.7f, new[] { "Attack2" }, 2.4f, 60, 6f, windup: 0.6f, desc: "몸을 길게 쭈욱 늘여 멀리 있는 상대를 찌른다. 맞으면 힘이 빠진다."));
+            Add(S("CUBE_TRIPLE", "통통 연속 박치기", 5, 2, 3, 0.5f, 6f, 0, 0.8f, 0.37f, 0.6f, new[] { "Attack1" }, 1.6f, 100, 4f, windup: 0.6f, lunge: 4f, desc: "세 번 연달아 통통 튀며 들이받는다."));
+            // ── 일반 몬스터 ②: 그린볼런(단단하고 느림, 블럭 박치기 · 톱니 던지기 = 원거리 투사체)
+            Add(S("BLOCK_RAM", "블럭 박치기", 9, 4, 1, 1.0f, 3.5f, 0, 0.5f, 0.37f, 0.9f, new[] { "Attack1" }, 1.7f, 90, 9f, windup: 0.8f, lunge: 5f, desc: "단단한 몸을 기울여 쿵 들이받는다."));
+            Add(S("BLOCK_GEAR", "톱니 던지기", 7, 3, 2, 0.7f, 5f, 0, 0.8f, 0.37f, 0.7f, new[] { "Attack2" }, 9f, 40, 3f, windup: 0.6f,
+                  desc: "톱니바퀴를 상대에게 날린다(원거리). 근접 공격으로는 합할 수 없고, 다른 원거리 공격과만 공중에서 합한다. 맞으면 베여 출혈."));
             // ── 적(같은 SkillExecutor 사용). windup = 바닥 경고 시간
             Add(S("ENEMY_BUMP", "몸통 박치기", 7, 3, 2, 0.7f, 1.2f, 0, 0.35f, 0.12f, 0.8f, A1, 1.6f, 100, 4f, windup: 0.65f, lunge: 5f));
             Add(S("ENEMY_SLAM", "내려찍기", 9, 4, 2, 0.8f, 4f, 0, 0.45f, 0.15f, 1.1f, A1, 2.0f, 360, 7f, windup: 1.0f, lunge: 1f));
@@ -99,6 +107,17 @@ namespace MoominAction
             St("WHALE_RAM", StatusType.Tremor, 2, 1); St("WHALE_BEAM", StatusType.Sinking, 2, 2, 1, 1); St("WHALE_JUMP", StatusType.Tremor, 3, 1, 1, 1);
             St("WHALE_FLIPPER", StatusType.PowerDown, 1, 1); St("WHALE_SPOUT", StatusType.Sinking, 1, 2);
             Look("SKILL_004", SkillAttribute.Yellow, SkillMotif.Smash);
+            // 일반 몬스터: 핑크큐브(빨강, 말랑이 실루엣) · 그린볼런(초록, 블럭 실루엣)
+            foreach (var id in new[] { "CUBE_BOUNCE", "CUBE_STRETCH", "CUBE_TRIPLE" }) if (map.TryGetValue(id, out var cs)) cs.subject = IllustrationSubject.Slime;
+            foreach (var id in new[] { "BLOCK_RAM", "BLOCK_GEAR" }) if (map.TryGetValue(id, out var bs)) bs.subject = IllustrationSubject.Block;
+            Look("CUBE_BOUNCE", SkillAttribute.Red, SkillMotif.Rush); Look("CUBE_STRETCH", SkillAttribute.Red, SkillMotif.Thrust); Look("CUBE_TRIPLE", SkillAttribute.Orange, SkillMotif.Flurry);
+            Look("BLOCK_RAM", SkillAttribute.Green, SkillMotif.Smash); Look("BLOCK_GEAR", SkillAttribute.Green, SkillMotif.Throw);
+            if (map.TryGetValue("CUBE_BOUNCE", out var cb)) { cb.lungeDelay = 0.13f; cb.lungeTime = 0.23f; }   // 4~11프레임 공중에서 날아감
+            if (map.TryGetValue("CUBE_TRIPLE", out var ct)) { ct.lungeDelay = 0.13f; ct.lungeTime = 0.23f; }
+            if (map.TryGetValue("BLOCK_RAM", out var br)) { br.lungeDelay = 0.2f; br.lungeTime = 0.17f; }
+            if (map.TryGetValue("BLOCK_GEAR", out var bg)) { bg.isProjectile = true; bg.projectileKind = ProjectileKind.Gear; bg.projectileSpeed = 10f; bg.projectileRadius = 0.3f; bg.projectileHoming = 25f; }
+            St("CUBE_STRETCH", StatusType.PowerDown, 1, 1); St("CUBE_TRIPLE", StatusType.Tremor, 1, 1);
+            St("BLOCK_RAM", StatusType.Tremor, 2, 1, 1, 1); St("BLOCK_GEAR", StatusType.Bleed, 1, 2, 1, 1);
             // 에너지: (소비, 명중 시 추가 획득, 진동 폭발)
             Energy("BASIC_1", 0, 4); Energy("BASIC_2", 0, 4); Energy("BASIC_3", 0, 4);
             Energy("SKILL_001", 0, 2); Energy("SKILL_002", 0, 2);

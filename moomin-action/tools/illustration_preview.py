@@ -58,6 +58,35 @@ def whale(X, Y, c, s, tilt, jaw=0.0, curl=0.0):
     for sg in (1, -1): d = np.minimum(d, ell(X, Y, (end[0] - .03 * s, end[1] + sg * .05 * s), .09 * s, .025 * s, ft + sg * 1.0))   # 갈라진 꼬리 지느러미
     return d, P(.5, -.02), P(.16, .15), P(.14, -.12)
 
+def smin(a, b, k=40.0):
+    h = np.clip(0.5 + 0.5 * (b - a) * k, 0, 1); return b * (1 - h) + a * h - h * (1 - h) / k
+
+def boxd(u, v, hx, hy):
+    qx, qy = np.abs(u) - hx, np.abs(v) - hy; return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0)
+
+def cube(X, Y, c, s, sx, sy, tilt, kind):
+    """일반 몬스터 실루엣 SDF(C# SkillIllustration.CubeSdf 와 같음). kind = "slime"(핑크큐브: 혹 3×3 이 뭉친 네모) | "block"(그린볼런: 계단 모서리 + 가운데 구멍 + 오른쪽 톱니).
+    sx·sy = 늘어남(1 이 기본), tilt = 기울기(도, + 반시계). 반환: (sdf, 얼굴 좌표 함수 P(lx, ly))."""
+    t = math.radians(tilt); ct, st = math.cos(t), math.sin(t); dx, dy = X - c[0], Y - c[1]
+    u = (dx * ct + dy * st) / (s * sx); v = (-dx * st + dy * ct) / (s * sy); k = s * min(sx, sy)
+    P = lambda lx, ly: (c[0] + (lx * sx * ct - ly * sy * st) * s, c[1] + (lx * sx * st + ly * sy * ct) * s)
+    if kind == "slime":
+        d = None
+        for i in (-1, 0, 1):
+            for j in (-1, 0, 1):
+                e = np.hypot(u - i * .13, v - j * .13) - .085; d = e if d is None else smin(d, e)
+        return d * k, P
+    d = boxd(u, v, .2, .2)
+    for i in (-1, 1):
+        for j in (-1, 1): d = np.maximum(d, -boxd(u - i * .2, v - j * .2, .055, .055))   # 계단 모서리
+    d = np.maximum(d, -boxd(u, v, .07, .07))                                              # 가운데 구멍
+    return d * k, P
+
+def gear(X, Y, c, r):
+    """톱니바퀴 SDF(이 8개 + 구멍) — 던진 톱니(밝게)."""
+    dx, dy = X - c[0], Y - c[1]; rr = np.hypot(dx, dy); th = np.arctan2(dy, dx)
+    R_ = np.where(np.cos(8 * th) > 0.3, r, r * .74); return np.maximum(rr - R_, -(rr - r * .3))
+
 def render(motif, seed, accent, subject="human"):
     rng = np.random.default_rng(seed); R = lambda a, b: a + rng.random() * (b - a)
     xs = (np.arange(W) + .5) / W * ASP; ys = (np.arange(H) + .5) / H; X, Y = np.meshgrid(xs, ys[::-1])
@@ -76,7 +105,7 @@ def render(motif, seed, accent, subject="human"):
         for k in range(n): stroke(P(k / n), P((k + 1) / n), w * max(.12, math.sin(math.pi * (k + .5) / n)), l, ac, taper=False)
     fx = R(0.45, 0.7)
     lum = lum + 0.22 * np.exp(-((X - fx - 0.35) ** 2 / 0.25 + (Y - 0.5) ** 2 / 0.35)) * (0.6 + 0.8 * noise(X * 6, Y * 6 + 3))   # 연기 같은 밝은 배경(실루엣이 보이게)
-    W_ = None   # 고래 실루엣 설정(figure == "whale")
+    W_ = None; C_ = None; G_ = None   # 고래 · 일반 몬스터 실루엣 설정
     if subject == "whale":
         if motif == "Beam":     # 주둥이를 들고 앞으로 굵은 빛줄기 + 결 + 고리
             W_ = ((fx - .25, .4), 1.0, 14, .45, -.4); _, tip, _, _ = whale(X, Y, *W_[:3], W_[3], W_[4])
@@ -103,6 +132,27 @@ def render(motif, seed, accent, subject="human"):
             W_ = ((fx + .25, .42), .9, 0, .05, .9)
             arc((fx + .05, .35), .62, .42, 200, 40, .045, 1, .3, n=26)
             for k in range(7): arc((fx + .05 + R(-.05, .05), .35 + R(-.05, .05)), R(.5, .7), R(.32, .48), R(190, 215), R(30, 60), R(.002, .009), R(.5, .9), R(0, 1) > .6)
+        pose = None
+    elif subject in ("slime", "block"):   # 일반 몬스터: 핑크큐브말랑이 · 그린볼런
+        kind = subject; G_ = None
+        if motif == "Thrust":    # 쭈욱 늘어나 찌르기: 오른쪽으로 길게
+            C_ = ((fx + .28, .36), 1.0, 2.1, .68, 0); tip = (fx + .28 + .21 * 2.1, .36)
+            for k in range(18): y = R(.15, .75); stroke((R(tip[0] - .1, ASP), y), (ASP + .2, .36 + (y - .36) * .3), R(.002, .008), R(.4, .9), R(0, 1) > .7)
+            for k in range(12): a = math.radians(R(-70, 70)); stroke(tip, (tip[0] + math.cos(a) * R(.08, .22), tip[1] + math.sin(a) * R(.08, .22)), R(.005, .015), R(.7, 1), R(0, 1) > .6)
+        elif motif == "Flurry":  # 통통 연속: 땅 위로 튀어 온 궤적 세 번
+            C_ = ((fx + .38, .5), .85, .88, 1.18, -6)
+            for k in range(3): arc((fx - .45 + k * .3, .22), .15, .2 + k * .03, 180, 0, .012, .9, .4, n=16)
+            for k in range(3): arc((fx - .3 + k * .3, .12), .07, .02, 0, 360, .006, .6, .2, n=12)
+        elif motif == "Smash":   # 블럭 박치기: 앞으로 기울며 쿵 + 충격
+            C_ = ((fx + .25, .4), 1.0, 1, 1, -22); c = (fx + .55, .2)
+            for k in range(22): a = math.radians(R(-60, 120)); l = R(.15, .5); stroke(c, (c[0] + math.cos(a) * l, c[1] + math.sin(a) * l), R(.008, .03), R(.6, 1), R(0, 1) > .6)
+        elif motif == "Throw":   # 톱니 던지기: 블럭이 비틀어 던진 톱니가 빙글 날아감
+            C_ = ((fx - .1, .38), .9, 1, 1, 8); G_ = ((fx + .62, .55), .09)
+            for k in range(16): y = R(.42, .68); x0 = R(fx + .05, fx + .5); stroke((x0, y), (x0 - R(.15, .45), y - .04), R(.002, .01), R(.4, .9), R(0, 1) > .6)
+            for k in range(3): arc(G_[0], .13 + k * .03, .13 + k * .03, R(0, 90) + 120 * k, R(0, 90) + 120 * k + 70, .006, .9, .5, n=10)
+        else:                    # 말랑 박치기(Rush): 옆으로 눌리며 들이받음 + 속도선
+            C_ = ((fx + .3, .4), 1.0, 1.25, .84, -8)
+            for k in range(34): y = R(.1, .9); x0 = R(0, fx); stroke((x0, y), (x0 - R(.3, .8), y), R(.002, .012), R(.3, .9), R(0, 1) > .75)
         pose = None
     elif motif == "Slash":
         pose = (15, 70, 200, -60, -120, 30); arc((fx + 0.5, 0.2), 1.0, 0.75, 180, 75, 0.05, 1, 0.3)
@@ -136,6 +186,9 @@ def render(motif, seed, accent, subject="human"):
     dots = np.hypot(GX, GY) < (lum * cell * 0.75); mid = (lum > .15) & (lum < .6); lum = np.where(mid, np.where(dots, lum + .15, lum - .08), lum)
     # 실루엣(검정) + 가장자리 빛
     if W_ is not None: d, _, hole, _ = whale(X, Y, *W_[:3], W_[3], W_[4]); wd = np.full_like(X, 1.0)
+    elif C_ is not None:
+        d, P = cube(X, Y, C_[0], C_[1], C_[2], C_[3], C_[4], subject); wd = np.full_like(X, 1.0)
+        if subject == "block" and G_ is None: d = np.minimum(d, gear(X, Y, P(.24, 0), .085 * C_[1]))   # 옆에 붙은 톱니
     else: d, wd, tip = figure(X, Y, pose, fx, 1.0)
     rim = np.clip(1 - np.abs(d) * H * 0.35, 0, 1) * np.clip(glow, 0, 1)
     lum = np.where(d < 0, 0.02 + 0.15 * rim, lum); lum = np.maximum(lum, rim * 0.8)
@@ -144,6 +197,15 @@ def render(motif, seed, accent, subject="human"):
         c0, s0, t0 = W_[:3]; tt = math.radians(t0); ex, ey = c0[0] + (.27 * math.cos(tt) - .02 * math.sin(tt)) * s0, c0[1] + (.27 * math.sin(tt) + .02 * math.cos(tt)) * s0
         lum = np.where(np.hypot(X - ex, Y - ey) < .012 * s0, 0.95, lum)
         for dx, dy, rr in ((0, .05, .018), (.03, .075, .012), (-.03, .07, .012)): lum = np.where(np.hypot(X - hole[0] - dx * s0, Y - hole[1] - dy * s0) < rr * s0, 0.9, lum)
+    if C_ is not None and subject == "slime":   # 핑크큐브: 흰 눈알 + 검은 눈동자 + 흰 미소
+        for sg in (-1, 1):
+            e = P(sg * .052, .06); lum = np.where(np.hypot(X - e[0], Y - e[1]) < .036 * C_[1], 0.92, lum); lum = np.where(np.hypot(X - e[0] - .004, Y - e[1]) < .015 * C_[1], 0.03, lum)
+        for k in range(14):
+            t0, t1 = -1 + 2 * k / 14, -1 + 2 * (k + 1) / 14; a, b = P(.11 * t0, -.045 + .035 * t0 * t0), P(.11 * t1, -.045 + .035 * t1 * t1)
+            pax, pay = X - a[0], Y - a[1]; bax, bay = b[0] - a[0], b[1] - a[1]; h = np.clip((pax * bax + pay * bay) / max(1e-9, bax * bax + bay * bay), 0, 1)
+            lum = np.where(np.hypot(pax - bax * h, pay - bay * h) < .012 * C_[1], 0.85, lum)
+    if G_ is not None:   # 날아가는 톱니(밝게, 가운데 구멍은 어둡게)
+        gd = gear(X, Y, G_[0], G_[1]); lum = np.where(gd < 0, 0.9, lum); lum = np.where(np.hypot(X - G_[0][0], Y - G_[0][1]) < G_[1] * .3, 0.05, lum)
     vig = np.clip(1 - (np.hypot((X / ASP - .5) * 1.6, (Y - .5) * 1.6) - .5) * 0.9, .5, 1); lum = lum * vig   # 비네트
     lum = np.clip(lum, 0, 1); acc = np.clip(acc, 0, 1) * (lum > .3) * 0.45      # 속성색은 아주 조금
     rgb = np.stack([lum] * 3, -1) * (1 - acc[..., None] * .8) + np.array(accent)[None, None, :] / 255 * acc[..., None] * np.maximum(lum, .6)[..., None]
@@ -161,3 +223,9 @@ if __name__ == "__main__":
     out = Image.new("RGB", (W * 3 + 16, H * 2 + 12), (30, 30, 30))
     for i, (m, nm, ac) in enumerate(WH): out.paste(render(m, 21 + i, ac, "whale"), (4 + (i % 3) * (W + 4), 4 + (i // 3) * (H + 4)))
     out.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "previews", "whale_skill_illustrations.png"))
+
+    # 일반 몬스터 기술 5종: 핑크큐브말랑이(말랑 박치기 Rush · 쭈욱 늘이기 Thrust · 통통 연속 Flurry) · 그린볼런(블럭 박치기 Smash · 톱니 던지기 Throw)
+    MON = [("Rush", "slime", (219, 41, 51)), ("Thrust", "slime", (219, 41, 51)), ("Flurry", "slime", (242, 140, 38)), ("Smash", "block", (77, 191, 77)), ("Throw", "block", (77, 191, 77))]
+    out = Image.new("RGB", (W * 3 + 16, H * 2 + 12), (30, 30, 30))
+    for i, (m, sub, ac) in enumerate(MON): out.paste(render(m, 41 + i, ac, sub), (4 + (i % 3) * (W + 4), 4 + (i // 3) * (H + 4)))
+    out.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "previews", "monster_skill_illustrations.png"))

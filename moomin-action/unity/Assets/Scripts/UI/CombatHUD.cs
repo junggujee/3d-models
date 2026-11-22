@@ -181,7 +181,7 @@ namespace MoominAction.UI
                     x += 18 + 6 + tIconNums[i].preferredWidth + 18;
                 }
                 var s = t.Executor.CurrentSkill; var brain = t.GetComponent<EnemyBrain>();
-                if (s != null) targetIntent.text = (t.Executor.Phase == SkillPhase.Windup ? "<color=#E06060>예고</color> " : "<color=#E06060>공격</color> ") + $"{s.skillName} · 기본 {s.basePower} · 코인 {s.coinCount}개 +{s.coinPower}" + (!s.canBeGuarded ? "  <color=#B070FF>방어 불가</color>" : "") + (!s.canBeEvaded ? "  <color=#B070FF>회피 불가</color>" : "") + (s.isAreaAttack ? $"  <color=#E8C97A>광역 {s.areaRadius:0.#}m</color>" : "");
+                if (s != null) targetIntent.text = (t.Executor.Phase == SkillPhase.Windup ? "<color=#E06060>예고</color> " : "<color=#E06060>공격</color> ") + $"{s.skillName} · 기본 {s.basePower} · 코인 {s.coinCount}개 +{s.coinPower}" + (!s.canBeGuarded ? "  <color=#B070FF>방어 불가</color>" : "") + (!s.canBeEvaded ? "  <color=#B070FF>회피 불가</color>" : "") + (s.isAreaAttack ? $"  <color=#E8C97A>광역 {s.areaRadius:0.#}m</color>" : "") + (s.isProjectile ? $"  <color=#9BE07A>원거리 {s.range:0.#}m</color>" : "");
                 else targetIntent.text = t.IsStaggered ? "경직" : t.Stats.Guarding ? "방어" : t.IsDodging ? "회피" : brain != null ? brain.LastAction switch { EnemyAction.Approach => "접근", EnemyAction.Attack => "공격 준비", EnemyAction.Guard => "방어", EnemyAction.Dodge => "회피", _ => "관찰" } : "";
                 if (enemyCoinT > 0) enemyCoinT -= dt; targetCoins.text = enemyCoinT > 0 ? "적 코인  " + string.Join("  ", enemyCoins) : "";
                 var cam = Camera.main;

@@ -7,13 +7,15 @@ namespace MoominAction
     /// <summary>스킬 속성(색). 스킬 패널·슬롯·이펙트 색에 쓰임.</summary>
     public enum SkillAttribute { Red, Blue, Yellow, Green, Orange, Purple, Black }
     /// <summary>일러스트를 따로 넣지 않았을 때 코드로 그리는 스케치의 동작 종류.</summary>
-    public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry, Beam, Leap, Spout }
+    public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry, Beam, Leap, Spout, Throw }
     /// <summary>일러스트 주인공 실루엣: 사람(민미·곰 등) / 고래고래.</summary>
-    public enum IllustrationSubject { Humanoid, Whale }
+    public enum IllustrationSubject { Humanoid, Whale, Slime, Block }
     /// <summary>광역 모양: 원 = 공격자 중심 반경 areaRadius · 직선 = 앞으로 길이 areaRadius, 폭 areaWidth(빔).</summary>
     public enum AreaShape { Circle, Line }
     /// <summary>코인 판정 순간의 특수 연출(Effects/SkillVfx).</summary>
     public enum SkillVfx { None, WhaleBeam, Shockwave, WaterSpout }
+    /// <summary>원거리 투사체 모양(Combat/Projectile 이 코드로 만듦).</summary>
+    public enum ProjectileKind { Gear }
 
     public static class SkillAttributes
     {
@@ -66,6 +68,9 @@ namespace MoominAction
         [Tooltip("예고(windup) 동안 재생할 애니메이터 상태(비우면 Windup)")] public string windupAnimation = "";
         [Tooltip("마지막 공격 뒤 회복 구간에 재생할 상태(비우면 그대로)")] public string recoveryAnimation = "";
         [Tooltip("광역 대상 레이어(비우면 CombatResolver.targetMask)")] public LayerMask targetLayers;
+        [Header("Ranged (투사체)")] [Tooltip("켜면 코인마다 투사체를 날림. 근접 공격과는 합하지 않고(일방 공격) 다른 원거리 투사체와만 공중에서 합")] public bool isProjectile;
+        public ProjectileKind projectileKind = ProjectileKind.Gear; [Tooltip("초당 m")] public float projectileSpeed = 11f; [Tooltip("맞는 판정 반지름(m)")] public float projectileRadius = 0.35f;
+        [Tooltip("목표를 따라 꺾는 정도(초당 도) — 0 이면 직선")] public float projectileHoming = 25f;
         [Header("Attack Type")] [FormerlySerializedAs("clashEnabled")] [Tooltip("상대 공격과 겹치면 합")] public bool canBeClashed = true;
         [Header("Defense")] [Tooltip("끄면 가드로 피해를 줄일 수 없음(예전 '방어 불가')")] public bool canBeGuarded = true; [Tooltip("끄면 회피 코인으로 피할 수 없음")] public bool canBeEvaded = true;
 
@@ -104,6 +109,8 @@ namespace MoominAction
         public bool HasAnyStatus { get { foreach (var t in StatusInfo.All) if (InflictsStatus(t)) return true; return false; } }
         /// <summary>공격이 닿는 거리(광역 = 반경, 단일 = range). AI 접근 거리에 사용.</summary>
         public float Reach => isAreaAttack ? areaRadius : range;
+        /// <summary>근접 공격끼리의 합(히트박스가 겹칠 때) 대상인가. 투사체는 근접과 합하지 않음.</summary>
+        public bool MeleeClashable => canBeClashed && !isProjectile;
         public int MinPower => basePower; public int MaxPower => basePower + coinPower;
         public float ExpectedPower(int sanity) => CoinMath.ExpectedPower(basePower, coinPower, sanity);
         public float Duration => windup + (coinCount - 1) * attackInterval + hitTime + activeWindow + recovery;

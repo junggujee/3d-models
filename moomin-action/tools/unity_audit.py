@@ -38,10 +38,13 @@ setup = SRC[os.path.join(A, "Editor", "MoominSetup.cs")]
 controllers = {}   # fbx 이름 → 상태 집합
 for m in re.finditer(r'MakeController\("(\w+)\.fbx",[^,]+,\s*new\[\]\s*\{([^}]*)\}', setup):
     controllers[m.group(1)] = set(re.findall(r'"(\w+)"', m.group(2))) | {"Locomotion"}
+for m in re.finditer(r'MakeController\(n \+ "\.fbx",[^,]+,\s*new\[\]\s*\{([^}]*)\}', setup):   # 여러 모델을 한 번에(foreach n) 만드는 컨트롤러
+    fe = list(re.finditer(r'foreach \(var n in new\[\]\s*\{([^}]*)\}\)', setup[:m.start()]))[-1]
+    for fbx in re.findall(r'"(\w+)"', fe.group(1)): controllers[fbx] = set(re.findall(r'"(\w+)"', m.group(1))) | {"Locomotion"}
 moomin_states = set()
 for m in re.finditer(r'foreach \(var n in new\[\]\s*\{([^}]*)\}\)\s*\{\s*var s = sm\.AddState\(n\)', setup): moomin_states |= set(re.findall(r'"(\w+)"', m.group(1)))
 if moomin_states: controllers.setdefault("Moomin", set()).update(moomin_states | {"Locomotion"})
-glbs = {n: glb_anims(os.path.join(ROOT, "exports", n + ".glb")) for n in ("Moomin", "SleepyBear", "Goraegorae") if os.path.exists(os.path.join(ROOT, "exports", n + ".glb"))}
+glbs = {n: glb_anims(os.path.join(ROOT, "exports", n + ".glb")) for n in ("Moomin", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock") if os.path.exists(os.path.join(ROOT, "exports", n + ".glb"))}
 for fbx, states in controllers.items():
     clips = glbs.get(fbx)
     if clips is None: continue
@@ -50,7 +53,7 @@ for fbx, states in controllers.items():
     for c in ("Idle", "Walk", "Run"):
         if c not in clips: err(f"{fbx} 모델에 블렌드 트리용 '{c}' 애니메이션이 없음")
 lib = SRC[os.path.join(A, "Scripts", "Combat", "SkillLibrary.cs")]
-OWNER = {"BASIC": "Moomin", "SKILL": "Moomin", "HUMAN": "SleepyBear", "WHALE": "Goraegorae"}   # ENEMY/BOSS = 애니메이터 없는 그림자
+OWNER = {"BASIC": "Moomin", "SKILL": "Moomin", "HUMAN": "SleepyBear", "WHALE": "Goraegorae", "CUBE": "PinkCube", "BLOCK": "GreenBlock"}   # ENEMY/BOSS = 애니메이터 없는 그림자
 arrays = dict(re.findall(r'string\[\]\s*([^;]*);', lib) and [(k, v) for k, v in re.findall(r'(\w+)\s*=\s*\{([^}]*)\}', re.findall(r'string\[\][^;]*;', lib)[0])] or [])
 arrays = {k: re.findall(r'"(\w+)"', v) for k, v in arrays.items()}
 for m in re.finditer(r'Add\(S\("(\w+)",\s*"[^"]*",(.*?)\)\);', lib, re.S):

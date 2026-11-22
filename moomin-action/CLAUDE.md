@@ -77,3 +77,9 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 저장 `Core/SaveSystem.cs`(SaveData JSON + jpg, 슬롯 0~2 수동 · 3 자동), 표시 규칙 `Core/SaveFormat.cs`(순수 C#, status_tests). 불러오기 = `SaveSystem.Pending` → `Inventory.Awake`(가방) + `GameManager.Start`(실행 순서 -50, 나머지). 가방은 PlayerPrefs 대신 슬롯에. 저장은 웨이브 사이에만(`SaveSystem.CanSave`).
 - 여정 기록 `Core/RunStats.cs`(처치·합 승패·최고 위력, 저장 파일에 포함). 장소 이름·좌표 `Core/MapPlaces.cs`(월드맵 데이터 + PlayerSpawn 으로 축 맞춤 — WorldMapView 도 이것을 씀).
 - 게임 오버 `UI/GameOverScreen.cs`(HUD 가 만듦): "패배...." 띠 + 눈이 ×× 인 민미 얼굴 → 결과(얼굴은 패널 왼쪽 위로) + 마지막 저장에서 다시/타이틀로. 밝기 상수 ShadeBand·BandFill·ShadeResults(mock 의 SHADE_* 와 같게). 얼굴 그림 = `blender/render_defeat_face.py`(실제 모델, 눈 면 삭제 + 눈 자리 json) → `tools/defeat_face.py`(×× 2D 붓선·아래 흐리게) → `Resources/UI/GameOver/DefeatFace.png`. R 재시작은 없어짐.
+
+## 일반 몬스터 (상세: docs/MONSTERS.md)
+- 핑크큐브말랑이 `blender/build_pink_cube.py`(혹 27개 구에 중심에서 쏜 광선의 부드러운 최댓값 = 몸 표면, 얼굴은 front_y(혹 앞끝 soft-min, **z 는 CZ 기준으로 빼서**)에 붙임, 뼈 root→body(바닥 중심: 눌림·늘어남·숙임)→top(높이로 부드럽게 나눈 위쪽, lag 프레임 늦게 출렁)). 키 목록 → `track()` 부드럽게 이어 매 프레임 키잉. 오돌도돌 = `tools/pebble_normal.py` 노멀 맵(Unity 재질 `MoominSetup.JellyMaterial`).
+- 그린볼런 `blender/build_green_block.py`(판 6개 = 뼈 6개 100%, 겹치지 않게 x 판 전체·y 판 x 안쪽·z 판 x·y 안쪽, 칸 FR 비율, 모서리 칸 STEP 낮춤, 톱니 gear 뼈). Death = 판마다 포물선 + 기울어 납작 착지(death_frame). 재질은 MoominSetup.PlasticMaterial(이름 정확히 일치로 교체 — Block_GreenInner 는 그대로).
+- 원거리 = `SkillDefinition.isProjectile` → `Combat/Projectile.cs`(근접과 합 없음 = `MeleeClashable`, 투사체끼리만 공중 합). 새 원거리 기술은 SkillLibrary 에서 isProjectile + projectile* 값만 넣으면 됨.
+- 프리팹 `MoominSetup.BuildMonster`(애니메이션 있는 일반 몬스터 공용) · 컨트롤러 `BuildMonsterControllers`. 일러스트 subject Slime/Block(C# CubeScene ↔ Python cube()).

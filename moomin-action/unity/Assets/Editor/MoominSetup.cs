@@ -17,7 +17,7 @@ namespace MoominAction.EditorTools
         const string Models = "Assets/Models/", Prefabs = "Assets/Prefabs/", Anims = "Assets/Animations/", Scenes = "Assets/Scenes/";
 
         [MenuItem("Moomin/한 번에 설정 (전부 실행)")]
-        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildWhaleController(); BuildPrefabs(); BuildScene(); BuildTitleScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Title.unity 를 열고 Play! (Main.unity 를 바로 열면 새 게임으로 시작)"); }
+        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildWhaleController(); BuildMonsterControllers(); BuildPrefabs(); BuildScene(); BuildTitleScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Title.unity 를 열고 Play! (Main.unity 를 바로 열면 새 게임으로 시작)"); }
 
         [MenuItem("Moomin/1. FBX 임포트 설정")]
         public static void ConfigureImports()
@@ -54,6 +54,16 @@ namespace MoominAction.EditorTools
                 foreach (var c in wc) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "BeamHold"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
                 whale.clipAnimations = wc; whale.SaveAndReimport();
             }
+            // 일반 몬스터: 핑크큐브말랑이 · 그린볼런(루프 = Idle·Walk·Run·Guard)
+            foreach (var n in new[] { "PinkCube", "GreenBlock" })
+            {
+                if (!(AssetImporter.GetAtPath(Models + n + ".fbx") is ModelImporter mi)) continue;
+                mi.animationType = ModelImporterAnimationType.Generic; mi.importAnimation = true; mi.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                var mc = mi.defaultClipAnimations;
+                foreach (var c in mc) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
+                mi.clipAnimations = mc; mi.SaveAndReimport();
+            }
+            if (AssetImporter.GetAtPath(Models + "Textures/Pebble_Normal.png") is TextureImporter pn) { pn.textureType = TextureImporterType.NormalMap; pn.wrapMode = TextureWrapMode.Repeat; pn.SaveAndReimport(); }   // 핑크큐브 오돌도돌 표면
             // 맵(City.fbx): 애니메이션·카메라·조명 없음, 충돌용으로 읽기 가능, 메시 최적화 · 텍스처: 밉맵 + 2048 + 고품질 압축 + 비스듬히 봐도 선명하게
             foreach (var cg in AssetDatabase.FindAssets("City", new[] { "Assets/City" }))
             if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(cg)) is ModelImporter cityImp)
@@ -97,6 +107,16 @@ namespace MoominAction.EditorTools
             if (AssetImporter.GetAtPath(Models + "Goraegorae.fbx") == null) { Debug.LogWarning("Assets/Models/Goraegorae.fbx 가 없습니다."); return; }
             MakeController("Goraegorae.fbx", Anims + "Goraegorae.controller", new[] { "Windup", "Attack1", "Attack2", "Attack3", "Jump", "BeamCharge", "Beam", "BeamHold", "BeamEnd", "Spout", "Guard", "Dodge", "Hit", "Death" },
                            new[] { "Attack1", "Attack2", "Attack3", "Jump", "BeamEnd", "Spout", "Dodge", "Hit" });
+        }
+
+        [MenuItem("Moomin/2-3. 일반 몬스터(핑크큐브말랑이·그린볼런) Animator 만들기")]
+        public static void BuildMonsterControllers()
+        {
+            foreach (var n in new[] { "PinkCube", "GreenBlock" })
+            {
+                if (AssetImporter.GetAtPath(Models + n + ".fbx") == null) { Debug.LogWarning($"Assets/Models/{n}.fbx 가 없습니다."); continue; }
+                MakeController(n + ".fbx", Anims + n + ".controller", new[] { "Windup", "Attack1", "Attack2", "Guard", "Dodge", "Hit", "Death" }, new[] { "Attack1", "Attack2", "Dodge", "Hit" });
+            }
         }
 
         [MenuItem("Moomin/2. Animator Controller 만들기")]
@@ -218,7 +238,65 @@ namespace MoominAction.EditorTools
                 SetLayer(w, enemyLayer);
                 PrefabUtility.SaveAsPrefabAsset(w, Prefabs + "Goraegorae.prefab"); Object.DestroyImmediate(w);
             }
+            // ── 일반 몬스터 ①: 핑크큐브말랑이(약하고 빠름 · 말랑 박치기 · 쭈욱 늘이기 · 통통 연속) — 1웨이브부터
+            var pink = BuildMonster("PinkCube", "핑크큐브말랑이", SkillAttribute.Red, 40f, 70f, 2.8f, 0.32f, 0.62f, 35, 10, 1, 0, playerMask,
+                                    new[] { "CUBE_BOUNCE", "CUBE_STRETCH", "CUBE_TRIPLE" });
+            if (pink != null) { ApplyMaterial(pink, "Cube_Jelly", JellyMaterial()); Save(pink, "PinkCube"); }
+            // ── 일반 몬스터 ②: 그린볼런(단단하고 느림 · 블럭 박치기 · 톱니 던지기 = 원거리) — 2웨이브부터, 한 웨이브에 2마리까지
+            var green = BuildMonster("GreenBlock", "그린볼런", SkillAttribute.Green, 85f, 140f, 1.5f, 0.36f, 0.66f, 60, 18, 2, 2, playerMask,
+                                     new[] { "BLOCK_GEAR", "BLOCK_RAM" });
+            if (green != null) { ApplyMaterial(green, "Block_Green", PlasticMaterial("GreenBlock_Plastic", new Color(0.08f, 0.5f, 0.06f), 0.82f)); ApplyMaterial(green, "Block_Gear", PlasticMaterial("GreenBlock_Gear", new Color(0.12f, 0.58f, 0.09f), 0.85f)); Save(green, "GreenBlock"); }
             AssetDatabase.SaveAssets();
+            void Save(GameObject g, string n) { SetLayer(g, enemyLayer); PrefabUtility.SaveAsPrefabAsset(g, Prefabs + n + ".prefab"); Object.DestroyImmediate(g); }
+        }
+
+        /// <summary>애니메이션이 있는 일반 몬스터 프리팹(저장은 부른 쪽에서). 반환 null = 모델 없음.</summary>
+        static GameObject BuildMonster(string model, string displayName, SkillAttribute attr, float hp, float stagger, float speed, float radius, float height, int exp, int score,
+                                       int minWave, int maxPerWave, int playerMask, string[] skillIds)
+        {
+            var m = AssetDatabase.LoadAssetAtPath<GameObject>(Models + model + ".fbx"); if (m == null) { Debug.LogWarning($"Assets/Models/{model}.fbx 가 없습니다."); return null; }
+            var g = (GameObject)PrefabUtility.InstantiatePrefab(m); g.name = model;
+            var an = g.GetComponentInChildren<Animator>(); if (an == null) an = g.AddComponent<Animator>();
+            an.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + model + ".controller"); an.applyRootMotion = false;
+            var col = g.AddComponent<CapsuleCollider>(); col.center = new Vector3(0, height * 0.5f, 0); col.radius = radius; col.height = height;
+            var ag = g.AddComponent<UnityEngine.AI.NavMeshAgent>(); ag.radius = radius; ag.height = height; ag.speed = speed; ag.angularSpeed = 0f; ag.stoppingDistance = 1f;
+            var st = g.AddComponent<CharacterStats>(); st.displayName = displayName; st.team = Team.Enemy; st.attribute = attr; st.maxHealth = st.currentHealth = hp; st.invulnerableTime = 0.1f; st.maxStagger = stagger;
+            g.AddComponent<CoinSystem>(); g.AddComponent<StatusEffectManager>(); g.AddComponent<DefenseController>(); g.AddComponent<EnergyManager>(); var rs = g.AddComponent<CombatResolver>(); rs.targetMask = playerMask;
+            var ex = g.AddComponent<SkillExecutor>(); ex.useAnimationEvents = false; ex.animator = an;
+            var ec = g.AddComponent<EnemyCombatController>(); ec.archetype = EnemyArchetype.GroundMonster; ec.animator = an; ec.agent = ag; ec.visual = g.transform; ec.moveSpeed = speed; ec.score = score;
+            ec.expReward = exp; ec.minWave = minWave; ec.maxPerWave = maxPerWave;
+            ec.skills = new System.Collections.Generic.List<SkillDefinition>(); foreach (var id in skillIds) { var sk = SkillAsset(id); if (sk != null) ec.skills.Add(sk); }
+            ec.basicSkill = ec.skills.Count > 0 ? ec.skills[0] : null;
+            g.AddComponent<EnemyBrain>().personality = EnemyPersonality.Grunt;
+            return g;
+        }
+
+        /// <summary>이름이 key 인 재질 칸을 바꿈(FBX 가 만든 재질 대신 손질한 재질).</summary>
+        static void ApplyMaterial(GameObject g, string key, Material mat)
+        {
+            foreach (var r in g.GetComponentsInChildren<Renderer>(true))
+            {
+                var ms = r.sharedMaterials; bool changed = false;
+                for (int i = 0; i < ms.Length; i++) if (ms[i] != null && ms[i].name.Replace(" (Instance)", "") == key) { ms[i] = mat; changed = true; }
+                if (changed) r.sharedMaterials = ms;
+            }
+        }
+        const string Mats = "Assets/Materials/";
+        static Material SaveMat(Material m, string name) { System.IO.Directory.CreateDirectory(Mats); var path = Mats + name + ".mat"; AssetDatabase.DeleteAsset(path); AssetDatabase.CreateAsset(m, path); return m; }
+        /// <summary>핑크큐브 젤리: 진한 분홍 + 매끈한 광택 + 오돌도돌 노멀 맵(타일 6) + 속에서 비치는 듯한 은은한 분홍 빛.</summary>
+        static Material JellyMaterial()
+        {
+            var m = new Material(Shader.Find("Standard")) { name = "PinkCube_Jelly", color = new Color(0.98f, 0.36f, 0.52f) };
+            m.SetFloat("_Glossiness", 0.72f); m.SetFloat("_Metallic", 0f);
+            var nm = AssetDatabase.LoadAssetAtPath<Texture2D>(Models + "Textures/Pebble_Normal.png");
+            if (nm != null) { m.SetTexture("_BumpMap", nm); m.SetFloat("_BumpScale", 0.8f); m.SetTextureScale("_MainTex", new Vector2(6, 6)); m.EnableKeyword("_NORMALMAP"); }
+            m.SetColor("_EmissionColor", new Color(0.22f, 0.03f, 0.08f)); m.EnableKeyword("_EMISSION"); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            return SaveMat(m, "PinkCube_Jelly");
+        }
+        /// <summary>그린볼런: 단단하고 매끈한 플라스틱(높은 광택).</summary>
+        static Material PlasticMaterial(string name, Color c, float gloss)
+        {
+            var m = new Material(Shader.Find("Standard")) { name = name, color = c }; m.SetFloat("_Glossiness", gloss); m.SetFloat("_Metallic", 0f); return SaveMat(m, name);
         }
 
         [MenuItem("Moomin/코인 확률 검증")]
@@ -298,7 +376,7 @@ namespace MoominAction.EditorTools
             player.GetComponent<PlayerController>().cam = camGo.transform;
             var gmGo = new GameObject("GameManager"); var gm = gmGo.AddComponent<GameManager>(); gmGo.AddComponent<NavMeshBaker>(); gmGo.AddComponent<ClashManager>();
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
-            foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
+            foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");
             RegisterScenes();
         }
