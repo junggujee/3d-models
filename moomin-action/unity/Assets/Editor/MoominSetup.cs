@@ -17,7 +17,7 @@ namespace MoominAction.EditorTools
         const string Models = "Assets/Models/", Prefabs = "Assets/Prefabs/", Anims = "Assets/Animations/", Scenes = "Assets/Scenes/";
 
         [MenuItem("Moomin/한 번에 설정 (전부 실행)")]
-        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildWhaleController(); BuildPrefabs(); BuildScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Main.unity 를 열고 Play!"); }
+        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildWhaleController(); BuildPrefabs(); BuildScene(); BuildTitleScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Title.unity 를 열고 Play! (Main.unity 를 바로 열면 새 게임으로 시작)"); }
 
         [MenuItem("Moomin/1. FBX 임포트 설정")]
         public static void ConfigureImports()
@@ -234,15 +234,13 @@ namespace MoominAction.EditorTools
             Debug.Log(sb.ToString());
         }
 
-        [MenuItem("Moomin/4. 메인 씬 만들기")]
-        public static void BuildScene()
+        /// <summary>해·바닥·맵(Assets/City 의 City_*.fbx → World, 소품 자리, MapTools 규칙)을 지금 씬에 배치. 반환: 시작 위치(PlayerSpawn).</summary>
+        static Vector3 PlaceWorld(out GameObject ground)
         {
-            System.IO.Directory.CreateDirectory(Scenes);
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.2f; sun.shadows = LightShadows.Soft; sun.transform.rotation = Quaternion.Euler(50, -30, 0);
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane); ground.name = "Ground"; ground.transform.localScale = new Vector3(40, 1, 40);
-            // 도시 배경(Assets/City 의 City.fbx 등): 보이는 메시 + 보이지 않는 충돌 메시(City_Collision) + 시작 위치(PlayerSpawn)
             Vector3 spawn = new Vector3(0, 0.1f, 0);
+            var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.2f; sun.shadows = LightShadows.Soft; sun.transform.rotation = Quaternion.Euler(50, -30, 0);
+            ground = GameObject.CreatePrimitive(PrimitiveType.Plane); ground.name = "Ground"; ground.transform.localScale = new Vector3(40, 1, 40);
+            // 도시 배경(Assets/City 의 City.fbx 등): 보이는 메시 + 보이지 않는 충돌 메시(City_Collision) + 시작 위치(PlayerSpawn)
             // 맵: Assets/City 의 City_*.fbx(최적화 맵, 분류별 파일)를 World 아래에 모으고 소품 자리를 만든 뒤 MapTools 규칙 적용. 예전 한 덩어리 City.fbx 도 지원.
             var guids = AssetDatabase.FindAssets("t:GameObject", new[] { "Assets/City" });
             if (guids.Length > 0)
@@ -266,6 +264,35 @@ namespace MoominAction.EditorTools
                 }
                 var sp = Find(world, "PlayerSpawn"); if (sp != null) spawn = sp.position + Vector3.up * 0.1f;
             }
+            return spawn;
+        }
+
+        [MenuItem("Moomin/5. 타이틀 씬 만들기")]
+        public static void BuildTitleScene()
+        {
+            System.IO.Directory.CreateDirectory(Scenes);
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            PlaceWorld(out var ground); Object.DestroyImmediate(ground);   // 타이틀은 걸어 다니지 않음
+            var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)); camGo.tag = "MainCamera"; camGo.AddComponent<TitleCamera>();
+            new GameObject("Title").AddComponent<TitleScreen>();
+            EditorSceneManager.SaveScene(scene, Scenes + "Title.unity"); RegisterScenes();
+            Debug.Log("[Moomin] 타이틀 씬 완성 → Assets/Scenes/Title.unity");
+        }
+
+        /// <summary>빌드 설정: Title(처음) → Main. 있는 씬만.</summary>
+        static void RegisterScenes()
+        {
+            var list = new System.Collections.Generic.List<EditorBuildSettingsScene>();
+            foreach (var n in new[] { "Title", "Main" }) if (System.IO.File.Exists(Scenes + n + ".unity")) list.Add(new EditorBuildSettingsScene(Scenes + n + ".unity", true));
+            EditorBuildSettings.scenes = list.ToArray();
+        }
+
+        [MenuItem("Moomin/4. 메인 씬 만들기")]
+        public static void BuildScene()
+        {
+            System.IO.Directory.CreateDirectory(Scenes);
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var spawn = PlaceWorld(out _);
             var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Player.prefab")); player.transform.position = spawn;
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)); camGo.tag = "MainCamera"; var cam = camGo.AddComponent<ThirdPersonCamera>(); cam.target = player.transform;
             player.GetComponent<PlayerController>().cam = camGo.transform;
@@ -273,7 +300,7 @@ namespace MoominAction.EditorTools
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
             foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Scenes + "Main.unity", true) };
+            RegisterScenes();
         }
     }
 }

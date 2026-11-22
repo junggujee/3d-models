@@ -104,7 +104,9 @@ namespace MoominAction
         {
             skillExecutor.Interrupt(); HideTelegraph(); stats.Guarding = false; deadT = 0f; if (agent && agent.enabled) agent.enabled = false; Play("Death", 0.05f);
             foreach (var c in GetComponents<Collider>()) c.enabled = false;
-            GameManager.Instance?.AddScore(score); if (Experience.Instance != null) Experience.Instance.Gain(expReward); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
+            RunStats.Kills++; if (isBoss || showBossBar) RunStats.BossKills++;
+            if (GameManager.Instance != null) GameManager.Instance.AddScore(score);
+            if (Experience.Instance != null) Experience.Instance.Gain(expReward); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
         }
 
         void Update()

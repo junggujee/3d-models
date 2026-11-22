@@ -155,23 +155,7 @@ namespace MoominAction.UI
         }
         Vector2 ToBlender(Vector3 w) { var p = worldToBlender.MultiplyPoint3x4(w); return new Vector2(p.x, p.y); }
 
-        /// <summary>
-        /// 게임(Unity) 좌표 → 지도를 만든 Blender 좌표. FBX 축 변환(x 뒤집힘·y/z 바뀜)이 설정에 따라 달라서,
-        /// 장면의 PlayerSpawn 위치와 지도 데이터의 spawnBlender 를 맞춰 보며 8가지(축 바꿈 × 부호) 중 가장 잘 맞는 것을 고름.
-        /// </summary>
-        void Calibrate()
-        {
-            calibrated = true; var sp = GameObject.Find("PlayerSpawn");
-            if (sp == null || data.spawnBlender == null) { worldToBlender = Matrix4x4.identity; worldToBlender.SetRow(1, new Vector4(0, 0, 1, 0)); Debug.LogWarning("[WorldMap] PlayerSpawn 이 없어 (x, z) 를 그대로 씁니다."); return; }
-            Vector3 u = sp.transform.position; var want = new Vector2(data.spawnBlender[0], data.spawnBlender[1]); float best = float.MaxValue;
-            for (int swap = 0; swap < 2; swap++) for (int sx = -1; sx <= 1; sx += 2) for (int sy = -1; sy <= 1; sy += 2)
-            {
-                var m = Matrix4x4.zero; m.m33 = 1;
-                if (swap == 0) { m.m00 = sx; m.m12 = sy; } else { m.m02 = sx; m.m10 = sy; }
-                Vector3 p = m.MultiplyPoint3x4(u); float s = new Vector2(p.x, p.y).magnitude > 0.01f ? want.magnitude / new Vector2(p.x, p.y).magnitude : 1f;
-                var ms = Matrix4x4.Scale(new Vector3(s, s, 1)) * m; Vector3 q = ms.MultiplyPoint3x4(u); float err = (new Vector2(q.x, q.y) - want).sqrMagnitude;
-                if (err < best) { best = err; worldToBlender = ms; }
-            }
-        }
+        /// <summary>게임(Unity) 좌표 → 지도를 만든 Blender 좌표. 축 맞추기는 MapPlaces 가 함(PlayerSpawn ↔ spawnBlender).</summary>
+        void Calibrate() { calibrated = true; worldToBlender = MapPlaces.WorldToBlender; }
     }
 }

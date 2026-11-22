@@ -25,7 +25,7 @@ namespace MoominAction.UI
                 new Row { label = "수직 동기화", value = () => GameSettings.VSync ? "켜짐" : "꺼짐", adjust = d => GameSettings.VSync = !GameSettings.VSync },
                 new Row { label = "인터페이스 표시", value = () => GameSettings.ShowHud ? "켜짐" : "꺼짐", adjust = d => GameSettings.ShowHud = !GameSettings.ShowHud },
                 new Row { label = "기본값으로 되돌리기", activate = () => GameSettings.Reset() },
-                new Row { label = "닫기", activate = () => ui.Back() },
+                new Row { label = "닫기", activate = () => host.Back() },
             };
             for (int i = 0; i < rows.Length; i++)
             {

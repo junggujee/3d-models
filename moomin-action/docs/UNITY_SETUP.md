@@ -5,14 +5,15 @@
 1. Unity Hub에서 **새 프로젝트 → "3D (Built-In Render Pipeline)"** 템플릿으로 만든다. Unity 6 또는 2022.3 이상을 권장한다.
    - URP 템플릿이면 모델 재질(Standard 셰이더)이 **분홍색**으로 나온다. URP를 쓰려면 `Window ▸ Rendering ▸ Render Pipeline Converter`로 재질을 변환해야 한다.
 2. 이 저장소의 `moomin-action/unity/Assets` 안의 폴더를 새 프로젝트의 `Assets`에 복사한다.
-   - 대상: `Editor`, `Scripts`, `Models`, `Resources`, `City`
+   - 대상: `Editor`, `Scripts`, `Models`, `Resources`(글꼴·UI 그림 포함), `City`
 3. 메뉴 **Moomin ▸ 한 번에 설정 (전부 실행)**을 누른다. 다음이 차례로 진행된다.
    1. 임포트 설정
    2. 애니메이터
    3. 스킬 에셋
    4. 프리팹
    5. `Assets/Scenes/Main.unity` 생성 + 맵 정리
-4. `Main.unity`를 열고 Play.
+   6. `Assets/Scenes/Title.unity` 생성(타이틀) + 빌드 설정 Title → Main
+4. `Title.unity`를 열고 Play. (`Main.unity`를 바로 열면 새 게임으로 시작)
 5. (선택) 메뉴 **Moomin ▸ 맵 가림 처리 굽기**를 누른다.
 
 ## 오류가 나면

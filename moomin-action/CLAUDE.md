@@ -18,7 +18,7 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - **스태미나**(`Stamina`): 회피·달리기(초당 9) 소모(공격은 이제 스태미나 대신 쿨타임·정신력), 0.7초 후 초당 32 회복.
 - **인벤토리**(`Inventory/`): `ItemDef`/`ItemDatabase`(새 아이템은 목록에 한 줄 추가), 30칸·스택·금화·장착 무기(공격력 배율·칼날 색)·퀵슬롯 4칸·사용/버리기/정렬, PlayerPrefs 저장. 적이 죽으면 `EnemyAI.DropLoot()` → `ItemPickup`(자석처럼 끌려와 자동 획득). 아이콘은 `ItemIcons` 가 코드로 그림(이미지 파일 없음).
 - **UI**(`UI/`, uGUI 를 코드로 생성, 프리팹 없음): `UITheme`(어두운 양피지 + 금박 이중 테두리, 대화 선택지식 » 막대), `UIFactory`, `HUD`, `PauseMenu`(휴식), `SettingsMenu`, `InventoryMenu`, `InfoPage`(조작법), `UIRoot`(입력 라우팅). `GameManager.Start` 가 `UIRoot` 를 자동 생성. 메뉴가 열리면 `UIState.Paused` 로 게임이 멈춤 — **게임플레이 스크립트는 Update 맨 앞에서 `UIState.Paused` 를 확인할 것.**
-- 한글 폰트: `Font.CreateDynamicFontFromOSFont`(나눔명조 → 바탕 → 맑은 고딕 …) 로 OS 폰트 사용. 모든 PC 에서 같은 모양을 원하면 TTF 를 프로젝트에 넣고 `UITheme.Font` 를 바꿀 것.
+- 한글 폰트: `Resources/Fonts/NanumMyeongjo.ttf`(OFL, 라이선스 같은 폴더) 우선, 없으면 OS 폰트(나눔명조 → 바탕 → 맑은 고딕 …). 타이틀 제목은 `UITheme.TitleFont`(나눔명조 ExtraBold).
 - Unity 6(또는 2023.1+) 권장(`FindFirstObjectByType`; 이전 버전은 `#if` 로 대체됨). 새/기존 Input System 모두 지원, UI 는 `com.unity.ugui`(기본 포함) 사용.
 
 ## 코인 전투 — 명세 v2.0 (상세: docs/COMBAT.md)
@@ -69,3 +69,11 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 면 방향: 수직이 아닌 면은 모두 위로(Unity 뒷면 컬링 대비).
 - 성능 함정: bpy.ops.make_single_user·object.join·mesh.materials.append 를 물체 2만 개에 쓰면 제곱으로 느림 → data.copy(), numpy 직접 합치기(merge), 재질 번호는 face 속성 "fmat" 에 저장 후 한 번에.
 - 면 방향: 수직이 아닌 면은 모두 위로(Unity 뒷면 컬링 대비). 남은 문제: 일부 평지붕이 어둡게 보임(원본 어두운 재질 추정, 미확인).
+
+## 타이틀 · 저장 · 게임 오버 (상세: docs/TITLE_SAVE.md)
+- 장면: `Title.unity`(메뉴 5. 타이틀 씬 만들기) → `Main.unity`. 장면 이동은 항상 `SceneFader.Load`(빌드 설정에 없으면 지금 장면 다시 열기).
+- 타이틀 `Title/TitleScreen.cs`(IMenuHost, 메뉴 스택) + `Title/TitleCamera.cs`(성·산지 중심 궤도, 값은 `blender/render_title_bg.py` 와 같음). 그림 `tools/title_art.py` → `Resources/UI/Title/*`, 색 `UITheme.TitleStyle`(Palette). 미리보기 `tools/title_mock.py <렌더 폴더>` → previews/title_mock·save_slots_mock·game_over_mock.png — **TitleScreen·SaveSlotPage·GameOverScreen 배치를 바꾸면 mock 도 같이**.
+- 메뉴 페이지는 `MenuPage.host`(IMenuHost)로 열고 닫음 → 같은 페이지를 게임(UIRoot)·타이틀에서 공용(`BuildFor`). 게임 전용 페이지만 `ui`(UIRoot) 사용.
+- 저장 `Core/SaveSystem.cs`(SaveData JSON + jpg, 슬롯 0~2 수동 · 3 자동), 표시 규칙 `Core/SaveFormat.cs`(순수 C#, status_tests). 불러오기 = `SaveSystem.Pending` → `Inventory.Awake`(가방) + `GameManager.Start`(실행 순서 -50, 나머지). 가방은 PlayerPrefs 대신 슬롯에. 저장은 웨이브 사이에만(`SaveSystem.CanSave`).
+- 여정 기록 `Core/RunStats.cs`(처치·합 승패·최고 위력, 저장 파일에 포함). 장소 이름·좌표 `Core/MapPlaces.cs`(월드맵 데이터 + PlayerSpawn 으로 축 맞춤 — WorldMapView 도 이것을 씀).
+- 게임 오버 `UI/GameOverScreen.cs`(HUD 가 만듦): 쓰러졌다 띠 → 결과 + 마지막 저장에서 다시/타이틀로. R 재시작은 없어짐.

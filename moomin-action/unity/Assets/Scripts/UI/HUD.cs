@@ -7,14 +7,14 @@ namespace MoominAction.UI
 {
     /// <summary>
     /// 전투 화면 HUD: 좌상단 체력(잔상)·스태미나 게이지, 목표 문구, 우하단 다이아몬드 퀵슬롯(1~4), 좌하단 금화·조작 안내,
-    /// 우상단 획득 알림, 중앙 배너(웨이브/처치), 피격 붉은 번쩍임, 쓰러짐 화면.
+    /// 우상단 획득·저장 알림, 중앙 배너(웨이브/처치), 피격 붉은 번쩍임, 쓰러짐 → 결과 화면(GameOverScreen).
     /// </summary>
     public class HUD
     {
         UIRoot ui; GameObject hudRoot, coreRoot; CombatHUD combat; CharacterStats hp; Stamina st; Inventory inv;
         Gauge stBar; VitalBars vitals; Text objective, scoreText, goldText, weaponText;
         Image[] qIcon = new Image[4]; Text[] qCount = new Text[4]; Image flash;
-        Text banner; float bannerT, bannerDur; Color bannerCol; Image deathBand; Text deathText, deathHint; float deathT = -1;
+        Text banner; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver;
         class Toast { public RectTransform rt; public Text text; public Image icon; public CanvasGroup cg; public float t; }
         readonly List<Toast> toasts = new(); readonly List<Toast> pool = new(); Transform toastParent;
 
@@ -51,17 +51,15 @@ namespace MoominAction.UI
             // 중앙 배너·피격 번쩍임·쓰러짐
             flash = Box(hudRoot.transform, "Flash", new Color(.6f, 0, 0, 0)); Stretch(flash.rectTransform);
             banner = Txt(hudRoot.transform, "", 72, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Bold, "Banner"); At(banner.rectTransform, new Vector2(.5f, .62f), Vector2.zero, new Vector2(1600, 120));
-            deathBand = Box(hudRoot.transform, "DeathBand", new Color(0, 0, 0, 0)); At(deathBand.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(4000, 300));
-            deathText = Txt(deathBand.transform, "쓰러졌다", 130, new Color(.72f, .1f, .1f, 0), TextAnchor.MiddleCenter, FontStyle.Bold, "DeathText"); Stretch(deathText.rectTransform);
-            deathHint = Txt(hudRoot.transform, "R   다시 시작", 32, new Color(.9f, .85f, .7f, 0), TextAnchor.MiddleCenter); At(deathHint.rectTransform, new Vector2(.5f, .32f), Vector2.zero, new Vector2(800, 50));
-            deathBand.gameObject.SetActive(false); deathHint.gameObject.SetActive(false);
 
             hp.Damaged += (a, p, k) => flash.color = new Color(.6f, 0, 0, .38f);
             if (inv != null) { inv.Picked += OnPicked; inv.Message += m => Toast_Text(m); }
             var gm = GameManager.Instance; if (gm != null) { gm.WaveStarted += w => Banner("웨이브 " + w, UITheme.Gold, 2.4f); gm.WaveCleared += w => Banner("적을 쓰러뜨렸다", new Color(1f, .86f, .5f), 2.6f); }
             var xp = ui.player.GetComponent<Experience>(); if (xp != null) xp.LeveledUp += lv => Banner("레벨 업!  Lv." + lv, UITheme.GoldBright, 2.2f);
-            hp.Died += () => { deathT = 0; deathBand.gameObject.SetActive(true); deathHint.gameObject.SetActive(true); };
             combat = new CombatHUD(); combat.Build(ui, hudRoot.transform, core);
+            gameOver = new GameOverScreen(); gameOver.Build(hudRoot.transform, hp);   // 쓰러짐 띠 → 결과 화면(맨 위에 그려지게 마지막에)
+            hp.Died += gameOver.Show;
+            SaveSystem.Saved += OnSaved;
         }
 
         void OnPicked(ItemDef d, int n) { if (d == null) Toast_Item(null, "금화  +" + n); else Toast_Item(d, d.name + (n > 1 ? "  ×" + n : "")); }
@@ -80,7 +78,8 @@ namespace MoominAction.UI
             t.t = 3.2f; t.text.text = msg; t.icon.enabled = d != null; t.icon.sprite = d != null ? ItemIcons.Get(d) : null; t.rt.gameObject.SetActive(true); toasts.Insert(0, t); if (toasts.Count > 5) { var old = toasts[toasts.Count - 1]; toasts.RemoveAt(toasts.Count - 1); old.rt.gameObject.SetActive(false); pool.Add(old); }
         }
 
-        public void Dispose() => combat?.Dispose();
+        void OnSaved(int slot) => Toast_Text(slot == SaveFormat.AutoSlot ? "자동 저장했다" : SaveFormat.SlotName(slot) + "에 저장했다");
+        public void Dispose() { combat?.Dispose(); SaveSystem.Saved -= OnSaved; }
 
         public void Update()
         {
@@ -100,7 +99,7 @@ namespace MoominAction.UI
             // 배너
             if (bannerT > 0) { bannerT -= dt; float k = bannerT / bannerDur, a = Mathf.Clamp01(Mathf.Min(k * 3f, (1f - k) * 5f)); banner.color = new Color(bannerCol.r, bannerCol.g, bannerCol.b, a); } else banner.color = new Color(0, 0, 0, 0);
             flash.color = new Color(.6f, 0, 0, Mathf.MoveTowards(flash.color.a, 0, 0.9f * dt));
-            if (deathT >= 0) { deathT += dt; float a = Mathf.Clamp01(deathT / 1.6f); deathBand.color = new Color(0, 0, 0, .75f * a); deathText.color = new Color(.72f, .1f, .1f, a); deathHint.color = new Color(.9f, .85f, .7f, Mathf.Clamp01((deathT - 1.6f) / 0.8f)); }
+            gameOver.Update(dt);
         }
     }
 }

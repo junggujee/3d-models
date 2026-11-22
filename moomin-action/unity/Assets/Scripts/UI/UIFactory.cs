@@ -8,6 +8,23 @@ namespace MoominAction.UI
     /// <summary>uGUI 조립 도우미(프리팹 없이 코드로 UI를 만든다).</summary>
     public static class UIFactory
     {
+        /// <summary>화면 덮개 캔버스(1920×1080 기준 크기 맞춤) + 클릭 판정. EventSystem 이 없으면 함께 만듦.</summary>
+        public static Canvas MakeCanvas(Transform parent, string name, int order)
+        {
+            var cgo = new GameObject(name); cgo.transform.SetParent(parent, false); var canvas = cgo.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = order;
+            var cs = cgo.AddComponent<CanvasScaler>(); cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; cs.referenceResolution = new Vector2(1920, 1080); cs.matchWidthOrHeight = 0.5f; cgo.AddComponent<GraphicRaycaster>();
+            if (EventSystem.current == null)
+            {
+                var es = new GameObject("EventSystem"); es.AddComponent<EventSystem>();
+#if ENABLE_INPUT_SYSTEM
+                es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+#else
+                es.AddComponent<StandaloneInputModule>();
+#endif
+            }
+            return canvas;
+        }
+
         public static RectTransform NewRect(string name, Transform parent) { var go = new GameObject(name, typeof(RectTransform)); go.transform.SetParent(parent, false); return (RectTransform)go.transform; }
         public static RectTransform Set(RectTransform r, Vector2 aMin, Vector2 aMax, Vector2 pivot, Vector2 pos, Vector2 size) { r.anchorMin = aMin; r.anchorMax = aMax; r.pivot = pivot; r.anchoredPosition = pos; r.sizeDelta = size; return r; }
         public static RectTransform Stretch(RectTransform r, float pad = 0) { r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.offsetMin = new Vector2(pad, pad); r.offsetMax = new Vector2(-pad, -pad); return r; }

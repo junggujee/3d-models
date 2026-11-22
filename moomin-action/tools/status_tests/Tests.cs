@@ -86,6 +86,20 @@ static class Tests
         Eq(NumberFormat.Short(39100), "39.1K", "39100 → 39.1K"); Eq(NumberFormat.Short(2_600_000), "2.6M", "2.6M"); Eq(NumberFormat.Short(14_440_000), "14.44M", "14.44M");
         Eq(NumberFormat.Short(9999), "9,999", "9999 → 9,999"); Eq(NumberFormat.Comma(28347), "28,347", "쉼표");
 
+        // ── 저장 슬롯 표시
+        Eq(SaveFormat.SlotName(0), "기록 1", "슬롯 0 이름"); Eq(SaveFormat.SlotName(SaveFormat.AutoSlot), "자동 저장", "자동 저장 이름"); Eq(SaveFormat.FileName(2), "slot3", "파일 이름"); Eq(SaveFormat.FileName(3), "auto", "자동 파일 이름");
+        Eq(SaveFormat.PlayTime(0), "00:00", "0초"); Eq(SaveFormat.PlayTime(65.9), "01:05", "1분 5초(내림)"); Eq(SaveFormat.PlayTime(3 * 3600 + 12 * 60 + 5), "3:12:05", "3시간"); Eq(SaveFormat.PlayTime(-3), "00:00", "음수 → 0"); Eq(SaveFormat.PlayTime(double.NaN), "00:00", "NaN → 0");
+        var utc = new DateTime(2026, 11, 22, 5, 3, 0, DateTimeKind.Utc); string iso = SaveFormat.Stamp(utc); var seoul = TimeZoneInfo.CreateCustomTimeZone("KST", TimeSpan.FromHours(9), "KST", "KST");
+        Eq(SaveFormat.Date(iso, seoul), "2026.11.22 14:03", "UTC → 한국 시각"); Eq(SaveFormat.Date("", seoul), "", "빈 시각"); Eq(SaveFormat.Date("엉망", seoul), "", "읽을 수 없는 시각");
+        Eq(SaveFormat.TryParse(iso, out var back) && back == utc, true, "저장 시각 왕복");
+        Eq(SaveFormat.Ago(iso, utc.AddSeconds(20)), "방금", "20초 전"); Eq(SaveFormat.Ago(iso, utc.AddMinutes(3)), "3분 전", "3분 전"); Eq(SaveFormat.Ago(iso, utc.AddHours(5).AddMinutes(59)), "5시간 전", "5시간 전");
+        Eq(SaveFormat.Ago(iso, utc.AddDays(2)), "2일 전", "2일 전"); Eq(SaveFormat.Ago(iso, utc.AddDays(30), seoul), "2026.11.22 14:03", "일주일 넘으면 날짜");
+        Eq(SaveFormat.WinRate(0, 0), "-", "합 없음"); Eq(SaveFormat.WinRate(8, 5), "62%", "8승 5패"); Eq(SaveFormat.WinRate(1, 1), "50%", "반반"); Eq(SaveFormat.WinRate(2, 0), "100%", "전승");
+        Eq(SaveFormat.Latest(new (int, string)[0]), -1, "저장 없음 → -1");
+        Eq(SaveFormat.Latest(new[] { (0, SaveFormat.Stamp(utc)), (3, SaveFormat.Stamp(utc.AddMinutes(5))), (1, SaveFormat.Stamp(utc.AddMinutes(-9))) }), 3, "가장 최근 = 자동 저장");
+        Eq(SaveFormat.Latest(new[] { (2, "망가짐"), (1, SaveFormat.Stamp(utc)) }), 1, "망가진 시각은 건너뜀");
+        Eq(SaveFormat.Summary(12, "마을 광장", 7), "Lv.12  ·  마을 광장  ·  웨이브 7", "슬롯 요약"); Eq(SaveFormat.Summary(1, "", 0), "Lv.1  ·  여정의 시작", "새 여정 요약");
+
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }

@@ -10,7 +10,8 @@ namespace MoominAction
     public class Inventory : MonoBehaviour
     {
         [Serializable] public class Slot { public string id; public int count; public bool Empty => string.IsNullOrEmpty(id) || count <= 0; public ItemDef Def => ItemDatabase.Get(id); }
-        [Serializable] class Save { public int gold; public List<Slot> slots = new(); public string[] quick = new string[4]; public string weapon; }
+        /// <summary>저장 슬롯에 들어가는 가방 상태(SaveSystem).</summary>
+        [Serializable] public class State { public int gold; public List<Slot> slots = new(); public string[] quick = new string[4]; public string weapon; }
 
         public const int Capacity = 30, QuickCount = 4;
         public Slot[] slots = new Slot[Capacity]; public string[] quick = new string[QuickCount]; public string equippedWeapon = "sword_spark"; public int gold;
@@ -22,10 +23,9 @@ namespace MoominAction
         {
             for (int i = 0; i < Capacity; i++) slots[i] = new Slot();
             health = GetComponent<CharacterStats>(); stamina = GetComponent<Stamina>(); combat = GetComponent<SkillExecutor>();
-            if (!Load()) NewGame();
+            if (SaveSystem.Pending != null && SaveSystem.Pending.inventory != null && SaveSystem.Pending.inventory.slots != null && SaveSystem.Pending.inventory.slots.Count > 0) Import(SaveSystem.Pending.inventory); else NewGame();   // 불러오기면 저장된 가방, 아니면 새 게임
         }
         void Start() { glow = GetComponentInChildren<SwordGlow>(); ApplyWeapon(); }
-        void OnApplicationQuit() { Persist(); }
 
         void NewGame()
         {
@@ -98,12 +98,23 @@ namespace MoominAction
         public void UseQuick(int i) { if (i < 0 || i >= QuickCount || string.IsNullOrEmpty(quick[i])) return; if (!Contains(quick[i])) { Message?.Invoke("남은 것이 없다"); return; } UseItem(quick[i]); }
         public void Sort() { var list = new List<Slot>(); foreach (var s in slots) if (!s.Empty) list.Add(new Slot { id = s.id, count = s.count }); list.Sort((a, b) => { var da = a.Def; var db = b.Def; int t = da.type.CompareTo(db.type); return t != 0 ? t : string.CompareOrdinal(a.id, b.id); }); for (int i = 0; i < Capacity; i++) slots[i] = i < list.Count ? list[i] : new Slot(); Changed?.Invoke(); }
 
-        // ── 저장/불러오기
-        public void Persist() { var sv = new Save { gold = gold, quick = quick, weapon = equippedWeapon }; foreach (var s in slots) sv.slots.Add(new Slot { id = s.id, count = s.count }); PlayerPrefs.SetString(PrefKey, JsonUtility.ToJson(sv)); PlayerPrefs.Save(); }
-        bool Load()
+        // ── 저장/불러오기(저장 슬롯 — SaveSystem 이 Export/Import 를 부름)
+        public State Export() { var sv = new State { gold = gold, quick = (string[])quick.Clone(), weapon = equippedWeapon }; foreach (var s in slots) sv.slots.Add(new Slot { id = s.id, count = s.count }); return sv; }
+        public void Import(State sv)
         {
-            try { var j = PlayerPrefs.GetString(PrefKey, ""); if (string.IsNullOrEmpty(j)) return false; var sv = JsonUtility.FromJson<Save>(j); gold = sv.gold; equippedWeapon = sv.weapon ?? "sword_spark"; if (sv.quick != null) for (int i = 0; i < QuickCount && i < sv.quick.Length; i++) quick[i] = sv.quick[i]; for (int i = 0; i < Capacity && i < sv.slots.Count; i++) { slots[i].id = sv.slots[i].id; slots[i].count = sv.slots[i].count; if (ItemDatabase.Get(slots[i].id) == null) { slots[i].id = null; slots[i].count = 0; } } return true; } catch { return false; }
+            if (sv == null) return;
+            gold = sv.gold; equippedWeapon = string.IsNullOrEmpty(sv.weapon) ? "sword_spark" : sv.weapon;
+            for (int i = 0; i < QuickCount; i++) quick[i] = sv.quick != null && i < sv.quick.Length ? sv.quick[i] : null;
+            for (int i = 0; i < Capacity; i++)
+            {
+                slots[i] = new Slot(); if (sv.slots == null || i >= sv.slots.Count) continue;
+                slots[i].id = sv.slots[i].id; slots[i].count = sv.slots[i].count;
+                if (ItemDatabase.Get(slots[i].id) == null) { slots[i].id = null; slots[i].count = 0; }
+            }
+            if (glow != null) ApplyWeapon(); Changed?.Invoke();
         }
+        /// <summary>예전 버전 호환용(이제 가방은 저장 슬롯에 들어감). 아무것도 하지 않음.</summary>
+        public void Persist() { }
         public static void ClearSave() { PlayerPrefs.DeleteKey(PrefKey); }
     }
 }

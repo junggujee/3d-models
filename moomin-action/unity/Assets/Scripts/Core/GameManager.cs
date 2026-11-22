@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace MoominAction
 {
-    /// <summary>웨이브 스폰·점수·게임오버 상태. UI(HUD/메뉴)는 UIRoot 가 담당하고 이 컴포넌트가 자동 생성함. 쓰러진 뒤 R 키로 재시작.</summary>
+    /// <summary>
+    /// 웨이브 스폰·점수·게임오버 상태. UI(HUD/메뉴)는 UIRoot 가 담당하고 이 컴포넌트가 자동 생성함.
+    /// 불러오기: 시작할 때 SaveSystem.Pending 을 적용(다른 컴포넌트의 Start 보다 먼저 — 카메라가 불러온 위치·방향을 따라가게). 웨이브를 끝낼 때마다 자동 저장.
+    /// 쓰러지면 HUD 의 게임 오버 화면(결과 + 마지막 저장에서 다시 / 타이틀로).
+    /// </summary>
+    [DefaultExecutionOrder(-50)]
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
@@ -13,6 +17,9 @@ namespace MoominAction
         public int Score { get; private set; } public int Wave { get; private set; } public bool IsOver { get; private set; }
         public int EnemiesAlive { get { alive.RemoveAll(g => g == null); return alive.Count; } }
         public event Action<int> WaveStarted, WaveCleared;
+        /// <summary>웨이브 진행 중(적이 남아 있음) — 이때는 저장 불가.</summary>
+        public bool InWave => waveActive;
+        [Tooltip("웨이브를 끝낼 때마다 자동 저장 슬롯에 저장")] public bool autoSave = true;
         readonly List<GameObject> alive = new(); float nextWave = 2f; bool waveActive;
 
         void Awake() { Instance = this; }
@@ -32,6 +39,7 @@ namespace MoominAction
         void Start()
         {
             if (!player) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<CharacterStats>(); }
+            RunStats.Hook(); SaveSystem.ApplyPending(this);
             var baker = GetComponent<NavMeshBaker>(); if (baker == null) baker = gameObject.AddComponent<NavMeshBaker>(); baker.Build();
             if (player) player.Died += () => IsOver = true;
             #if UNITY_2023_1_OR_NEWER
@@ -42,12 +50,21 @@ namespace MoominAction
             if (!hasUi) { var go = new GameObject("UIRoot"); var ui = go.AddComponent<UI.UIRoot>(); ui.player = player; }
         }
         public void AddScore(int s) { Score += s; }
+        void OnDestroy() { RunStats.Unhook(); if (Instance == this) Instance = null; }
+
+        /// <summary>불러오기: 저장된 웨이브까지 끝낸 상태로(다음 웨이브는 잠시 뒤 시작).</summary>
+        public void RestoreProgress(int wave, int score) { Wave = Mathf.Max(0, wave); Score = Mathf.Max(0, score); waveActive = false; nextWave = Time.time + wavePause; }
 
         void Update()
         {
-            if (IsOver) { if (InputAdapter.RestartPressed()) { UIState.Reset(); SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); } return; }
+            if (IsOver) return;
             if (UIState.Paused) return;
-            if (waveActive && EnemiesAlive == 0) { waveActive = false; if (player) player.inCombat = false; WaveCleared?.Invoke(Wave); nextWave = Time.time + wavePause; }
+            SaveSystem.PlayTime += Time.unscaledDeltaTime;
+            if (waveActive && EnemiesAlive == 0)
+            {
+                waveActive = false; if (player) player.inCombat = false; WaveCleared?.Invoke(Wave); nextWave = Time.time + wavePause;
+                if (autoSave && SaveSystem.CanSave(out _)) SaveSystem.Save(SaveFormat.AutoSlot);
+            }
             if (!waveActive && Time.time >= nextWave && enemyPrefab && player) SpawnWave();
         }
 
