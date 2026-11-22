@@ -67,6 +67,10 @@ namespace MoominAction
         public StatusAmount sinkingOnHeads, sinkingOnTails;
         public StatusAmount tremorOnHeads, tremorOnTails;
         [Tooltip("적중 시 대상의 진동을 폭발시켜 경직 게이지 피해")] public bool tremorBurstEnabled;
+        [Header("Coin Power Effects (강도/횟수 — 횟수 = 영향받는 코인 수)")]
+        [Tooltip("적중 시 '자신'에게: 앞면 코인 위력 +강도")] public StatusAmount powerUpOnHeads, powerUpOnTails;
+        [Tooltip("적중 시 상대에게: 앞면 코인 위력 -강도")] public StatusAmount powerDownOnHeads, powerDownOnTails;
+        [Tooltip("적중 시 상대에게: 코인 위력 0 (강도 무시, 횟수만)")] public StatusAmount paralysisOnHeads, paralysisOnTails;
         [Header("Energy")] [Tooltip("사용에 필요한(소비하는) 에너지")] [Min(0)] public int energyCost; [Tooltip("공격이 명중할 때마다 얻는 에너지(기본 명중 보너스에 더해짐)")] [Min(0)] public int energyGain;
         [Header("Hit")] public float range = 2f; public float angle = 120f; public float knockback = 4f; [Tooltip("공격마다 앞으로 미끄러지는 속도")] public float lunge = 0f;
         public CoinEffect coinEffect = CoinEffect.None;
@@ -75,7 +79,9 @@ namespace MoominAction
         public StatusAmount StatusOn(StatusType t, bool heads) => t switch
         {
             StatusType.Bleed => heads ? bleedOnHeads : bleedOnTails, StatusType.Burn => heads ? burnOnHeads : burnOnTails,
-            StatusType.Sinking => heads ? sinkingOnHeads : sinkingOnTails, StatusType.Tremor => heads ? tremorOnHeads : tremorOnTails, _ => default,
+            StatusType.Sinking => heads ? sinkingOnHeads : sinkingOnTails, StatusType.Tremor => heads ? tremorOnHeads : tremorOnTails,
+            StatusType.PowerUp => heads ? powerUpOnHeads : powerUpOnTails, StatusType.PowerDown => heads ? powerDownOnHeads : powerDownOnTails,
+            StatusType.Paralysis => heads ? paralysisOnHeads : paralysisOnTails, _ => default,
         };
         public bool InflictsStatus(StatusType t) => !StatusOn(t, true).IsEmpty || !StatusOn(t, false).IsEmpty;
         public bool HasAnyStatus { get { foreach (var t in StatusInfo.All) if (InflictsStatus(t)) return true; return false; } }

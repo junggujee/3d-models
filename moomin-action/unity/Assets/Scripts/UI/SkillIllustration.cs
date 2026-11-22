@@ -4,7 +4,7 @@ using UnityEngine;
 namespace MoominAction.UI
 {
     /// <summary>
-    /// 스킬 일러스트 v2: 인물 실루엣 + 화려한 빛 연출 + 하프톤 + 먹 번짐 + 속성색 포인트(흑백 만화풍).
+    /// 스킬 일러스트 v3(흑백 먹선풍): 인물 실루엣 + 마른 붓결 빛 획 + 연기·먹 얼룩 바탕 + 흰 먹 튀김 + 하프톤 + 비네트, 속성색은 아주 조금.
     /// SkillDefinition.illustration 에 그림을 넣으면 그 그림을 쓰고, 비어 있으면 motif 로 코드 생성(스킬 id 로 모양이 고정).
     ///   베기 = 큰 빛의 호 · 찌르기 = 광선과 수렴선 · 내려찍기 = 아래서 터지는 가시 폭발 · 돌진 = 가로 속도선 · 연타 = 엇갈린 궤적
     /// 획마다 영향 범위(bbox)만 계산해서 스킬당 수십 ms 안에 그려지고, 한 번 그리면 캐시.
@@ -23,9 +23,18 @@ namespace MoominAction.UI
             if (s == null) return null; if (s.illustration != null) return s.illustration;
             string key = s.skillId + "_" + s.motif + "_" + s.attribute; if (cache.TryGetValue(key, out var sp)) return sp;
             rng = new System.Random(StableHash(s.skillId)); lum = new float[W * H]; glow = new float[W * H]; acc = new float[W * H];
-            for (int j = 0; j < H; j++) for (int i = 0; i < W; i++) lum[j * W + i] = 0.06f + 0.08f * (j + .5f) / H + (float)rng.NextDouble() * 0.03f;
-
+            int seed = StableHash(s.skillId) & 0xff;
+            for (int j = 0; j < H; j++) for (int i = 0; i < W; i++)
+            {
+                float x = (i + .5f) / W * ASP, y = (j + .5f) / H;   // 어두운 종이 + 먹 얼룩 + 거친 입자
+                lum[j * W + i] = 0.13f + 0.08f * y + (float)rng.NextDouble() * 0.05f + (SkillPanelArt.Noise(x * 4 + seed, y * 4) - .5f) * 0.2f + (SkillPanelArt.Noise(x * 13, y * 13 + seed) - .5f) * 0.06f;
+            }
             float fx = R(0.45f, 0.7f); float[] pose;
+            for (int j = 0; j < H; j++) for (int i = 0; i < W; i++)   // 연기 같은 밝은 배경(실루엣이 보이게)
+            {
+                float x = (i + .5f) / W * ASP, y = (j + .5f) / H, dx = x - fx - .35f, dy = y - .5f;
+                lum[j * W + i] += 0.22f * Mathf.Exp(-(dx * dx / .25f + dy * dy / .35f)) * (0.6f + 0.8f * SkillPanelArt.Noise(x * 6, y * 6 + 3));
+            }
             switch (s.motif)
             {
                 case SkillMotif.Slash:
@@ -46,12 +55,18 @@ namespace MoominAction.UI
                     pose = new[] { 20f, 40f, 210f, -55f, -125f, 60f }; for (int k = 0; k < 6; k++) Arc(fx + R(-.2f, .6f), R(.2f, .8f), R(.3f, .6f), R(.3f, .5f), R(0, 360), R(0, 360), R(.006f, .025f), R(.6f, 1f), R(0, 1) > .5f ? 1 : 0, 14);
                     break;
             }
-            // 먹 번짐
-            for (int k = 0; k < 40; k++) { float cx = R(0, ASP), cy = R(0, 1), r = R(.003f, .03f); ForBox(cx - r, cy - r, cx + r, cy + r, (idx, x, y) => { if (Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) < r) lum[idx] = Mathf.Min(lum[idx], 0.03f); }); }
-            // 빛 번짐 합성 + 하프톤
+            // 먹 얼룩(방울 + 주변 작은 튀김)
+            for (int k = 0; k < 18; k++)
+            {
+                float cx = R(0, ASP), cy = R(0, 1), r = R(.006f, .03f);
+                for (int m = 0; m < 6; m++) { float ox = m == 0 ? cx : cx + R(-.08f, .08f), oy = m == 0 ? cy : cy + R(-.06f, .06f), rr = m == 0 ? r : r * R(.12f, .35f); Blot(ox, oy, rr, false); }
+            }
+            // 흰 먹 튀김(연출 쪽에 몰림)
+            for (int k = 0; k < 70; k++) Blot(fx + R(-.3f, 1f), R(.05f, .95f), R(.0015f, .006f), true);
+            // 빛 번짐 합성 + 대비 + 하프톤
             for (int j = 0; j < H; j++) for (int i = 0; i < W; i++)
             {
-                int idx = j * W + i; float v = Mathf.Clamp01(lum[idx] + glow[idx] * 0.35f);
+                int idx = j * W + i; float v = Mathf.Clamp01(lum[idx] + glow[idx] * 0.35f); v = v * v * (3 - 2 * v);
                 if (v > .15f && v < .6f) { float gx = i % 6 - 3f, gy = j % 6 - 3f; v += Mathf.Sqrt(gx * gx + gy * gy) < v * 6f * 0.75f ? .15f : -.08f; }
                 lum[idx] = v;
             }
@@ -60,12 +75,20 @@ namespace MoominAction.UI
             var c = SkillAttributes.ColorOf(s.attribute); var px = new Color[W * H];
             for (int k = 0; k < px.Length; k++)
             {
-                float v = Mathf.Clamp01(lum[k]), a = Mathf.Clamp01(acc[k]) * (v > .3f ? 1f : 0f), m = Mathf.Max(v, .6f);
+                float x = (k % W + .5f) / W, y = (k / W + .5f) / H, vd = Mathf.Sqrt((x - .5f) * 1.6f * (x - .5f) * 1.6f + (y - .5f) * 1.6f * (y - .5f) * 1.6f);
+                float v = Mathf.Clamp01(lum[k] * Mathf.Clamp(1 - (vd - .5f) * .9f, .5f, 1f));   // 비네트
+                float a = Mathf.Clamp01(acc[k]) * (v > .3f ? 1f : 0f) * .45f, m = Mathf.Max(v, .6f);   // 속성색은 아주 조금
                 px[k] = new Color(v * (1 - a * .8f) + c.r * a * m, v * (1 - a * .8f) + c.g * a * m, v * (1 - a * .8f) + c.b * a * m, 1f);
             }
             var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp }; tex.SetPixels(px); tex.Apply();
             sp = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(.5f, .5f), 100f); cache[key] = sp; lum = glow = acc = null; return sp;
         }
+
+        static void Blot(float cx, float cy, float r, bool white) => ForBox(cx - r, cy - r, cx + r, cy + r, (idx, x, y) =>
+        {
+            if ((x - cx) * (x - cx) + (y - cy) * (y - cy) >= r * r) return;
+            if (white) glow[idx] = 2.5f; else lum[idx] = Mathf.Min(lum[idx], 0.03f);
+        });
 
         delegate void PixelFn(int idx, float x, float y);
         static void ForBox(float x0, float y0, float x1, float y1, PixelFn f)
@@ -87,7 +110,8 @@ namespace MoominAction.UI
             ForBox(Mathf.Min(ax, bx) - w - pad, Mathf.Min(ay, by) - w - pad, Mathf.Max(ax, bx) + w + pad, Mathf.Max(ay, by) + w + pad, (idx, x, y) =>
             {
                 float dd = Seg(x, y, ax, ay, bx, by, out float h); float t = taper ? Mathf.Sin(Mathf.PI * Mathf.Clamp(h, .02f, .98f)) : 1f; float d = dd - w * t;
-                float core = Mathf.Clamp01(0.5f - d * H * 0.8f); lum[idx] = Mathf.Max(lum[idx], core * l); glow[idx] += Mathf.Exp(-Mathf.Max(d, 0) * 40f) * w * 6f * l; acc[idx] = Mathf.Max(acc[idx], core * ac);
+                float L = Mathf.Max(1e-9f, Mathf.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay))), across = ((x - ax) * -(by - ay) + (y - ay) * (bx - ax)) / L;
+                float core = Mathf.Clamp01(0.5f - d * H * 0.8f) * Mathf.Clamp01(0.45f + 0.75f * SkillPanelArt.Noise(h * L * 8, across * 260 + 17));   // 마른 붓결 lum[idx] = Mathf.Max(lum[idx], core * l); glow[idx] += Mathf.Exp(-Mathf.Max(d, 0) * 40f) * w * 6f * l; acc[idx] = Mathf.Max(acc[idx], core * ac);
             });
         }
 

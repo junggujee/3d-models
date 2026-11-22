@@ -11,6 +11,8 @@ namespace MoominAction
     {
         /// <summary>공격 고유 번호 — 상태이상이 같은 공격에서 두 번 발동하지 않게 하는 키.</summary>
         public readonly int id = ++nextId; static int nextId;
+        /// <summary>이 코인에 적용된 힘·위력 감소·마비.</summary>
+        public CoinModifiers modifiers;
         public int power; public bool isHeads; public bool isResolved; public bool isHit;
         public SkillDefinition skill; public SkillExecutor owner; public int coinIndex;
         public bool clashed, cancelled; public float activeUntil;

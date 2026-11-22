@@ -1,5 +1,5 @@
 """
-상태이상 아이콘 5종(화상 · 에너지 · 출혈 · 진동 · 침잠) — 검은 배경, 절제된 림버스풍(평면 채색 + 단단한 하이라이트 + 은은한 빛 번짐).
+상태이상 아이콘(화상 · 에너지 · 출혈 · 진동 · 침잠 / 힘 · 위력 감소 · 마비) — 검은 배경, 절제된 림버스풍(평면 채색 + 단단한 하이라이트 + 은은한 빛 번짐).
 모양은 모두 SDF(거리장)로 그려 가장자리가 매끄럽고, 크기를 바꿔도 다시 만들 수 있음.
 
   python3 tools/status_icons.py            → unity/Assets/Resources/StatusIcons/*.png (투명 배경, 게임용)
@@ -177,17 +177,60 @@ def sinking():
     return c.image('#2A40D0', 1.0)
 
 
-ICONS = [("Burn", burn), ("Energy", energy), ("Bleed", bleed), ("Tremor", tremor), ("Sinking", sinking)]
+def chevron(cy, h, w, t, up=True):
+    """^ 모양(up) 또는 v 모양 꺾쇠: 높이 h, 반폭 w, 두께 t."""
+    s = 1 if up else -1
+    return np.abs((Y - cy) * s + np.abs(X) * (h / w) - h * 0.5) * (w / np.hypot(w, h)) - t
+
+def power_up():
+    """힘: 위로 겹친 꺾쇠 두 개 + 가운데 솟는 칼날, 따뜻한 금색."""
+    c = Canvas()
+    shape = union(inter(chevron(0.38, 0.62, 0.78, 0.09), np.abs(X) - 0.8), inter(chevron(-0.18, 0.62, 0.78, 0.09), np.abs(X) - 0.8))
+    blade = (np.abs(X) / 0.08 + np.abs(Y - 0.05) / 0.95 - 1) * 0.08
+    for d in (shape, blade):
+        c.fill(offset(d, 0.014), '#9A5A08'); c.fill(d, vgrad('#FFF0B0', '#F2A824'))
+    c.fill((np.abs(X) / 0.025 + np.abs(Y - 0.2) / 0.6 - 1) * 0.025, '#FFFBE6', 0.95)
+    return c.image('#FFB21F', 0.8)
+
+def power_down():
+    """위력 감소: 아래로 겹친 꺾쇠 두 개를 금이 가로지름, 차가운 회청색."""
+    c = Canvas()
+    shape = union(inter(chevron(0.22, 0.62, 0.78, 0.09, up=False), np.abs(X) - 0.8), inter(chevron(-0.34, 0.62, 0.78, 0.09, up=False), np.abs(X) - 0.8))
+    crack = np.abs(X * 0.9 - 0.12 + np.where(Y > 0, -Y * 0.35, Y * 0.25) + 0.06 * np.sign(np.sin(Y * 14))) - 0.022
+    shape = sub(shape, inter(crack, np.abs(Y) - 0.95))
+    c.fill(offset(shape, 0.014), '#2C3446'); c.fill(shape, vgrad('#C9D2E6', '#6E7A96'))
+    c.fill(inter(offset(shape, -0.05), Y - 0.2), '#E6ECF8', 0.5)
+    return c.image('#7F8FB8', 0.7)
+
+def paralysis():
+    """마비: 군데군데 끊긴 고리를 지지직거리는 번개가 가로지름, 라임빛 노랑."""
+    c = Canvas()
+    ang = np.arctan2(Y, X)
+    ring = np.abs(np.hypot(X, Y) - 0.66) - 0.075
+    gaps = np.abs(np.sin(ang * 3 + 0.6)) - 0.22          # 세 군데 끊김
+    ring = np.maximum(ring, -gaps * 0.3)
+    zig = polygon([(-0.95, 0.12), (-0.38, 0.3), (-0.2, -0.02), (0.22, 0.24), (0.36, -0.12), (0.95, 0.06), (0.4, -0.26), (0.2, 0.06), (-0.22, -0.2), (-0.4, 0.1)])
+    for d in (ring, zig):
+        c.fill(offset(d, 0.014), '#5E6A08'); c.fill(d, vgrad('#F4FF9A', '#C2D22A'))
+    c.fill(offset(zig, -0.035), '#FDFFE0', 0.9)
+    for (x, y) in ((-0.62, -0.5), (0.58, 0.52), (0.1, -0.78)):
+        c.fill(circle(x, y, 0.04), '#EFFF8A', 0.9)
+    return c.image('#C8E030', 0.85)
+
+
+ICONS = [("Burn", burn), ("Energy", energy), ("Bleed", bleed), ("Tremor", tremor), ("Sinking", sinking),
+         ("PowerUp", power_up), ("PowerDown", power_down), ("Paralysis", paralysis)]
 
 def main():
     out_dir = os.path.join(ROOT, "unity", "Assets", "Resources", "StatusIcons"); os.makedirs(out_dir, exist_ok=True)
-    sheet = Image.new("RGB", (OUT * len(ICONS) + 40 * (len(ICONS) + 1), OUT + 80), (0, 0, 0))
+    cols = 5; rows = (len(ICONS) + cols - 1) // cols
+    sheet = Image.new("RGB", (OUT * cols + 40 * (cols + 1), (OUT + 40) * rows + 40), (0, 0, 0))
     only = set(sys.argv[1:])
     for i, (name, fn) in enumerate(ICONS):
         if only and name not in only: continue
         img = fn().resize((OUT, OUT), Image.LANCZOS)
         img.save(os.path.join(out_dir, name + ".png"))
-        sheet.paste(img, (40 + i * (OUT + 40), 40), img)
+        sheet.paste(img, (40 + (i % cols) * (OUT + 40), 40 + (i // cols) * (OUT + 40)), img)
         print("✔", name)
     os.makedirs(os.path.join(ROOT, "previews"), exist_ok=True)
     sheet.save(os.path.join(ROOT, "previews", "status_icons.png"))

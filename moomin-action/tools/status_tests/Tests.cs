@@ -43,6 +43,16 @@ static class Tests
         var e = new EnergyPool(); Eq(e.Gain(70), 70, "에너지 획득"); Eq(e.Gain(50), 30, "최대 100 제한"); Eq(e.Current, 100, "에너지 100");
         Eq(e.Spend(60), true, "에너지 60 소비"); Eq(e.Spend(60), false, "부족 → 소비 불가"); Eq(e.Current, 40, "실패 시 그대로"); Eq(e.CanSpend(0), true, "비용 0 항상 가능");
 
+        // 코인 위력 보정: 힘 · 위력 감소 · 마비 (코인 한 번에 횟수 -1, 같은 공격 중복 없음)
+        var up = new PowerUpEffect(); up.Add(new StatusAmount(2, 2)); var dn = new PowerDownEffect(); dn.Add(new StatusAmount(1, 1)); var pz = new ParalysisEffect(); pz.Add(new StatusAmount(0, 1));
+        Eq(pz.Potency, 1, "마비 강도 없이 부여 → 1"); 
+        var m1 = new CoinModifiers { powerUp = up.UseOnCoin(1), powerDown = dn.UseOnCoin(1), paralyzed = pz.UseOnCoin(1) > 0 };
+        Eq(m1.CoinValue(3), 0, "마비 → 코인 위력 0"); Eq(up.UseOnCoin(1), 0, "같은 코인 중복 소모 없음"); Eq(up.Count, 1, "힘 횟수 -1"); Eq(pz.Active, false, "마비 소진");
+        var m2 = new CoinModifiers { powerUp = up.UseOnCoin(2), powerDown = dn.UseOnCoin(2), paralyzed = pz.UseOnCoin(2) > 0 };
+        Eq(m2.CoinValue(3), 5, "힘 2 → 3+2"); Eq(dn.Active, false, "위력 감소 1회 뒤 소진");
+        Eq(new CoinModifiers { powerDown = 9 }.CoinValue(3), 0, "위력 감소는 0 아래로 안 내려감");
+        Eq(new CoinModifiers().CoinValue(4), 4, "보정 없음");
+
         Console.WriteLine(fail == 0 ? $"✔ 상태이상·경직·에너지 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }

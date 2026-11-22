@@ -100,7 +100,10 @@ namespace MoominAction
             if (!isExecuting || Phase != SkillPhase.Attacking || coinDoneThisStage || currentCoin >= CurrentSkill.coinCount) return;
             if (t - stageStart < CurrentSkill.hitTime - eventGrace) return;   // 이전 클립의 늦은 이벤트 무시
             var s = CurrentSkill; var r = coinSystem.Toss(stats, currentCoin);
-            var ctx = new AttackContext(coinSystem.CalculatePower(s.basePower, s.coinPower, r.heads), r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
+            var ctx = new AttackContext(0, r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
+            // 코인 위력 보정(힘·위력 감소·마비)을 이 코인에 한 번 적용 → 위력 = 기본 + (앞면 ? 보정된 코인 위력 : 0)
+            ctx.modifiers = status != null ? status.UseCoinModifiers(ctx.id) : default;
+            ctx.power = coinSystem.CalculatePower(s.basePower, ctx.modifiers.CoinValue(s.coinPower), r.heads);
             CurrentAttack = ctx; results.Add(ctx); currentCoin++; coinDoneThisStage = true; if (hitboxHeld) ctx.activeUntil = float.MaxValue;
             CoinAttacked?.Invoke(ctx);
             if (status != null) status.OnCoinUsed(ctx);   // 출혈: 공격 코인을 쓸 때(같은 ctx.id 로는 한 번만)

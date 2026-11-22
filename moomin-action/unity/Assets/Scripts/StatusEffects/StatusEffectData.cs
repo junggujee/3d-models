@@ -3,7 +3,7 @@ using System;
 namespace MoominAction
 {
     /// <summary>상태이상 종류.</summary>
-    public enum StatusType { None, Bleed, Burn, Sinking, Tremor }
+    public enum StatusType { None, Bleed, Burn, Sinking, Tremor, PowerUp, PowerDown, Paralysis }
 
     /// <summary>부여량: 강도(Potency)와 횟수(Count). Inspector 에서 스킬마다 앞면/뒷면 따로 설정.</summary>
     [Serializable]

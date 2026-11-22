@@ -34,6 +34,8 @@ namespace MoominAction
                 {
                     case StatusType.Bleed: s.bleedOnHeads = h; s.bleedOnTails = l; break; case StatusType.Burn: s.burnOnHeads = h; s.burnOnTails = l; break;
                     case StatusType.Sinking: s.sinkingOnHeads = h; s.sinkingOnTails = l; break; case StatusType.Tremor: s.tremorOnHeads = h; s.tremorOnTails = l; break;
+                    case StatusType.PowerUp: s.powerUpOnHeads = h; s.powerUpOnTails = l; break; case StatusType.PowerDown: s.powerDownOnHeads = h; s.powerDownOnTails = l; break;
+                    case StatusType.Paralysis: s.paralysisOnHeads = h; s.paralysisOnTails = l; break;
                 }
             }
             void Energy(string id, int cost, int gain, bool burst = false) { if (map.TryGetValue(id, out var s)) { s.energyCost = cost; s.energyGain = gain; s.tremorBurstEnabled = burst; } }
@@ -69,6 +71,9 @@ namespace MoominAction
             St("SKILL_001", StatusType.Bleed, 2, 1, 1, 1); St("SKILL_002", StatusType.Burn, 3, 2, 2, 1); St("SKILL_003", StatusType.Sinking, 2, 1);
             St("HUMAN_JAB", StatusType.Tremor, 1, 1); St("HUMAN_SLAM", StatusType.Sinking, 2, 2, 1, 1); St("ENEMY_SLAM", StatusType.Tremor, 2, 1);
             St("BOSS_LUNGE", StatusType.Bleed, 3, 2, 1, 1); St("BOSS_FLURRY", StatusType.Burn, 2, 1);
+            // 코인 위력: 힘(자신) · 위력 감소 · 마비(상대). 횟수 = 영향받는 코인 수
+            St("SKILL_001", StatusType.PowerUp, 1, 2); St("SKILL_002", StatusType.PowerDown, 2, 2); St("BASIC_3", StatusType.PowerUp, 1, 1);
+            St("HUMAN_JAB", StatusType.Paralysis, 1, 1); St("ENEMY_BUMP", StatusType.PowerDown, 1, 2); St("BOSS_FLURRY", StatusType.PowerDown, 2, 2); St("BOSS_BREAK", StatusType.Paralysis, 1, 2);
             // 에너지: (소비, 명중 시 추가 획득, 진동 폭발)
             Energy("BASIC_1", 0, 4); Energy("BASIC_2", 0, 4); Energy("BASIC_3", 0, 4);
             Energy("SKILL_001", 0, 2); Energy("SKILL_002", 0, 2);

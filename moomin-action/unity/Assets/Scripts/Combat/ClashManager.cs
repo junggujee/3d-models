@@ -11,6 +11,8 @@ namespace MoominAction
     public class ClashOutcome
     {
         public string playerName, enemyName; public int playerPower, enemyPower, playerAffinity; public ClashResult result; public ClashMode mode; public bool parry;
+        /// <summary>맞부딪힌 두 공격(가운데 연출용, 패링이면 null).</summary>
+        public AttackContext playerAttack, enemyAttack;
         public int playerCoinsLeft, enemyCoinsLeft; public readonly List<(int player, int enemy, int pc, int ec)> rounds = new();
     }
 
@@ -36,7 +38,7 @@ namespace MoominAction
         {
             var p = a.owner.stats.team == Team.Player ? a : b; var e = p == a ? b : a;
             a.clashed = b.clashed = true;
-            var o = new ClashOutcome { playerName = p.owner.stats.displayName, enemyName = e.owner.stats.displayName, mode = mode };
+            var o = new ClashOutcome { playerName = p.owner.stats.displayName, enemyName = e.owner.stats.displayName, mode = mode, playerAttack = p, enemyAttack = e };
             // 속성 상성: 유리한 쪽 클래시 위력 +2
             o.playerAffinity = SkillAttributes.Affinity(p.skill.attribute, e.skill.attribute);
             int pb = o.playerAffinity > 0 ? SkillAttributes.AdvantageClashBonus : 0, eb = o.playerAffinity < 0 ? SkillAttributes.AdvantageClashBonus : 0;

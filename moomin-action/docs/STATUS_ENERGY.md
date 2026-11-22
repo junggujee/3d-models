@@ -9,6 +9,18 @@
 | 침잠 | 내가 공격에 맞을 때 (`CombatResolver.ApplyHit`) | 강도만큼 정신력 손실 (정신력이 없으면 기본은 체력 손실) | 횟수 -1 |
 | 진동 | 스스로는 발동하지 않음. `tremorBurstEnabled` 스킬에 맞을 때 폭발 | 경직 게이지 피해 = 강도×4 + 횟수×2 | 횟수 -1 |
 
+### 코인 위력 효과 (스킬 패널 위쪽 3칸에 실시간 표시)
+
+| 효과 | 누구에게 | 효과 | 소모 |
+|---|---|---|---|
+| 힘 | 적중 시 **자신** | 코인을 던질 때 앞면 코인 위력 +강도 | 코인 1개마다 횟수 -1 |
+| 위력 감소 | 적중 시 상대 | 앞면 코인 위력 -강도(최소 0) | 코인 1개마다 횟수 -1 |
+| 마비 | 적중 시 상대 | 앞면이어도 코인 위력 0 (강도 무시) | 코인 1개마다 횟수 -1 |
+
+- 공격 위력 = 기본 위력 + (앞면 ? max(0, 코인 위력 + 힘 − 위력 감소) : 0), 마비면 코인 위력 0. 보정은 `AttackContext.modifiers`에 기록되어 클래시·피해·패널(개별 코인 결과의 `+1`, `마비`)이 같은 값을 씁니다.
+- 코인을 안 던지면 계속 남지 않도록 기본 지속시간 12초(`StatusEffectManager.coinModifierDuration`).
+- 스킬 데이터: `Power Up On Heads/Tails`, `Power Down On Heads/Tails`, `Paralysis On Heads/Tails`.
+
 - 중첩하면 강도와 횟수를 각각 더합니다(상한 99). 횟수가 0이 되면 효과가 사라집니다.
 - **화상 타이밍**: `Update`는 시간만 쌓고, 간격을 넘는 순간에만 피해를 줍니다. 매 프레임 피해는 없습니다. 프레임이 길어도 밀린 발동을 모두 처리하므로 30/144fps나 불규칙한 프레임에서도 횟수가 같습니다(테스트로 확인).
 - **명중 처리 순서**(한 공격·대상당 1회): ① 쌓여 있던 침잠 발동 → ② 이번 코인 결과(앞면/뒷면)에 맞는 상태이상 부여 → ③ 진동 폭발 → ④ 공격자 에너지 획득.
@@ -21,6 +33,7 @@
 |---|---|
 | `Scripts/StatusEffects/StatusEffectData.cs` | `StatusType`, `StatusAmount`(강도/횟수), 공통 기반 `StatusEffect`(중첩·소모·지속시간) — 순수 C# |
 | `Scripts/StatusEffects/BleedEffect.cs` · `BurnEffect.cs` · `SinkingEffect.cs` · `TremorEffect.cs` | 효과별 발동 규칙 — 순수 C# |
+| `Scripts/StatusEffects/CoinModifierEffects.cs` | 힘 · 위력 감소 · 마비, `CoinModifiers`(코인 위력 계산) — 순수 C# |
 | `Scripts/StatusEffects/StatusEffectManager.cs` | 캐릭터 한 명의 상태이상 컴포넌트: 부여·발동·화상 시간·이벤트(`Changed`, `Triggered`, `AnyTriggered`), `StatusInfo`(이름·색·규칙) |
 | `Scripts/Character/StaggerGauge.cs` | 경직 게이지 수치 — 순수 C# |
 | `Scripts/Character/CharacterStats.cs` | (수정) `hasSanity`, 경직 설정, `AddStagger()`, `IsStaggerBroken` |
@@ -35,7 +48,7 @@
 | `Scripts/UI/CombatHUD.cs` | (수정) 에너지 게이지, 내 상태이상·경직, 적 상태이상 아이콘(강도/횟수), 적 경직 게이지, 진동 폭발 연출 |
 | `Scripts/UI/SkillPanel.cs` · `SkillPanelArt.cs` | (수정) 스킬 패널 상태이상 줄(앞/뒤), 에너지 비용, 침잠 아이콘 |
 | `Editor/MoominSetup.cs` | (수정) 플레이어·적 프리팹에 `StatusEffectManager`, `EnergyManager` 추가 |
-| `tools/status_tests/` | Unity 없이 핵심 로직 테스트 42개 (`cd tools && dotnet run --project status_tests`) |
+| `tools/status_tests/` | Unity 없이 핵심 로직 테스트 51개 (`cd tools && dotnet run --project status_tests`) |
 
 `Scripts/Resources/` 대신 `CombatResources/`를 씁니다. Unity에서 `Resources`라는 이름의 폴더는 특수 폴더라 빌드에 전부 강제로 포함되기 때문입니다.
 
@@ -63,7 +76,7 @@
 
 ## 아이콘
 
-`tools/status_icons.py`가 화상·에너지·출혈·진동·침잠 아이콘을 그려 `unity/Assets/Resources/StatusIcons/*.png`(256px, 투명 배경)와 미리보기 `previews/status_icons.png`를 만듭니다. 모양은 모두 코드(SDF)로 그리므로 색이나 형태를 바꾸려면 스크립트를 고친 뒤 다시 실행하면 됩니다(`python3 tools/status_icons.py [Burn Energy ...]`, numpy와 Pillow 필요).
+`tools/status_icons.py`가 화상·에너지·출혈·진동·침잠·힘·위력 감소·마비 아이콘을 그려 `unity/Assets/Resources/StatusIcons/*.png`(256px, 투명 배경)와 미리보기 `previews/status_icons.png`를 만듭니다. 모양은 모두 코드(SDF)로 그리므로 색이나 형태를 바꾸려면 스크립트를 고친 뒤 다시 실행하면 됩니다(`python3 tools/status_icons.py [Burn Energy ...]`, numpy와 Pillow 필요).
 
 - 진동: 황금빛 주황, 좌우 대칭 공명 파동 + 세로 가시
 - 침잠: 짙은 남색. 위는 겹겹이 짙어지는 응집된 구체, 아래는 액체처럼 흘러내리는 줄기와 떨어지는 방울

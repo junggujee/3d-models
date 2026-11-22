@@ -95,7 +95,7 @@
 - **스킬 일러스트 v2**(`UI/SkillIllustration.cs`): 그림(`SkillDefinition.illustration`)이 없으면 **인물 실루엣 + 빛 연출(베기 호·찌르기 광선·충격 폭발·속도선·연타 궤적) + 하프톤 + 먹 번짐 + 속성색 포인트**를 코드로 생성. 같은 알고리즘의 Python 시제품 `tools/illustration_preview.py` → `previews/skill_illustrations.png`.
 
 ## 상태이상 · 경직 · 에너지
-출혈(코인 사용 시) · 화상(2초마다) · 침잠(피격 시 정신력) · 진동(축적 → 진동 폭발 스킬로 경직 게이지 피해)은 강도/횟수로 나뉘고, 스킬마다 코인 앞면·뒷면 부여량이 따로 있습니다. 경직 게이지와 에너지(강화 스킬 비용)도 함께 있습니다. 규칙·파일·Inspector 설정은 **[STATUS_ENERGY.md](STATUS_ENERGY.md)**를 보세요.
+출혈(코인 사용 시) · 화상(2초마다) · 침잠(피격 시 정신력) · 진동(축적 → 진동 폭발 스킬로 경직 게이지 피해)은 강도/횟수로 나뉘고, 스킬마다 코인 앞면·뒷면 부여량이 따로 있습니다. 경직 게이지와 에너지(강화 스킬 비용), 코인 위력에 영향을 주는 힘·위력 감소·마비도 함께 있습니다. 규칙·파일·Inspector 설정은 **[STATUS_ENERGY.md](STATUS_ENERGY.md)**를 보세요.
 
 ## Unity 연결(명세 9장) — 메뉴 Moomin ▸ 한 번에 설정이 자동으로 해 줌
 - **Player**: CharacterController, PlayerController, CharacterStats, CoinSystem, SkillExecutor(이벤트 사용), CombatResolver(대상 = Enemy 레이어), CombatManager(스킬 에셋 연결), Stamina, Inventory, LockOnSystem

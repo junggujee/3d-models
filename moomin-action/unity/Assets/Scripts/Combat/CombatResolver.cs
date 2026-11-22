@@ -110,6 +110,7 @@ namespace MoominAction
             if (se == null) se = target.gameObject.AddComponent<StatusEffectManager>();
             se.OnHitTaken(attack);
             if (target.IsAlive) se.ApplyFromSkill(skill, attack.isHeads);
+            var mySe = executor != null ? executor.status : GetComponent<StatusEffectManager>(); if (mySe != null) mySe.ApplyFromSkill(skill, attack.isHeads, self: true);   // 힘(자신)
             var energy = executor != null ? executor.energy : GetComponent<EnergyManager>();
             int sd = 0; bool broke = skill.tremorBurstEnabled && target.IsAlive && se.TryTremorBurst(attack, out sd);
             if (sd > 0)

@@ -19,8 +19,9 @@ namespace MoominAction.UI
         readonly List<string> enemyCoins = new(); float enemyCoinT; Text popup; float popupT;
         // 에너지 · 상태이상 · 경직
         RectTransform energyFill; Text energyLabel; EnergyManager energy; StatusEffectManager playerSe;
-        Gauge targetStagger; Text targetStaggerLabel; readonly Image[] tIcons = new Image[4]; readonly Text[] tIconNums = new Text[4]; readonly float[] tFlash = new float[4]; float staggerFlash;
+        Gauge targetStagger; Text targetStaggerLabel; readonly Image[] tIcons = new Image[StatusInfo.All.Length]; readonly Text[] tIconNums = new Text[StatusInfo.All.Length]; readonly float[] tFlash = new float[StatusInfo.All.Length]; float staggerFlash;
         System.Action<AttackContext, CharacterStats, int, bool> onTremor; System.Action<StatusEffectManager, StatusType, int> onStatus;
+        ClashStage stage;
         System.Action<ClashOutcome> onClash; System.Action<AttackContext> onEnemyCoin; System.Action<AttackContext, CharacterStats, int> onHit;
 
         public void Build(UIRoot ui, Transform hudRoot, Transform core)
@@ -73,7 +74,7 @@ namespace MoominAction.UI
             // 경직 게이지(체력과 별개) + 상태이상 아이콘(강도/횟수)
             targetStagger = MakeGauge(tp.transform, "Stagger", new Color(.95f, .8f, .3f), new Vector2(420, 10), false, false); Set(targetStagger.root, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(18, -60), new Vector2(420, 10));
             targetStaggerLabel = Txt(tp.transform, "", 16, new Color(.95f, .85f, .5f), TextAnchor.MiddleLeft); Set(targetStaggerLabel.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(446, -54), new Vector2(180, 22));
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < tIcons.Length; i++)
             {
                 tIcons[i] = Img(tp.transform, "Status" + i, SkillPanelArt.StatusIcon(StatusInfo.All[i]), SkillPanelArt.StatusTint(StatusInfo.All[i]), false); Set(tIcons[i].rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(32 + i * 110, -86), new Vector2(36, 36));
                 tIconNums[i] = Txt(tp.transform, "", 19, UITheme.Cream, TextAnchor.MiddleLeft, FontStyle.Bold); Set(tIconNums[i].rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, .5f), new Vector2(50 + i * 110, -86), new Vector2(80, 26));
@@ -82,12 +83,13 @@ namespace MoominAction.UI
             targetCoins = Txt(tp.transform, "", 21, UITheme.Muted, TextAnchor.MiddleRight); Set(targetCoins.rectTransform, Vector2.zero, new Vector2(1, 0), Vector2.zero, new Vector2(18, 4), new Vector2(-36, 26));
             targetPanel.SetActive(false);
             lockMarker = Img(hudRoot, "LockMarker", UITheme.Slot, UITheme.GoldBright, true); At(lockMarker.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(30, 30)); lockMarker.rectTransform.localRotation = Quaternion.Euler(0, 0, 45); lockMarker.gameObject.SetActive(false);
+            stage = new ClashStage(); stage.Build(hudRoot);   // 클래시 때 가운데 두 패널
             popup = Txt(hudRoot, "", 34, UITheme.GoldBright, TextAnchor.MiddleCenter, FontStyle.Bold, "Popup"); At(popup.rectTransform, new Vector2(.5f, .44f), Vector2.zero, new Vector2(800, 50));
 
             ex.SkillRefused += (s, why) => Popup(s.skillName + " — " + why, UITheme.Muted);
             stats.Evaded += () => Popup("회피", UITheme.Cream);
             stats.SanityChanged += (a, b, why) => { if (why == "패링" || why.Contains("앞면")) Popup(why + "  " + (b > a ? "+" : "") + (b - a), UITheme.GoldBright); };
-            onClash = o => { clash = o; clashT = 0f; }; ClashManager.Clashed += onClash;
+            onClash = o => { if (!o.parry && o.playerAttack != null) { stage.Show(o); clash = null; } else { clash = o; clashT = 0f; } };   // 합 = 가운데 연출, 패링 = 작은 패널 ClashManager.Clashed += onClash;
             onHit = (a, target, dmg) => { if (a.owner == ex && a.affinity != 0) Popup(a.affinity > 0 ? $"약점!  ×{SkillAttributes.AdvantageDamage:0.00}" : $"저항  ×{SkillAttributes.DisadvantageDamage:0.0}", a.affinity > 0 ? new Color(.5f, 1f, .5f) : new Color(1f, .5f, .5f)); };
             CombatResolver.DamageDealt += onHit;
             // 진동 폭발 연출: 팝업 + 경직 게이지 번쩍임
@@ -108,7 +110,7 @@ namespace MoominAction.UI
         }
 
         /// <summary>정적 이벤트·적 구독 해제(씬 재시작 시 파괴된 UI 를 건드리지 않도록).</summary>
-        public void Dispose() { if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
+        public void Dispose() { stage?.Dispose(); if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
         void Popup(string t, Color c) { popup.text = t; popup.color = c; popupT = 1.2f; }
 
         public void Update(float dt)
@@ -125,7 +127,8 @@ namespace MoominAction.UI
                 u.cdFill.anchorMax = new Vector2(1, lacking ? 1 : k); u.cd.text = cd > 0 ? Mathf.CeilToInt(cd).ToString() : ""; u.cost.color = lacking ? new Color(.95f, .4f, .4f) : u.skill.energyCost > 0 ? new Color(.55f, .9f, 1f) : new Color(.6f, .7f, 1f);
                 u.frame.color = ex.CurrentSkill == u.skill || (u == slots[0] && ex.CurrentSkill != null && ex.CurrentSkill.skillId.StartsWith("BASIC")) ? UITheme.GoldBright : Color.Lerp(Color.white, SkillAttributes.ColorOf(u.skill.attribute), 0.55f);
             }
-            playerPanel.Tick(Camera.main, canvasForPanels, dt); enemyPanels.Update(dt);
+            if (ClashStage.OnStage.Contains(ex)) playerPanel.Hide(); else playerPanel.Tick(Camera.main, canvasForPanels, dt);
+            enemyPanels.Update(dt); stage.Update(dt);
             if (energy != null) { energyFill.anchorMax = new Vector2(energy.Ratio, 1); energyLabel.text = $"에너지 {energy.Current}/{energy.Max}"; }
             string ps = playerSe != null ? playerSe.Summary() : "";
             if (stats.IsStaggerBroken) ps = "<color=#F2D27F>경직!</color>  " + ps; else if (stats.StaggerGauge.Current > 0) ps = $"<color=#C9B27A>경직 {Mathf.RoundToInt(stats.StaggerGauge.Ratio * 100)}%</color>  " + ps;
@@ -154,11 +157,16 @@ namespace MoominAction.UI
                 targetStaggerLabel.text = t.Stats.IsStaggerBroken ? "경직!" : $"경직 {Mathf.RoundToInt(t.Stats.StaggerGauge.Current)}/{Mathf.RoundToInt(t.Stats.StaggerGauge.Max)}";
                 // 상태이상 아이콘: 강도/횟수, 발동하면 잠깐 커짐
                 var tse = t.GetComponent<StatusEffectManager>();
-                for (int i = 0; i < 4; i++)
+                float x = 32f;   // 켜진 효과만 왼쪽부터 차례로
+                for (int i = 0; i < tIcons.Length; i++)
                 {
                     var e = tse != null ? tse.Get(StatusInfo.All[i]) : null; bool on = e != null && e.Active; tIcons[i].gameObject.SetActive(on); tIconNums[i].gameObject.SetActive(on);
                     if (tFlash[i] > 0) tFlash[i] -= dt; tIcons[i].rectTransform.localScale = Vector3.one * (1f + Mathf.Max(0, tFlash[i]) * 1.5f);
-                    if (on) tIconNums[i].text = StatusInfo.All[i] == StatusType.Tremor && t.Stats != null ? $"{e.Potency}/{e.Count} <size=14>(폭발 {((TremorEffect)e).PreviewBurst})</size>" : $"{e.Potency}/{e.Count}";
+                    if (!on) continue;
+                    var type = StatusInfo.All[i];
+                    tIconNums[i].text = type == StatusType.Tremor ? $"{e.Potency}/{e.Count} <size=14>(폭발 {((TremorEffect)e).PreviewBurst})</size>" : type == StatusType.Paralysis ? $"{e.Count}" : $"{e.Potency}/{e.Count}";
+                    tIcons[i].rectTransform.anchoredPosition = new Vector2(x, -86); tIconNums[i].rectTransform.anchoredPosition = new Vector2(x + 18, -86);
+                    x += 18 + 6 + tIconNums[i].preferredWidth + 18;
                 }
                 var s = t.Executor.CurrentSkill; var brain = t.GetComponent<EnemyBrain>();
                 if (s != null) targetIntent.text = (t.Executor.Phase == SkillPhase.Windup ? "<color=#E06060>예고</color> " : "<color=#E06060>공격</color> ") + $"{s.skillName} · 기본 {s.basePower} · 코인 {s.coinCount}개 +{s.coinPower}" + (s.unblockable ? "  <color=#B070FF>방어 불가</color>" : "");
