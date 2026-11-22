@@ -75,7 +75,22 @@ namespace MoominAction.UI
         public static Sprite IconCoin => iconCoin ??= Icon((x, y) => { float r = Mathf.Sqrt(x * x + y * y); return Mathf.Max(r - .8f, -Mathf.Max(Mathf.Abs(r - .45f) - .1f, -(r - .2f))); });
         public static Sprite IconMin => iconMin ??= Icon((x, y) => Mathf.Max(Mathf.Abs(x) * .9f + y * .45f - .45f, -y - .7f));   // 아래 화살표 비슷한 방패
         public static Sprite IconMax => iconMax ??= Icon((x, y) => Mathf.Max(Mathf.Abs(x) - .2f + y * .9f - .5f, Mathf.Abs(y) - .85f) );   // 위로 뾰족
-        public static Sprite StatusIcon(StatusType t) => t switch
+        // ── 상태이상·에너지 아이콘: 그림(Resources/StatusIcons/*.png, tools/status_icons.py 로 생성)이 있으면 그것, 없으면 아래 흰색 SDF 아이콘
+        static readonly System.Collections.Generic.Dictionary<string, Sprite> art = new();
+        static Sprite Art(string name)
+        {
+            if (art.TryGetValue(name, out var s)) return s;
+            var tex = Resources.Load<Texture2D>("StatusIcons/" + name);
+            if (tex != null) { tex.wrapMode = TextureWrapMode.Clamp; s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(.5f, .5f), 100f); s.name = name; }
+            art[name] = s; return s;
+        }
+        static string ArtName(StatusType t) => t switch { StatusType.Bleed => "Bleed", StatusType.Burn => "Burn", StatusType.Sinking => "Sinking", StatusType.Tremor => "Tremor", _ => null };
+        public static bool HasArt(StatusType t) { var n = ArtName(t); return n != null && Art(n) != null; }
+        public static Sprite StatusIcon(StatusType t) { var n = ArtName(t); var a = n != null ? Art(n) : null; return a != null ? a : StatusIconFallback(t); }
+        /// <summary>Image.color 에 넣을 값: 그림 아이콘은 이미 색이 있으므로 흰색, 대체 아이콘은 상태이상 색.</summary>
+        public static Color StatusTint(StatusType t) => HasArt(t) ? Color.white : StatusInfo.ColorOf(t);
+        public static Sprite EnergyIcon => Art("Energy");
+        static Sprite StatusIconFallback(StatusType t) => t switch
         {
             StatusType.Bleed => iconBleed ??= Icon((x, y) => Mathf.Min(Mathf.Sqrt(x * x + (y + .25f) * (y + .25f)) - .55f, Mathf.Abs(x) * 1.6f + (y - .25f) - .55f)),   // 핏방울
             StatusType.Burn => iconBurn ??= Icon((x, y) => Mathf.Min(Mathf.Sqrt(x * x + (y + .35f) * (y + .35f)) - .5f, Mathf.Abs(x + Mathf.Sin(y * 3) * .15f) * 1.4f + (y - .2f) * .9f - .45f)),   // 불꽃

@@ -51,7 +51,7 @@ namespace MoominAction.UI
             attrLine = Txt(root, "", 18, UITheme.Cream, TextAnchor.LowerRight); Set(attrLine.rectTransform, tl, tl, new Vector2(1, 1), new Vector2(590, -56), new Vector2(330, 24));
             // 아래: 코인 · 적중 효과 · 최종 위력
             for (int i = 0; i < 5; i++) { var c = Img(root, "Coin" + i, SkillPanelArt.Coin(0), Color.white, false); Set(c.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(166 + i * 50, -370), new Vector2(44, 44)); coins.Add(c); }
-            statusIcon = Img(root, "StatusIcon", SkillPanelArt.StatusIcon(StatusType.Bleed), Color.white, false); Set(statusIcon.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(232, -412), new Vector2(24, 24));
+            statusIcon = Img(root, "StatusIcon", SkillPanelArt.StatusIcon(StatusType.Bleed), Color.white, false); Set(statusIcon.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(232, -412), new Vector2(34, 34));
             status = Txt(root, "", 22, UITheme.Cream, TextAnchor.MiddleLeft); Set(status.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(148, -412), new Vector2(330, 30));
             totalGlow = Img(root, "TotalGlow", SkillPanelArt.Glow, Color.white, false); Set(totalGlow.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(500, -385), new Vector2(240, 150));
             totalLabel = Txt(root, "최종 위력", 24, Color.white, TextAnchor.LowerRight, FontStyle.Bold); Set(totalLabel.rectTransform, tl, tl, new Vector2(1, 1), new Vector2(572, -330), new Vector2(200, 30));
@@ -134,7 +134,7 @@ namespace MoominAction.UI
             attrLine.text = SkillAttributes.Names[(int)s.attribute] + " 속성 · " + SkillAttributes.WeaknessText(s.attribute) + (s.unblockable ? " · <color=#C080FF>방어 불가</color>" : "") + (s.energyCost > 0 ? $" · <color=#6FE0F0>에너지 {s.energyCost}</color>" : "");
             art.sprite = SkillIllustration.Get(s);
             string line = StatusLine(s, out var first); bool hasStatus = line.Length > 0; statusIcon.gameObject.SetActive(hasStatus);
-            if (hasStatus) { statusIcon.sprite = SkillPanelArt.StatusIcon(first); statusIcon.color = StatusInfo.ColorOf(first); status.text = "적중 시      " + line; }
+            if (hasStatus) { statusIcon.sprite = SkillPanelArt.StatusIcon(first); statusIcon.color = SkillPanelArt.StatusTint(first); status.text = "적중 시      " + line; }
             else status.text = s.description != null && s.description.Length > 0 ? "<size=18>" + s.description + "</size>" : "";
             totalLabel.color = light; total.color = Color.Lerp(Color.white, c, 0.55f); total.GetComponent<Outline>().effectColor = deep; total.text = "?"; punch = 0.15f;
         }

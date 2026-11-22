@@ -56,7 +56,9 @@ namespace MoominAction.UI
             energy = p.GetComponent<EnergyManager>(); playerSe = p.GetComponent<StatusEffectManager>();
             var eg = Img(core, "Energy", UITheme.Bar, Color.white); Set(eg.rectTransform, tl, tl, tl, new Vector2(44, -122), new Vector2(380, 12));
             var ein = NewRect("Inner", eg.transform); Stretch(ein, 3); energyFill = Box(ein, "Fill", new Color(.3f, .85f, .95f)).rectTransform; Stretch(energyFill); energyFill.anchorMax = new Vector2(0, 1);
-            energyLabel = Txt(core, "", 20, new Color(.55f, .9f, 1f)); Set(energyLabel.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(436, -128), new Vector2(300, 26));
+            energyLabel = Txt(core, "", 20, new Color(.55f, .9f, 1f)); Set(energyLabel.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(462, -128), new Vector2(300, 26));
+            var eIcon = SkillPanelArt.EnergyIcon; if (eIcon != null) { var ei = Img(core, "EnergyIcon", eIcon, Color.white, false); Set(ei.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(446, -128), new Vector2(34, 34)); }
+            else energyLabel.rectTransform.anchoredPosition = new Vector2(436, -128);
             playerStatus = Txt(core, "", 20, UITheme.Cream); Set(playerStatus.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(44, -152), new Vector2(640, 26));   // 내 상태이상·경직
             // 클래시
             var kp = Img(hudRoot, "ClashPanel", UITheme.Frame, Color.white); clashPanel = kp.gameObject; clashGroup = clashPanel.AddComponent<CanvasGroup>(); At(kp.rectTransform, new Vector2(.5f, .7f), Vector2.zero, new Vector2(620, 240));
@@ -73,7 +75,7 @@ namespace MoominAction.UI
             targetStaggerLabel = Txt(tp.transform, "", 16, new Color(.95f, .85f, .5f), TextAnchor.MiddleLeft); Set(targetStaggerLabel.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(446, -54), new Vector2(180, 22));
             for (int i = 0; i < 4; i++)
             {
-                tIcons[i] = Img(tp.transform, "Status" + i, SkillPanelArt.StatusIcon(StatusInfo.All[i]), StatusInfo.ColorOf(StatusInfo.All[i]), false); Set(tIcons[i].rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(32 + i * 110, -86), new Vector2(26, 26));
+                tIcons[i] = Img(tp.transform, "Status" + i, SkillPanelArt.StatusIcon(StatusInfo.All[i]), SkillPanelArt.StatusTint(StatusInfo.All[i]), false); Set(tIcons[i].rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(32 + i * 110, -86), new Vector2(36, 36));
                 tIconNums[i] = Txt(tp.transform, "", 19, UITheme.Cream, TextAnchor.MiddleLeft, FontStyle.Bold); Set(tIconNums[i].rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, .5f), new Vector2(50 + i * 110, -86), new Vector2(80, 26));
             }
             targetIntent = Txt(tp.transform, "", 21, UITheme.Cream, TextAnchor.MiddleLeft); Set(targetIntent.rectTransform, Vector2.zero, new Vector2(1, 0), Vector2.zero, new Vector2(18, 28), new Vector2(-36, 28));

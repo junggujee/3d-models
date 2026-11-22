@@ -10,7 +10,7 @@ namespace MoominAction
         public static Color ColorOf(StatusType t) => t switch
         {
             StatusType.Bleed => new Color(0.86f, 0.2f, 0.24f), StatusType.Burn => new Color(1f, 0.55f, 0.15f),
-            StatusType.Sinking => new Color(0.35f, 0.55f, 0.95f), StatusType.Tremor => new Color(0.95f, 0.85f, 0.35f), _ => Color.white,
+            StatusType.Sinking => new Color(0.29f, 0.39f, 0.85f), StatusType.Tremor => new Color(1f, 0.69f, 0.16f), _ => Color.white,
         };
         public static string Rule(StatusType t) => t switch
         {
