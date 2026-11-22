@@ -93,8 +93,9 @@ namespace MoominAction
             if (map.TryGetValue("WHALE_JUMP", out var wj)) { wj.canBeClashed = false; wj.vfx = SkillVfx.Shockwave; wj.lungeDelay = 0.27f; wj.lungeTime = 0.5f; }   // 공중에 뜬 동안(8~23프레임) 날아감
             if (map.TryGetValue("WHALE_SPOUT", out var ws)) { ws.canBeClashed = false; ws.vfx = SkillVfx.WaterSpout; }
             if (map.TryGetValue("WHALE_RAM", out var wr)) wr.lungeTime = 0.35f;
-            Look("WHALE_RAM", SkillAttribute.Blue, SkillMotif.Rush); Look("WHALE_BEAM", SkillAttribute.Blue, SkillMotif.Thrust); Look("WHALE_JUMP", SkillAttribute.Purple, SkillMotif.Smash);
-            Look("WHALE_FLIPPER", SkillAttribute.Green, SkillMotif.Flurry); Look("WHALE_TAIL", SkillAttribute.Blue, SkillMotif.Slash); Look("WHALE_SPOUT", SkillAttribute.Blue, SkillMotif.Smash);
+            Look("WHALE_RAM", SkillAttribute.Blue, SkillMotif.Rush); Look("WHALE_BEAM", SkillAttribute.Blue, SkillMotif.Beam); Look("WHALE_JUMP", SkillAttribute.Purple, SkillMotif.Leap);
+            Look("WHALE_FLIPPER", SkillAttribute.Green, SkillMotif.Flurry); Look("WHALE_TAIL", SkillAttribute.Blue, SkillMotif.Slash); Look("WHALE_SPOUT", SkillAttribute.Blue, SkillMotif.Spout);
+            foreach (var id in new[] { "WHALE_RAM", "WHALE_BEAM", "WHALE_JUMP", "WHALE_FLIPPER", "WHALE_TAIL", "WHALE_SPOUT" }) if (map.TryGetValue(id, out var wsk)) wsk.subject = IllustrationSubject.Whale;   // 일러스트 = 고래 실루엣
             St("WHALE_RAM", StatusType.Tremor, 2, 1); St("WHALE_BEAM", StatusType.Sinking, 2, 2, 1, 1); St("WHALE_JUMP", StatusType.Tremor, 3, 1, 1, 1);
             St("WHALE_FLIPPER", StatusType.PowerDown, 1, 1); St("WHALE_SPOUT", StatusType.Sinking, 1, 2);
             Look("SKILL_004", SkillAttribute.Yellow, SkillMotif.Smash);

@@ -143,7 +143,7 @@ def panel(skill, state, scale):
     fa = np.clip(.86 + (noise(*np.meshgrid(np.arange(460 * S) * .02, np.arange(300 * S) * .02)) - .5) * .05, 0, 1)
     fill = tinted(fa.astype(np.float32), (.05, .04, .03, 1)); P.alpha_composite(fill, at(120, -150))
     P.alpha_composite(nine(FRAME, (*light, 1), (460 + 12) * S, (300 + 12) * S, 34 * S), at(114, -144))
-    art = render_illustration(skill["motif"], skill["seed"], tuple(int(v * 255) for v in c)).convert("RGBA").resize(((416 - 16) * S, (158 - 16) * S), Image.LANCZOS)
+    art = render_illustration(skill["motif"], skill["seed"], tuple(int(v * 255) for v in c), skill.get("subject", "human")).convert("RGBA").resize(((416 - 16) * S, (158 - 16) * S), Image.LANCZOS)
     P.alpha_composite(art, at(120 + 22 + 8, -150 - 16 - 8)); P.alpha_composite(nine(FRAME, (*light, 1), 416 * S, 158 * S, 34 * S), at(142, -166))
     P.alpha_composite(glow((230 * S, 230 * S), c, .4), at(88 - 115, -138 + 115))
     P.alpha_composite(tinted(BANNER, (.07, .06, .05, .92), (470 * S, 74 * S)), at(128, -78)); P.alpha_composite(tinted(INK, (*light, 1), (470 * S, 74 * S)), at(128, -78))
@@ -199,5 +199,17 @@ def main():
     text(bg, (W / 2, cy + 62), "공격 유지 — 그대로 명중", 26, CREAM, anchor="mm", stroke=2, outline=(0, 0, 0, 230))
     out = os.path.join(ROOT, "previews", "skill_panel_v3_mock.png"); bg.convert("RGB").save(out); print("✔", out)
 
+def whale_panels():
+    """고래고래 기술 패널 미리보기(고래 실루엣 일러스트) → previews/whale_skill_panels.png"""
+    bg = Image.new("RGBA", (1500, 430), (24, 22, 26, 255))
+    beam = dict(name="고래빔", attr="Blue", motif="Beam", subject="whale", seed=22, base=12, coinPower=4, coins=4, attrLine="파랑 속성 · 초록에 약함 · 광역",
+                status=[("침잠", "Sinking"), (" 앞 2/2 · 뒤 1/1", CREAM)])
+    jump = dict(name="점프 내려찍기", attr="Purple", motif="Leap", subject="whale", seed=23, base=14, coinPower=4, coins=1, attrLine="보라 속성 · 빨강에 약함 · 광역",
+                status=[("진동", "Tremor"), (" 앞 3/1 · 뒤 1/1", CREAM)])
+    for sk, st, x in ((beam, dict(mods=[("PowerUp", "0", False), ("PowerDown", "0", False), ("Paralysis", "0", False)], results=[(1, 16, None), (2, 12, None), (1, 16, None)], label="위력 3/4"), 10),
+                      (jump, dict(mods=[("PowerUp", "0", False), ("PowerDown", "0", False), ("Paralysis", "0", False)], results=[], label="공격 예고"), 760)):
+        img, (ox, oy) = panel(sk, st, .9); bg.alpha_composite(img, (int(x - ox + 20), int(420 - img.height + (560 - 80 - 460) * .9)))
+    out = os.path.join(ROOT, "previews", "whale_skill_panels.png"); bg.convert("RGB").save(out); print("✔", out)
+
 if __name__ == "__main__":
-    main()
+    main(); whale_panels()

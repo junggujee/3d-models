@@ -36,7 +36,29 @@ def figure(X, Y, pose, ox, s):
     wt = (fw[0] + math.cos(wa) * 0.34 * s, fw[1] + math.sin(wa) * 0.34 * s)
     return d, capsule(X, Y, fw, wt, 0.008 * s), wt
 
-def render(motif, seed, accent):
+def ell(X, Y, c, rx, ry, rot=0.0):
+    """회전한 타원 SDF(근사)."""
+    ca, sa = math.cos(rot), math.sin(rot); dx, dy = X - c[0], Y - c[1]; u = dx * ca + dy * sa; v = -dx * sa + dy * ca
+    return (np.hypot(u / rx, v / ry) - 1) * min(rx, ry)
+
+def whale(X, Y, c, s, tilt, jaw=0.0, curl=0.0):
+    """고래고래 옆모습 실루엣 SDF(오른쪽을 봄). c = 몸 중심, s = 크기, tilt = 기울기(도, + = 주둥이가 위), jaw = 입 벌림(라디안), curl = 꼬리 휨(+ 위).
+    반환: (sdf, 주둥이 끝, 숨구멍, 지느러미 위치)"""
+    t = math.radians(tilt); ct, st = math.cos(t), math.sin(t)
+    P = lambda x, y: (c[0] + (x * ct - y * st) * s, c[1] + (x * st + y * ct) * s)
+    d = ell(X, Y, P(0, 0), .32 * s, .13 * s, t)                                            # 몸
+    d = np.minimum(d, ell(X, Y, P(.2, .03), .14 * s, .12 * s, t))                           # 볼록한 이마
+    d = np.minimum(d, ell(X, Y, P(.37, -.005), .13 * s, .035 * s, t + jaw * .5))           # 위 주둥이
+    d = np.minimum(d, ell(X, Y, P(.33, -.05), .11 * s, .028 * s, t - jaw))                 # 아래턱
+    d = np.minimum(d, ell(X, Y, P(.02, .14), .05 * s, .07 * s, t - .5))                    # 등지느러미
+    d = np.minimum(d, ell(X, Y, P(.14, -.12), .08 * s, .028 * s, t - .6))                  # 가슴지느러미
+    pts = [P(-.22 - .34 * k / 8, curl * .18 * (k / 8) ** 2) for k in range(9)]
+    for k in range(8): d = np.minimum(d, capsule(X, Y, pts[k], pts[k + 1], (.1 - .075 * k / 8) * s))   # 가늘어지는 꼬리
+    end = pts[-1]; ft = t + math.atan2(curl * .36, -.34)
+    for sg in (1, -1): d = np.minimum(d, ell(X, Y, (end[0] - .03 * s, end[1] + sg * .05 * s), .09 * s, .025 * s, ft + sg * 1.0))   # 갈라진 꼬리 지느러미
+    return d, P(.5, -.02), P(.16, .15), P(.14, -.12)
+
+def render(motif, seed, accent, subject="human"):
     rng = np.random.default_rng(seed); R = lambda a, b: a + rng.random() * (b - a)
     xs = (np.arange(W) + .5) / W * ASP; ys = (np.arange(H) + .5) / H; X, Y = np.meshgrid(xs, ys[::-1])
     # 바탕: 어두운 종이 + 먹 얼룩(낮은 주파수 노이즈) + 거친 입자
@@ -54,7 +76,35 @@ def render(motif, seed, accent):
         for k in range(n): stroke(P(k / n), P((k + 1) / n), w * max(.12, math.sin(math.pi * (k + .5) / n)), l, ac, taper=False)
     fx = R(0.45, 0.7)
     lum = lum + 0.22 * np.exp(-((X - fx - 0.35) ** 2 / 0.25 + (Y - 0.5) ** 2 / 0.35)) * (0.6 + 0.8 * noise(X * 6, Y * 6 + 3))   # 연기 같은 밝은 배경(실루엣이 보이게)
-    if motif == "Slash":
+    W_ = None   # 고래 실루엣 설정(figure == "whale")
+    if subject == "whale":
+        if motif == "Beam":     # 주둥이를 들고 앞으로 굵은 빛줄기 + 결 + 고리
+            W_ = ((fx - .25, .4), 1.0, 14, .45, -.4); _, tip, _, _ = whale(X, Y, *W_[:3], W_[3], W_[4])
+            stroke(tip, (ASP + .1, tip[1] + .1), .075, 1, .3, taper=False); stroke(tip, (ASP + .1, tip[1] + .1), .03, 1, 0, taper=False)
+            for k in range(22): o = R(-.12, .12); stroke((tip[0] + R(0, .3), tip[1] + o), (ASP + .1, tip[1] + .1 + o * 1.6), R(.002, .008), R(.5, .95), R(0, 1) > .6)
+            for k in range(5): cx = tip[0] + .15 + k * (ASP - tip[0]) / 5; arc((cx, tip[1] + .1 * (cx - tip[0]) / (ASP - tip[0])), .025, .13, 0, 360, .006, .8, .4, n=16)
+        elif motif == "Leap":   # 하늘에서 내리꽂힘 + 땅에서 솟는 충격 가시 + 낮게 퍼지는 충격파
+            W_ = ((fx + .3, .6), .8, -28, .1, .7); c = (fx + .45, .04)
+            for k in range(24): a = math.radians(R(10, 170)); l = R(.15, .55); stroke(c, (c[0] + math.cos(a) * l * 1.6, c[1] + math.sin(a) * l), R(.008, .03), R(.6, 1), R(0, 1) > .6)
+            for k in range(3): arc(c, .3 + k * .18, .05 + k * .025, 0, 180, .01, .8, .3, n=20)
+            for k in range(14): x0 = fx + R(-.1, .5); stroke((x0, R(.75, 1)), (x0 + .1, R(.45, .6)), R(.002, .006), R(.4, .8))
+        elif motif == "Spout":  # 숨구멍에서 하늘로 치솟는 물기둥 + 흩날리는 물방울
+            W_ = ((fx + .15, .26), .95, 4, .05, .2); _, _, hole, _ = whale(X, Y, *W_[:3], W_[3], W_[4])
+            for k in range(10): o = R(-.035, .035); stroke((hole[0] + o, hole[1]), (hole[0] + o * 2.5, 1.05), R(.01, .03), R(.7, 1), R(0, 1) > .5, taper=False)
+            for k in range(40): a = math.radians(R(20, 160)); l = R(.15, .5); p = (hole[0] + math.cos(a) * l * 1.3, .9 + math.sin(a) * l * .2 - l * .4); stroke(p, (p[0] + .01, p[1] - .02), R(.004, .012), R(.6, 1))
+        elif motif == "Rush":   # 들이받음: 뒤로 흐르는 속도선 + 주둥이 끝 충격
+            W_ = ((fx + .32, .45), .9, -6, .1, .1); _, tip, _, _ = whale(X, Y, *W_[:3], W_[3], W_[4])
+            for k in range(34): y = R(.1, .9); x0 = R(0, fx); stroke((x0, y), (x0 - R(.3, .8), y), R(.002, .012), R(.3, .9), R(0, 1) > .75)
+            for k in range(16): a = math.radians(R(-80, 80)); stroke(tip, (tip[0] + math.cos(a) * R(.1, .3), tip[1] + math.sin(a) * R(.1, .3)), R(.006, .02), R(.7, 1), R(0, 1) > .6)
+        elif motif == "Flurry": # 지느러미 주변에 엇갈린 궤적
+            W_ = ((fx + .3, .5), .9, 6, .05, -.3); _, _, _, fp = whale(X, Y, *W_[:3], W_[3], W_[4])
+            for k in range(7): arc((fp[0] + R(-.05, .25), fp[1] + R(-.1, .05)), R(.12, .3), R(.1, .22), R(0, 360), R(0, 360), R(.006, .022), R(.6, 1), R(0, 1) > .5, n=14)
+        else:                   # 꼬리 휘두르기: 꼬리를 휘감는 큰 호
+            W_ = ((fx + .25, .42), .9, 0, .05, .9)
+            arc((fx + .05, .35), .62, .42, 200, 40, .045, 1, .3, n=26)
+            for k in range(7): arc((fx + .05 + R(-.05, .05), .35 + R(-.05, .05)), R(.5, .7), R(.32, .48), R(190, 215), R(30, 60), R(.002, .009), R(.5, .9), R(0, 1) > .6)
+        pose = None
+    elif motif == "Slash":
         pose = (15, 70, 200, -60, -120, 30); arc((fx + 0.5, 0.2), 1.0, 0.75, 180, 75, 0.05, 1, 0.3)
         for k in range(8): arc((fx + 0.5 + R(-.1, .1), 0.2 + R(-.1, .1)), R(.85, 1.1), R(.6, .85), R(170, 190), R(70, 90), R(.002, .01), R(.5, .9), R(0, 1) > .6)
     elif motif == "Thrust":
@@ -84,10 +134,16 @@ def render(motif, seed, accent):
     # 하프톤(중간 밝기 영역에 점무늬)
     cell = 6; gx = (np.arange(W) % cell - cell / 2) ; gy = (np.arange(H) % cell - cell / 2); GX, GY = np.meshgrid(gx, gy)
     dots = np.hypot(GX, GY) < (lum * cell * 0.75); mid = (lum > .15) & (lum < .6); lum = np.where(mid, np.where(dots, lum + .15, lum - .08), lum)
-    # 인물 실루엣(검정) + 가장자리 빛
-    d, wd, tip = figure(X, Y, pose, fx, 1.0); rim = np.clip(1 - np.abs(d) * H * 0.35, 0, 1) * np.clip(glow, 0, 1)
+    # 실루엣(검정) + 가장자리 빛
+    if W_ is not None: d, _, hole, _ = whale(X, Y, *W_[:3], W_[3], W_[4]); wd = np.full_like(X, 1.0)
+    else: d, wd, tip = figure(X, Y, pose, fx, 1.0)
+    rim = np.clip(1 - np.abs(d) * H * 0.35, 0, 1) * np.clip(glow, 0, 1)
     lum = np.where(d < 0, 0.02 + 0.15 * rim, lum); lum = np.maximum(lum, rim * 0.8)
     lum = np.where(wd < 0, 0.9, lum)   # 무기(밝은 칼날)
+    if W_ is not None:   # 고래: 눈의 흰 점 + 숨구멍 물방울(밝게) — 실루엣이어도 고래고래로 알아보게
+        c0, s0, t0 = W_[:3]; tt = math.radians(t0); ex, ey = c0[0] + (.27 * math.cos(tt) - .02 * math.sin(tt)) * s0, c0[1] + (.27 * math.sin(tt) + .02 * math.cos(tt)) * s0
+        lum = np.where(np.hypot(X - ex, Y - ey) < .012 * s0, 0.95, lum)
+        for dx, dy, rr in ((0, .05, .018), (.03, .075, .012), (-.03, .07, .012)): lum = np.where(np.hypot(X - hole[0] - dx * s0, Y - hole[1] - dy * s0) < rr * s0, 0.9, lum)
     vig = np.clip(1 - (np.hypot((X / ASP - .5) * 1.6, (Y - .5) * 1.6) - .5) * 0.9, .5, 1); lum = lum * vig   # 비네트
     lum = np.clip(lum, 0, 1); acc = np.clip(acc, 0, 1) * (lum > .3) * 0.45      # 속성색은 아주 조금
     rgb = np.stack([lum] * 3, -1) * (1 - acc[..., None] * .8) + np.array(accent)[None, None, :] / 255 * acc[..., None] * np.maximum(lum, .6)[..., None]
@@ -99,3 +155,9 @@ if __name__ == "__main__":
     for i, m in enumerate(["Slash", "Thrust", "Smash", "Rush", "Flurry"]):
         out.paste(render(m, 7 + i, acc[i]), (4 + (i % 3) * (W + 4), 4 + (i // 3) * (H + 4)))
     import os; out.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "previews", "skill_illustrations.png"))
+    # 고래고래 기술 6종(SkillLibrary WHALE_*: 박치기 Rush · 빔 Beam · 점프 Leap · 지느러미 Flurry · 꼬리 Slash · 물기둥 Spout)
+    WH = [("Rush", "고래박치기", (51, 115, 242)), ("Beam", "고래빔", (51, 115, 242)), ("Leap", "점프 내려찍기", (153, 77, 230)),
+          ("Flurry", "지느러미 연타", (77, 191, 77)), ("Slash", "꼬리 휘두르기", (51, 115, 242)), ("Spout", "물기둥", (51, 115, 242))]
+    out = Image.new("RGB", (W * 3 + 16, H * 2 + 12), (30, 30, 30))
+    for i, (m, nm, ac) in enumerate(WH): out.paste(render(m, 21 + i, ac, "whale"), (4 + (i % 3) * (W + 4), 4 + (i // 3) * (H + 4)))
+    out.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "previews", "whale_skill_illustrations.png"))

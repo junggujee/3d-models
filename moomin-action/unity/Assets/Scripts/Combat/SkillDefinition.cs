@@ -7,7 +7,9 @@ namespace MoominAction
     /// <summary>스킬 속성(색). 스킬 패널·슬롯·이펙트 색에 쓰임.</summary>
     public enum SkillAttribute { Red, Blue, Yellow, Green, Orange, Purple, Black }
     /// <summary>일러스트를 따로 넣지 않았을 때 코드로 그리는 스케치의 동작 종류.</summary>
-    public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry }
+    public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry, Beam, Leap, Spout }
+    /// <summary>일러스트 주인공 실루엣: 사람(민미·곰 등) / 고래고래.</summary>
+    public enum IllustrationSubject { Humanoid, Whale }
     /// <summary>광역 모양: 원 = 공격자 중심 반경 areaRadius · 직선 = 앞으로 길이 areaRadius, 폭 areaWidth(빔).</summary>
     public enum AreaShape { Circle, Line }
     /// <summary>코인 판정 순간의 특수 연출(Effects/SkillVfx).</summary>
@@ -52,7 +54,7 @@ namespace MoominAction
         public string skillId = "SKILL_000";
         public string skillName = "스킬";
 
-        [Header("Look")] public SkillAttribute attribute = SkillAttribute.Red; public SkillMotif motif = SkillMotif.Slash;
+        [Header("Look")] public SkillAttribute attribute = SkillAttribute.Red; public SkillMotif motif = SkillMotif.Slash; [Tooltip("일러스트 실루엣")] public IllustrationSubject subject = IllustrationSubject.Humanoid;
         [Tooltip("스킬 일러스트(비우면 motif 로 스케치를 자동 생성)")] public Sprite illustration;
         [Header("Coin Settings")] public int basePower = 10; public int coinPower = 3; public int coinCount = 3;
         [Header("Attack Settings")] public float damageMultiplier = 1.0f; public float cooldown = 5f; public int sanityCost = 0;

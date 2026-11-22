@@ -21,7 +21,7 @@ namespace MoominAction.UI
         public static Sprite Get(SkillDefinition s)
         {
             if (s == null) return null; if (s.illustration != null) return s.illustration;
-            string key = s.skillId + "_" + s.motif + "_" + s.attribute; if (cache.TryGetValue(key, out var sp)) return sp;
+            string key = s.skillId + "_" + s.motif + "_" + s.attribute + "_" + s.subject; if (cache.TryGetValue(key, out var sp)) return sp;
             rng = new System.Random(StableHash(s.skillId)); lum = new float[W * H]; glow = new float[W * H]; acc = new float[W * H];
             int seed = StableHash(s.skillId) & 0xff;
             for (int j = 0; j < H; j++) for (int i = 0; i < W; i++)
@@ -35,7 +35,9 @@ namespace MoominAction.UI
                 float x = (i + .5f) / W * ASP, y = (j + .5f) / H, dx = x - fx - .35f, dy = y - .5f;
                 lum[j * W + i] += 0.22f * Mathf.Exp(-(dx * dx / .25f + dy * dy / .35f)) * (0.6f + 0.8f * SkillPanelArt.Noise(x * 6, y * 6 + 3));
             }
-            switch (s.motif)
+            WhalePose? wp = null;
+            if (s.subject == IllustrationSubject.Whale) { wp = WhaleScene(s.motif, fx); pose = null; }
+            else switch (s.motif)
             {
                 case SkillMotif.Slash:
                     pose = new[] { 15f, 70f, 200f, -60f, -120f, 30f }; Arc(fx + 0.5f, 0.2f, 1.0f, 0.75f, 180f, 75f, 0.05f, 1f, 0.3f, 24);
@@ -70,7 +72,7 @@ namespace MoominAction.UI
                 if (v > .15f && v < .6f) { float gx = i % 6 - 3f, gy = j % 6 - 3f; v += Mathf.Sqrt(gx * gx + gy * gy) < v * 6f * 0.75f ? .15f : -.08f; }
                 lum[idx] = v;
             }
-            Figure(pose, fx);
+            if (wp.HasValue) WhaleFigure(wp.Value); else Figure(pose, fx);
             // 색 입히기
             var c = SkillAttributes.ColorOf(s.attribute); var px = new Color[W * H];
             for (int k = 0; k < px.Length; k++)
@@ -82,6 +84,102 @@ namespace MoominAction.UI
             }
             var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp }; tex.SetPixels(px); tex.Apply();
             sp = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(.5f, .5f), 100f); cache[key] = sp; lum = glow = acc = null; return sp;
+        }
+
+        // ── 고래고래 실루엣(옆모습, 오른쪽을 봄) — tools/illustration_preview.py 의 whale() 과 같은 도형
+        struct WhalePose { public float cx, cy, s, tilt, jaw, curl; public WhalePose(float cx, float cy, float s, float tilt, float jaw, float curl) { this.cx = cx; this.cy = cy; this.s = s; this.tilt = tilt * Mathf.Deg2Rad; this.jaw = jaw; this.curl = curl; } }
+        static Vector2 WP(WhalePose w, float lx, float ly) { float c = Mathf.Cos(w.tilt), s = Mathf.Sin(w.tilt); return new Vector2(w.cx + (lx * c - ly * s) * w.s, w.cy + (lx * s + ly * c) * w.s); }
+        static float Ell(float x, float y, Vector2 c, float rx, float ry, float rot)
+        {
+            float ca = Mathf.Cos(rot), sa = Mathf.Sin(rot), dx = x - c.x, dy = y - c.y, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
+            return (Mathf.Sqrt(u * u / (rx * rx) + v * v / (ry * ry)) - 1f) * Mathf.Min(rx, ry);
+        }
+        static float WhaleSdf(float x, float y, WhalePose w)
+        {
+            float s = w.s, t = w.tilt;
+            float d = Ell(x, y, WP(w, 0, 0), .32f * s, .13f * s, t);                                   // 몸
+            d = Mathf.Min(d, Ell(x, y, WP(w, .2f, .03f), .14f * s, .12f * s, t));                     // 볼록한 이마
+            d = Mathf.Min(d, Ell(x, y, WP(w, .37f, -.005f), .13f * s, .035f * s, t + w.jaw * .5f));   // 위 주둥이
+            d = Mathf.Min(d, Ell(x, y, WP(w, .33f, -.05f), .11f * s, .028f * s, t - w.jaw));          // 아래턱
+            d = Mathf.Min(d, Ell(x, y, WP(w, .02f, .14f), .05f * s, .07f * s, t - .5f));              // 등지느러미
+            d = Mathf.Min(d, Ell(x, y, WP(w, .14f, -.12f), .08f * s, .028f * s, t - .6f));            // 가슴지느러미
+            Vector2 prev = WP(w, -.22f, 0f);
+            for (int k = 1; k <= 8; k++)                                                                // 가늘어지는 꼬리
+            {
+                float u = k / 8f; Vector2 p = WP(w, -.22f - .34f * u, w.curl * .18f * u * u);
+                d = Mathf.Min(d, Seg(x, y, prev.x, prev.y, p.x, p.y, out _) - (.1f - .075f * (k - 1) / 8f) * s); prev = p;
+            }
+            float ft = t + Mathf.Atan2(w.curl * .36f, -.34f);
+            for (int sg = -1; sg <= 1; sg += 2) d = Mathf.Min(d, Ell(x, y, new Vector2(prev.x - .03f * s, prev.y + sg * .05f * s), .09f * s, .025f * s, ft + sg * 1.0f));   // 갈라진 꼬리 지느러미
+            return d;
+        }
+        /// <summary>고래 기술별 연출(빛 획)을 그리고 고래 자세를 돌려줌. 사람 기술의 switch 와 같은 역할.</summary>
+        static WhalePose WhaleScene(SkillMotif m, float fx)
+        {
+            WhalePose w;
+            switch (m)
+            {
+                case SkillMotif.Beam:   // 주둥이를 들고 앞으로 굵은 빛줄기 + 결 + 고리
+                {
+                    w = new WhalePose(fx - .25f, .4f, 1f, 14f, .45f, -.4f); var tip = WP(w, .5f, -.02f);
+                    Stroke(tip.x, tip.y, ASP + .1f, tip.y + .1f, .075f, 1f, .3f, false); Stroke(tip.x, tip.y, ASP + .1f, tip.y + .1f, .03f, 1f, 0f, false);
+                    for (int k = 0; k < 22; k++) { float o = R(-.12f, .12f); Stroke(tip.x + R(0, .3f), tip.y + o, ASP + .1f, tip.y + .1f + o * 1.6f, R(.002f, .008f), R(.5f, .95f), R(0, 1) > .6f ? 1 : 0, true); }
+                    for (int k = 0; k < 5; k++) { float cx = tip.x + .15f + k * (ASP - tip.x) / 5f; Arc(cx, tip.y + .1f * (cx - tip.x) / (ASP - tip.x), .025f, .13f, 0, 360, .006f, .8f, .4f, 16); }
+                    break;
+                }
+                case SkillMotif.Leap:   // 하늘에서 내리꽂힘 + 땅에서 솟는 충격 가시 + 낮게 퍼지는 충격파
+                {
+                    w = new WhalePose(fx + .3f, .6f, .8f, -28f, .1f, .7f); float cx = fx + .45f, cy = .04f;
+                    for (int k = 0; k < 24; k++) { float a = R(10f, 170f) * Mathf.Deg2Rad, l = R(.15f, .55f); Stroke(cx, cy, cx + Mathf.Cos(a) * l * 1.6f, cy + Mathf.Sin(a) * l, R(.008f, .03f), R(.6f, 1f), R(0, 1) > .6f ? 1 : 0, true); }
+                    for (int k = 0; k < 3; k++) Arc(cx, cy, .3f + k * .18f, .05f + k * .025f, 0, 180, .01f, .8f, .3f, 20);
+                    for (int k = 0; k < 14; k++) { float x0 = fx + R(-.1f, .5f); Stroke(x0, R(.75f, 1f), x0 + .1f, R(.45f, .6f), R(.002f, .006f), R(.4f, .8f), 0, true); }
+                    break;
+                }
+                case SkillMotif.Spout:  // 숨구멍에서 하늘로 치솟는 물기둥 + 흩날리는 물방울
+                {
+                    w = new WhalePose(fx + .15f, .26f, .95f, 4f, .05f, .2f); var hole = WP(w, .16f, .15f);
+                    for (int k = 0; k < 10; k++) { float o = R(-.035f, .035f); Stroke(hole.x + o, hole.y, hole.x + o * 2.5f, 1.05f, R(.01f, .03f), R(.7f, 1f), R(0, 1) > .5f ? 1 : 0, false); }
+                    for (int k = 0; k < 40; k++) { float a = R(20f, 160f) * Mathf.Deg2Rad, l = R(.15f, .5f); float px = hole.x + Mathf.Cos(a) * l * 1.3f, py = .9f + Mathf.Sin(a) * l * .2f - l * .4f; Stroke(px, py, px + .01f, py - .02f, R(.004f, .012f), R(.6f, 1f), 0, true); }
+                    break;
+                }
+                case SkillMotif.Rush:   // 들이받음: 뒤로 흐르는 속도선 + 주둥이 끝 충격
+                {
+                    w = new WhalePose(fx + .32f, .45f, .9f, -6f, .1f, .1f); var tip = WP(w, .5f, -.02f);
+                    for (int k = 0; k < 34; k++) { float y = R(.1f, .9f), x0 = R(0, fx); Stroke(x0, y, x0 - R(.3f, .8f), y, R(.002f, .012f), R(.3f, .9f), R(0, 1) > .75f ? 1 : 0, true); }
+                    for (int k = 0; k < 16; k++) { float a = R(-80f, 80f) * Mathf.Deg2Rad; Stroke(tip.x, tip.y, tip.x + Mathf.Cos(a) * R(.1f, .3f), tip.y + Mathf.Sin(a) * R(.1f, .3f), R(.006f, .02f), R(.7f, 1f), R(0, 1) > .6f ? 1 : 0, true); }
+                    break;
+                }
+                case SkillMotif.Flurry: // 지느러미 주변에 엇갈린 궤적
+                {
+                    w = new WhalePose(fx + .3f, .5f, .9f, 6f, .05f, -.3f); var fp = WP(w, .14f, -.12f);
+                    for (int k = 0; k < 7; k++) Arc(fp.x + R(-.05f, .25f), fp.y + R(-.1f, .05f), R(.12f, .3f), R(.1f, .22f), R(0, 360), R(0, 360), R(.006f, .022f), R(.6f, 1f), R(0, 1) > .5f ? 1 : 0, 14);
+                    break;
+                }
+                default:                // 꼬리 휘두르기: 꼬리를 휘감는 큰 호
+                {
+                    w = new WhalePose(fx + .25f, .42f, .9f, 0f, .05f, .9f);
+                    Arc(fx + .05f, .35f, .62f, .42f, 200f, 40f, .045f, 1f, .3f, 26);
+                    for (int k = 0; k < 7; k++) Arc(fx + .05f + R(-.05f, .05f), .35f + R(-.05f, .05f), R(.5f, .7f), R(.32f, .48f), R(190f, 215f), R(30f, 60f), R(.002f, .009f), R(.5f, .9f), R(0, 1) > .6f ? 1 : 0, 26);
+                    break;
+                }
+            }
+            return w;
+        }
+        /// <summary>고래 실루엣(검정) + 빛 쪽 가장자리 하이라이트 + 눈의 흰 점 + 숨구멍 물방울.</summary>
+        static void WhaleFigure(WhalePose w)
+        {
+            var eye = WP(w, .27f, .02f); var hole = WP(w, .16f, .15f);
+            ForBox(0f, 0f, ASP, 1f, (idx, x, y) =>
+            {
+                float d = WhaleSdf(x, y, w); float rim = Mathf.Clamp01(1 - Mathf.Abs(d) * H * 0.35f) * Mathf.Clamp01(glow[idx]);
+                if (d < 0) lum[idx] = 0.02f + 0.15f * rim; lum[idx] = Mathf.Max(lum[idx], rim * 0.8f);
+                if ((x - eye.x) * (x - eye.x) + (y - eye.y) * (y - eye.y) < .012f * w.s * .012f * w.s) lum[idx] = 0.95f;
+                for (int k = 0; k < 3; k++)
+                {
+                    float dx = k == 0 ? 0f : k == 1 ? .03f : -.03f, dy = k == 0 ? .05f : k == 1 ? .075f : .07f, rr = (k == 0 ? .018f : .012f) * w.s;
+                    float px = hole.x + dx * w.s, py = hole.y + dy * w.s; if ((x - px) * (x - px) + (y - py) * (y - py) < rr * rr) lum[idx] = 0.9f;
+                }
+            });
         }
 
         static void Blot(float cx, float cy, float r, bool white) => ForBox(cx - r, cy - r, cx + r, cy + r, (idx, x, y) =>
