@@ -39,9 +39,12 @@ namespace MoominAction.EditorTools
         public static int Apply(Transform world)
         {
             int renderers = 0, colliders = 0, lods = 0, props = 0;
-            foreach (Transform cat in world)
+            // 분류 이름으로 찾음(맵이 여러 FBX 로 나뉘어 World 아래 한 단계 더 깊이 있을 수 있음: World/City_TownW/TownW). Town* = 마을.
+            foreach (var cat in world.GetComponentsInChildren<Transform>(true))
             {
-                switch (cat.name)
+                string key = cat.name.StartsWith("Town") ? "Town" : cat.name;
+                if (cat != world && cat.parent != world && cat.parent.parent != world) continue;
+                switch (key)
                 {
                     case "Collision":
                         foreach (var mf in cat.GetComponentsInChildren<MeshFilter>(true))
@@ -52,9 +55,9 @@ namespace MoominAction.EditorTools
                         }
                         break;
                     case "Terrain": case "Castle": case "Town": case "Foliage":
-                        var flags = cat.name == "Foliage" ? Thin : Solid;
+                        var flags = key == "Foliage" ? Thin : Solid;
                         foreach (var t in cat.GetComponentsInChildren<Transform>(true)) GameObjectUtility.SetStaticEditorFlags(t.gameObject, flags);
-                        foreach (var lg in cat.GetComponentsInChildren<LODGroup>(true)) { SetHeights(lg, LodHeights[cat.name]); lods++; }
+                        foreach (var lg in cat.GetComponentsInChildren<LODGroup>(true)) { SetHeights(lg, LodHeights[key]); lods++; }
                         renderers += cat.GetComponentsInChildren<Renderer>(true).Length;
                         break;
                     case "Props": case "Interiors": case "Decor":

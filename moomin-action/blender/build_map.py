@@ -327,7 +327,7 @@ def build_mesh(name, co, lv, lt, uv, mi, mats, parent):
     for m in mats: me.materials.append(m)
     me.polygons.foreach_set("material_index", mi); me.update()
     ob = bpy.data.objects.new(name, me); OPT.collection.objects.link(ob); ob.parent = parent; return ob
-def strip_small(src, name, min_diag, parent):
+def strip_small(src, name, min_diag, parent, thin_below=0.0):
     """작은 장식 덩어리(창틀·등불·울타리 조각 등, 연결된 면 묶음의 크기 < min_diag m)를 통째로 뺀 사본 — 큰 면에 구멍이 나지 않음."""
     co, lv, lt, uv, mi = mesh_arrays(src.data); nF = len(lt); ls = np.concatenate([[0], np.cumsum(lt)[:-1]])
     if nF == 0: return build_mesh(name, co, lv, lt, uv, mi, list(src.data.materials), parent)
@@ -341,7 +341,8 @@ def strip_small(src, name, min_diag, parent):
         lab = new
     comp = lab[plv[ls]]; uniq, ci = np.unique(comp, return_inverse=True)
     lo = np.full((len(uniq), 3), np.inf, np.float32); hi = np.full((len(uniq), 3), -np.inf, np.float32); vc = np.repeat(ci, lt)
-    np.minimum.at(lo, vc, co[lv]); np.maximum.at(hi, vc, co[lv]); keepc = np.linalg.norm(hi - lo, axis=1) >= min_diag
+    np.minimum.at(lo, vc, co[lv]); np.maximum.at(hi, vc, co[lv]); size = np.linalg.norm(hi - lo, axis=1); keepc = size >= min_diag
+    if thin_below > 0: keepc &= (size >= thin_below) | (np.arange(len(uniq)) % 2 == 0)   # 이보다 작은 덩어리는 절반만(성기게)
     keep = keepc[ci]
     if keep.all(): keep = keep   # 그대로
     lk = np.repeat(keep, lt)
@@ -352,6 +353,10 @@ def decimate(ob, kind, value):
     else: m.decimate_type = "COLLAPSE"; m.ratio = value
     with bpy.context.temp_override(scene=OPT, view_layer=OPT.view_layers[0], object=ob, active_object=ob, selected_objects=[ob]):
         bpy.ops.object.modifier_apply(modifier=m.name)
+def weld(ob, dist=0.001):
+    """같은 위치(1mm)의 꼭짓점을 하나로: 보이는 모습은 같고(UV·재질은 면 모서리마다 그대로) 꼭짓점이 줄어 파일이 작고 LOD 가 깔끔해짐."""
+    bm = bmesh.new(); bm.from_mesh(ob.data); n0 = len(bm.verts); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=dist); bm.to_mesh(ob.data); bm.free(); ob.data.update()
+    STATS.setdefault("_weld", [0, 0]); STATS["_weld"][0] += n0; STATS["_weld"][1] += len(ob.data.vertices)
 def copy_obj(src, name, parent):
     ob = bpy.data.objects.new(name, src.data.copy()); OPT.collection.objects.link(ob); ob.parent = parent; return ob
 # LOD 규칙: (LOD1, LOD2) — 건물 = 작은 덩어리 빼기 + 같은 평면 합치기, 산·언덕 = 형태를 유지하며 줄이기, 나무 = 작은 수풀 빼기(LOD2 없음 → 멀면 사라짐)
@@ -359,9 +364,13 @@ RULES = {
     "Town":    (lambda b, n, p: (decimate(o := strip_small(b, n, 0.6, p), "planar", 4) or o), lambda b, n, p: (decimate(o := strip_small(b, n, 2.5, p), "planar", 10) or o)),
     "Castle":  (lambda b, n, p: (decimate(o := strip_small(b, n, 0.6, p), "planar", 4) or o), lambda b, n, p: (decimate(o := strip_small(b, n, 2.5, p), "planar", 10) or o)),
     "Terrain": (lambda b, n, p: (decimate(o := copy_obj(b, n, p), "collapse", 0.45) or o), lambda b, n, p: (decimate(o := copy_obj(b, n, p), "collapse", 0.15) or o)),
-    "Foliage": (lambda b, n, p: strip_small(b, n, 1.2, p), None),
+    "Foliage": (lambda b, n, p: strip_small(b, n, 1.2, p, thin_below=6.0), None),   # 작은 수풀 빼고, 6m 미만 나무는 절반만
 }
 world = empty("World"); groups = {k: empty(k, world) for k in ("Terrain", "Castle", "Town", "Foliage", "Collision", "Props", "Interiors", "Decor")}
+def gcenter_obj(ob):   # 구역 부모(빈 물체)의 자식 메시 중심 x
+    for c in ob.children:
+        if c.type == "MESH" and len(c.data.vertices): co = np.empty(len(c.data.vertices) * 3, np.float32); c.data.vertices.foreach_get("co", co); return float(co.reshape(-1, 3)[:, 0].mean())
+    return 0.0
 def chunks(objs, cat):
     out = {}
     for o in objs:
@@ -378,7 +387,7 @@ for cat in ("Terrain", "Castle", "Town", "Foliage"):
         name = f"{cat}_{key}"; parent = empty(name, groups[cat])
         lod0 = merge(part, name + ("" if key == "Ground" else "_LOD0"), double_sided=(cat == "Foliage"), coll=OPT.collection); lod0.parent = parent
         if len(lod0.data.polygons) == 0: continue
-        box_uv(lod0); n += 1; f0 += len(lod0.data.polygons)
+        box_uv(lod0); weld(lod0); n += 1; f0 += len(lod0.data.polygons)
         if key == "Ground": continue                                     # 평평한 바닥은 LOD 없음
         r1, r2 = RULES[cat]
         l1 = r1(lod0, name + "_LOD1", parent); f1 += len(l1.data.polygons)
@@ -390,16 +399,31 @@ for key, part in sorted(chunks([o for o in rest if diag(o) >= 30], "Collision").
 STATS["Collision"] = (len(groups["Collision"].children), nc, 0, 0); log("최적화 충돌", STATS["Collision"])
 sp2 = empty("PlayerSpawn", world, sp.location)
 
-# ── 8. 내보내기: Unity = 최적화 장면(FBX) · 도구(월드맵 등) = 합친 장면(GLB) ──
-with bpy.context.temp_override(scene=OPT, view_layer=OPT.view_layers[0]):
-    bpy.ops.export_scene.fbx(filepath=os.path.join(OUT_CITY, "City.fbx"), use_selection=False, object_types={"MESH", "EMPTY"}, apply_scale_options="FBX_SCALE_ALL", path_mode="RELATIVE",
-                             axis_forward="-Z", axis_up="Y", mesh_smooth_type="FACE")
+# ── 8. 내보내기: Unity = 최적화 장면을 분류별 FBX 여러 개로(GitHub 파일 한도 100MB · 일부만 다시 만들기 쉬움) · 도구(월드맵 등) = 합친 장면(GLB) ──
+# City_Terrain · City_Castle · City_TownW/E(마을은 커서 서·동 반으로) · City_Foliage · City_Collision(+PlayerSpawn). Unity 메뉴 4번이 World 아래에 모아 배치.
+old = os.path.join(OUT_CITY, "City.fbx")
+if os.path.exists(old): os.remove(old)
+tw, te = empty("TownW"), empty("TownE")                                   # 마을: 서·동 반(이름이 Town 으로 시작 → MapTools 가 마을 규칙)
+for ch in list(groups["Town"].children): ch.parent = tw if gcenter_obj(ch) < 0 else te
+sp2.parent = groups["Collision"]                                          # 시작 위치는 충돌 파일에
+FILES = {"City_Terrain": groups["Terrain"], "City_Castle": groups["Castle"], "City_TownW": tw, "City_TownE": te, "City_Foliage": groups["Foliage"], "City_Collision": groups["Collision"]}
+def subtree(o): out = [o]; [out.extend(subtree(c)) for c in o.children]; return out
+for fname, root in FILES.items():
+    objs = subtree(root); root_parent = root.parent; root.parent = None
+    for o in OPT.objects: o.select_set(o in objs)
+    with bpy.context.temp_override(scene=OPT, view_layer=OPT.view_layers[0], selected_objects=objs):
+        bpy.ops.export_scene.fbx(filepath=os.path.join(OUT_CITY, fname + ".fbx"), use_selection=True, object_types={"MESH", "EMPTY"}, apply_scale_options="FBX_SCALE_ALL", path_mode="RELATIVE",
+                                 axis_forward="-Z", axis_up="Y", mesh_smooth_type="FACE")
+    root.parent = root_parent; log("내보냄", fname, f"{os.path.getsize(os.path.join(OUT_CITY, fname + '.fbx')) / 1e6:.1f} MB")
 ctx = dict(scene=GAME, view_layer=GAME.view_layers[0])
 with bpy.context.temp_override(**ctx):
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_EXP, "City.glb"), export_format="GLB", use_active_scene=True)
 with open(os.path.join(ROOT, "docs", "map_optimization.md"), "w") as f:
     f.write("# 맵 최적화 결과 (자동 생성: blender/build_map.py)\n\n| 분류 | 구역 | LOD0 면 | LOD1 면 | LOD2 면 |\n|---|---|---|---|---|\n")
-    for k, (n_, a, b_, c_) in STATS.items(): f.write(f"| {k} | {n_} | {a:,} | {b_:,} | {c_:,} |\n")
+    for k, v in STATS.items():
+        if k.startswith("_"): continue
+        n_, a, b_, c_ = v; f.write(f"| {k} | {n_} | {a:,} | {b_:,} | {c_:,} |\n")
+    if "_weld" in STATS: f.write(f"\n꼭짓점 합치기(1mm, LOD0): {STATS['_weld'][0]:,} → {STATS['_weld'][1]:,}\n")
 co = np.empty(len(city.data.vertices) * 3, np.float32); city.data.vertices.foreach_get("co", co); co = co.reshape(-1, 3); lo, hi = co.min(0), co.max(0)
 log("내보냄", f"크기 {hi[0]-lo[0]:.0f} x {hi[1]-lo[1]:.0f} x {hi[2]-lo[2]:.0f} m")
 

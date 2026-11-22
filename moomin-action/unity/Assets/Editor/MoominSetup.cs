@@ -55,8 +55,10 @@ namespace MoominAction.EditorTools
                 whale.clipAnimations = wc; whale.SaveAndReimport();
             }
             // 맵(City.fbx): 애니메이션·카메라·조명 없음, 충돌용으로 읽기 가능, 메시 최적화 · 텍스처: 밉맵 + 2048 + 고품질 압축 + 비스듬히 봐도 선명하게
-            if (AssetImporter.GetAtPath("Assets/City/City.fbx") is ModelImporter cityImp)
+            foreach (var cg in AssetDatabase.FindAssets("City", new[] { "Assets/City" }))
+            if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(cg)) is ModelImporter cityImp)
             {
+                cityImp.preserveHierarchy = true;   // 분류(Terrain·Town…) 빈 물체를 그대로 — MapTools 가 이름으로 찾음
                 cityImp.importAnimation = false; cityImp.importCameras = false; cityImp.importLights = false; cityImp.isReadable = true;
                 cityImp.meshOptimizationFlags = MeshOptimizationFlags.Everything; cityImp.indexFormat = ModelImporterIndexFormat.Auto; cityImp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard; cityImp.SaveAndReimport();
             }
@@ -241,21 +243,28 @@ namespace MoominAction.EditorTools
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane); ground.name = "Ground"; ground.transform.localScale = new Vector3(40, 1, 40);
             // 도시 배경(Assets/City 의 City.fbx 등): 보이는 메시 + 보이지 않는 충돌 메시(City_Collision) + 시작 위치(PlayerSpawn)
             Vector3 spawn = new Vector3(0, 0.1f, 0);
+            // 맵: Assets/City 의 City_*.fbx(최적화 맵, 분류별 파일)를 World 아래에 모으고 소품 자리를 만든 뒤 MapTools 규칙 적용. 예전 한 덩어리 City.fbx 도 지원.
             var guids = AssetDatabase.FindAssets("t:GameObject", new[] { "Assets/City" });
             if (guids.Length > 0)
             {
-                var city = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guids[0]))); city.name = "City";
-                ground.GetComponent<MeshRenderer>().enabled = false; ground.transform.position = new Vector3(0, -0.05f, 0);   // 도시 밖으로 떨어지지 않게 투명 바닥은 남김
-                var world = Find(city.transform, "World");
-                if (world != null) EditorTools.MapTools.Apply(world);   // 최적화 맵: 구역·LOD·구역별 충돌 + 소품 자리(Props·Interiors·Decor) — 규칙은 MapTools
+                var worldGo = new GameObject("World"); var world = worldGo.transform; bool optimized = false;
+                foreach (var g in guids)
+                {
+                    var path = AssetDatabase.GUIDToAssetPath(g); if (!path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase)) continue;
+                    var part = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path)); part.transform.SetParent(world, false);
+                    optimized |= System.IO.Path.GetFileNameWithoutExtension(path).StartsWith("City_");
+                }
+                foreach (var n in new[] { "Props", "Interiors", "Decor" }) if (Find(world, n) == null) new GameObject(n).transform.SetParent(world, false);   // 이후 소품·인테리어 자리
+                ground.GetComponent<MeshRenderer>().enabled = false; ground.transform.position = new Vector3(0, -0.05f, 0);   // 맵 밖으로 떨어지지 않게 투명 바닥은 남김
+                if (optimized) EditorTools.MapTools.Apply(world);
                 else
                 {   // 예전 한 덩어리 맵(City · City_Collision)
-                    var colT = Find(city.transform, "City_Collision");
+                    var colT = Find(world, "City_Collision");
                     if (colT != null) { var mf = colT.GetComponent<MeshFilter>(); var mc = colT.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = mf.sharedMesh; var mr = colT.GetComponent<MeshRenderer>(); if (mr) mr.enabled = false; }
-                    else foreach (var m in city.GetComponentsInChildren<MeshRenderer>()) if (m.GetComponent<Collider>() == null) m.gameObject.AddComponent<MeshCollider>();
-                    foreach (var t in city.GetComponentsInChildren<Transform>()) t.gameObject.isStatic = true;
+                    else foreach (var m in world.GetComponentsInChildren<MeshRenderer>()) if (m.GetComponent<Collider>() == null) m.gameObject.AddComponent<MeshCollider>();
+                    foreach (var t in world.GetComponentsInChildren<Transform>()) t.gameObject.isStatic = true;
                 }
-                var sp = Find(city.transform, "PlayerSpawn"); if (sp != null) spawn = sp.position + Vector3.up * 0.1f;
+                var sp = Find(world, "PlayerSpawn"); if (sp != null) spawn = sp.position + Vector3.up * 0.1f;
             }
             var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Player.prefab")); player.transform.position = spawn;
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)); camGo.tag = "MainCamera"; var cam = camGo.AddComponent<ThirdPersonCamera>(); cam.target = player.transform;
