@@ -13,7 +13,7 @@ namespace MoominAction.UI
     public class UIRoot : MonoBehaviour
     {
         public CharacterStats player; Canvas canvas; HUD hud; Inventory inventory;
-        public PauseMenu pausePage; public SettingsMenu settingsPage; public InventoryMenu inventoryPage; public InfoPage controlsPage;
+        public WorldMapView worldMap; public PauseMenu pausePage; public SettingsMenu settingsPage; public InventoryMenu inventoryPage; public InfoPage controlsPage;
         readonly Stack<MenuPage> stack = new(); MenuPage Current => stack.Count > 0 ? stack.Peek() : null;
 
         void Awake()
@@ -39,8 +39,9 @@ namespace MoominAction.UI
             inventory = player.GetComponent<Inventory>(); if (inventory == null) inventory = player.gameObject.AddComponent<Inventory>();
             hud = new HUD(); hud.Build(this, canvas.transform);
             pausePage = new PauseMenu(); settingsPage = new SettingsMenu(); inventoryPage = new InventoryMenu();
-            controlsPage = new InfoPage("조작법", new[] { "W A S D / Shift", "Space", "좌클릭", "우클릭", "Q / E / R", "Tab", "I  ·  1~4", "Esc" }, new[] { "이동 / 달리기", "회피 — 짧은 무적", "일반 공격 (코인 1~2개, 3연타)", "방어 — 누른 직후는 패링", "연속 베기 · 불꽃 찌르기 · 별빛 난무", "타깃 고정 / 해제", "가방 · 퀵슬롯 사용", "휴식 메뉴" });
+            controlsPage = new InfoPage("조작법", new[] { "W A S D / Shift", "Space", "좌클릭", "우클릭", "Q / E / R", "Tab", "I  ·  1~4", "M", "Esc" }, new[] { "이동 / 달리기", "회피 — 회피 코인으로 판정", "일반 공격 (코인 1~2개, 3연타)", "방어 — 피해 감소, 누른 직후는 패링", "연속 베기 · 불꽃 찌르기 · 별빛 난무", "타깃 고정 / 해제", "가방 · 퀵슬롯 사용", "지도 펼치기 · 접기", "휴식 메뉴" });
             foreach (var pg in new MenuPage[] { pausePage, settingsPage, inventoryPage, controlsPage }) pg.Build(this, canvas.transform);
+            worldMap = new WorldMapView(); worldMap.Build(canvas.transform, player.transform);   // M: 지도 펼치기·접기
             inventory.Message += m => { };   // HUD 가 이미 구독
         }
 
@@ -50,9 +51,12 @@ namespace MoominAction.UI
         {
             if (hud == null) return;
             hud.Update();
-            var gm = GameManager.Instance; if (gm != null && gm.IsOver) { if (Current != null) CloseAll(); return; }
+            var gm = GameManager.Instance; if (gm != null && gm.IsOver) { if (Current != null) CloseAll(); if (worldMap.IsOpen) worldMap.Close(); worldMap.Update(); return; }
+            worldMap.Update();
+            if (worldMap.IsOpen) { if (InputAdapter.MapPressed() || InputAdapter.CancelPressed()) worldMap.Close(); return; }   // 지도가 열린 동안 다른 입력 막음
             if (Current == null)
             {
+                if (InputAdapter.MapPressed() && worldMap.Available) { worldMap.Open(); return; }
                 if (InputAdapter.PausePressed()) Open(pausePage);
                 else if (InputAdapter.InventoryPressed()) Open(inventoryPage);
                 else { int q = InputAdapter.QuickPressed(); if (q >= 0) inventory.UseQuick(q); }

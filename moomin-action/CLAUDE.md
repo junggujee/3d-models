@@ -52,6 +52,12 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 그림 `tools/bar_art.py` → `Resources/UI/Bars/*.png`(BarArt 가 9분할로 로드, 테두리 값은 두 파일이 같아야 함). 미리보기 `tools/vital_bars_mock.py` → `previews/vital_bars_mock.png`.
 - HUD 세로 배치: 체력 -22 · 경험치 -80 · 스태미나 -124 · 정신력 -142 · 에너지 -166 · 상태 -196 · 목표 -236.
 
+## 월드맵(M)
+- 그림 만들기: `blender/render_world_map.py <폴더>`(exports/City.glb 를 마을 축이 가로가 되게 돌려 고도 50° 정사영으로 color·normal·height 렌더 + map_meta.json) → `python3 tools/world_map_art.py <폴더>`(뭉갠 채색·외곽선·주요 장소 스포트라이트·양피지 가장자리·나침반, 핀 아이콘, 접힌 종이 뒷면) → `Resources/UI/WorldMap/*`. 미리보기 `tools/world_map_mock.py` → `previews/world_map.png`·`world_map_unfold.png`.
+- 주요 장소 자동 탐지(면 **개수** 밀도: 면적으로 하면 긴 성벽에 끌림): 성 = Roof_Slate, 산지 = Mountain_Snow(성벽 안), 동·서쪽 마을 = 지붕 2-평균, 광장 = 두 마을 사이.
+- `UI/WorldMapView.cs`: 세 폭(가운데 고정, 왼쪽/오른쪽이 접는 선 기준 Y 회전, 90° 넘으면 뒷면) 펼치기 1.15초 · 접기 0.75초(같은 곡선 역재생, 도중에 반대로 눌러도 그 자리에서), 열린 동안 UIState.Paused + 실제 시간. 핀 겹침 방지는 `Layout(id)`(mock 의 LAYOUT 과 같게). 내 위치는 PlayerSpawn 으로 Unity↔Blender 축(바꿈·부호·배율 8가지)을 자동 보정.
+- bpy 는 컨테이너가 새로 뜨면 사라질 수 있음: `python3 -m venv <폴더> && <폴더>/bin/pip install bpy`.
+
 ## 맵(blender/build_map.py)
 - 원본 GLB(SketchUp→openskp→Blender): 맨 위 계층 + 메시 공유 = 부품 원본 → 삭제. 1단위 = 0.14m, 바닥 z=-51 → 0.
 - 순서: 분석(형태: 수직 벽 비율·축 정렬 비율로 산/언덕 ↔ 건물) → 질감(면 종류·텍스처·상자 투영 UV) → 채색(산 높이별, 집마다 벽 5색·지붕 4색, 성은 석재+슬레이트).

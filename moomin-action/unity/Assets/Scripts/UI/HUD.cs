@@ -45,7 +45,7 @@ namespace MoominAction.UI
             // 좌하단
             var bl = new Vector2(0, 0);
             goldText = Txt(core.transform, "", 28, UITheme.GoldBright); Set(goldText.rectTransform, bl, bl, bl, new Vector2(44, 70), new Vector2(400, 40));
-            var hint = Txt(core.transform, "Space 회피   좌클릭 공격   우클릭 방어   Q·E·R 스킬   Tab 조준   I 가방   1~4 퀵슬롯   Esc 휴식", 21, UITheme.Muted); Set(hint.rectTransform, bl, bl, bl, new Vector2(44, 28), new Vector2(900, 34));
+            var hint = Txt(core.transform, "Space 회피   좌클릭 공격   우클릭 방어   Q·E·R 스킬   Tab 조준   I 가방   M 지도   1~4 퀵슬롯   Esc 휴식", 21, UITheme.Muted); Set(hint.rectTransform, bl, bl, bl, new Vector2(44, 28), new Vector2(900, 34));
             // 획득 알림(우상단)
             var tp = NewRect("Toasts", hudRoot.transform); Stretch(tp); toastParent = tp;
             // 중앙 배너·피격 번쩍임·쓰러짐
