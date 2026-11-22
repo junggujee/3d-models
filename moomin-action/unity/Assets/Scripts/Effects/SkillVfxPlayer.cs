@@ -17,14 +17,7 @@ namespace MoominAction
             float sc = owner.lossyScale.y, k = heads ? 1.25f : 1f;
             switch (s.vfx)
             {
-                case SkillVfx.WhaleBeam:
-                {
-                    Vector3 mouth = owner.position + owner.up * 0.55f * sc + owner.forward * 1.45f * owner.lossyScale.z;   // 튀어나온 주둥이 끝
-                    var v = Make(Kind.Beam, mouth, owner.rotation, 0.55f, new Color(0.45f, 0.8f, 1f, 0.75f)); v.size = s.areaRadius; v.width = s.areaWidth * 0.42f * k;
-                    v.parts = new[] { Cylinder(v.transform, v.mats[0]), Cylinder(v.transform, v.mats[1] = Mat(new Color(1f, 1f, 1f, 0.95f))) };
-                    SparkBurst.Spawn(mouth, owner.forward, 40, 9f, new Color(0.55f, 0.85f, 1f)); SparkBurst.Spawn(mouth + owner.forward * s.areaRadius, -owner.forward + Vector3.up, 30, 7f, Color.white);
-                    ClashFlash.Spawn(mouth, new Color(0.5f, 0.8f, 1f), 9f * k, 8f, 0.35f); ThirdPersonCamera.Shake(0.09f * k, 0.4f); break;
-                }
+                case SkillVfx.WhaleBeam: WhaleBeamFx.FireOrPulse(s, owner, heads); break;   // 한 번 쏘면 스킬이 끝날 때까지 유지, 코인마다 불끈
                 case SkillVfx.Shockwave:
                 {
                     var v = Make(Kind.Ring, owner.position + Vector3.up * 0.06f, Quaternion.identity, 0.45f, new Color(1f, 0.85f, 0.45f, 0.8f)); v.size = s.Reach * 2f * k;

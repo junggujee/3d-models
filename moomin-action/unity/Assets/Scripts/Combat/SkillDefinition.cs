@@ -61,6 +61,8 @@ namespace MoominAction
         public float areaRadius = 4f;
         public AreaShape areaShape = AreaShape.Circle; [Tooltip("직선 광역의 폭(m)")] public float areaWidth = 2f;
         [Tooltip("코인 판정 순간의 특수 연출")] public SkillVfx vfx = SkillVfx.None;
+        [Tooltip("예고(windup) 동안 재생할 애니메이터 상태(비우면 Windup)")] public string windupAnimation = "";
+        [Tooltip("마지막 공격 뒤 회복 구간에 재생할 상태(비우면 그대로)")] public string recoveryAnimation = "";
         [Tooltip("광역 대상 레이어(비우면 CombatResolver.targetMask)")] public LayerMask targetLayers;
         [Header("Attack Type")] [FormerlySerializedAs("clashEnabled")] [Tooltip("상대 공격과 겹치면 합")] public bool canBeClashed = true;
         [Header("Defense")] [Tooltip("끄면 가드로 피해를 줄일 수 없음(예전 '방어 불가')")] public bool canBeGuarded = true; [Tooltip("끄면 회피 코인으로 피할 수 없음")] public bool canBeEvaded = true;

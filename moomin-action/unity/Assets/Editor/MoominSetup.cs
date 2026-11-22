@@ -84,8 +84,8 @@ namespace MoominAction.EditorTools
         public static void BuildWhaleController()
         {
             if (AssetImporter.GetAtPath(Models + "Goraegorae.fbx") == null) { Debug.LogWarning("Assets/Models/Goraegorae.fbx 가 없습니다."); return; }
-            MakeController("Goraegorae.fbx", Anims + "Goraegorae.controller", new[] { "Windup", "Attack1", "Attack2", "Attack3", "Jump", "Beam", "BeamHold", "Spout", "Guard", "Dodge", "Hit", "Death" },
-                           new[] { "Attack1", "Attack2", "Attack3", "Jump", "Beam", "Spout", "Dodge", "Hit" });
+            MakeController("Goraegorae.fbx", Anims + "Goraegorae.controller", new[] { "Windup", "Attack1", "Attack2", "Attack3", "Jump", "BeamCharge", "Beam", "BeamHold", "BeamEnd", "Spout", "Guard", "Dodge", "Hit", "Death" },
+                           new[] { "Attack1", "Attack2", "Attack3", "Jump", "BeamEnd", "Spout", "Dodge", "Hit" });
         }
 
         [MenuItem("Moomin/2. Animator Controller 만들기")]
@@ -200,7 +200,7 @@ namespace MoominAction.EditorTools
                 w.AddComponent<CoinSystem>(); w.AddComponent<StatusEffectManager>(); w.AddComponent<DefenseController>(); w.AddComponent<EnergyManager>(); var wr = w.AddComponent<CombatResolver>(); wr.targetMask = playerMask;
                 var wex = w.AddComponent<SkillExecutor>(); wex.useAnimationEvents = false; wex.animator = wAnim;
                 var wcc = w.AddComponent<EnemyCombatController>(); wcc.archetype = EnemyArchetype.GroundMonster; wcc.animator = wAnim; wcc.agent = wa; wcc.visual = w.transform; wcc.moveSpeed = 1.8f; wcc.score = 40;
-                wcc.expReward = 150; wcc.minWave = 2; wcc.maxPerWave = 1;
+                wcc.expReward = 150; wcc.minWave = 2; wcc.maxPerWave = 1; wcc.showBossBar = true; wcc.bossEmblem = "Whale";   // 전용 보스바
                 wcc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("WHALE_FLIPPER"), SkillAsset("WHALE_RAM"), SkillAsset("WHALE_BEAM"), SkillAsset("WHALE_JUMP"), SkillAsset("WHALE_TAIL"), SkillAsset("WHALE_SPOUT") };
                 wcc.basicSkill = wcc.skills[0];
                 w.AddComponent<EnemyBrain>().personality = EnemyPersonality.Grunt;

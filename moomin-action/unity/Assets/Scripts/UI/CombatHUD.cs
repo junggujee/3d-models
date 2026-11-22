@@ -22,7 +22,7 @@ namespace MoominAction.UI
         Gauge targetStagger; Text targetStaggerLabel; readonly Image[] tIcons = new Image[StatusInfo.All.Length]; readonly Text[] tIconNums = new Text[StatusInfo.All.Length]; readonly float[] tFlash = new float[StatusInfo.All.Length]; float staggerFlash;
         System.Action<DefenseController, bool, int, int> onEvade; DefenseController playerDef;
         System.Action<AttackContext, CharacterStats, int, bool> onTremor; System.Action<StatusEffectManager, StatusType, int> onStatus;
-        ClashStage stage;
+        ClashStage stage; BossBar bossBar;
         System.Action<ClashOutcome> onClash, onClashEnd; System.Action<ClashOutcome, int, int> onExchange; System.Action<AttackContext> onEnemyCoin; System.Action<AttackContext, CharacterStats, int> onHit;
 
         public void Build(UIRoot ui, Transform hudRoot, Transform core)
@@ -84,6 +84,7 @@ namespace MoominAction.UI
             targetCoins = Txt(tp.transform, "", 21, UITheme.Muted, TextAnchor.MiddleRight); Set(targetCoins.rectTransform, Vector2.zero, new Vector2(1, 0), Vector2.zero, new Vector2(18, 4), new Vector2(-36, 26));
             targetPanel.SetActive(false);
             lockMarker = Img(hudRoot, "LockMarker", UITheme.Slot, UITheme.GoldBright, true); At(lockMarker.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(30, 30)); lockMarker.rectTransform.localRotation = Quaternion.Euler(0, 0, 45); lockMarker.gameObject.SetActive(false);
+            bossBar = new BossBar(); bossBar.Build(hudRoot, stats.transform);   // 보스바(화면 아래 가운데)
             stage = new ClashStage(); stage.Build(hudRoot);   // 클래시 때 가운데 두 패널
             popup = Txt(hudRoot, "", 34, UITheme.GoldBright, TextAnchor.MiddleCenter, FontStyle.Bold, "Popup"); At(popup.rectTransform, new Vector2(.5f, .44f), Vector2.zero, new Vector2(800, 50));
 
@@ -139,7 +140,7 @@ namespace MoominAction.UI
                 u.frame.color = ex.CurrentSkill == u.skill || (u == slots[0] && ex.CurrentSkill != null && ex.CurrentSkill.skillId.StartsWith("BASIC")) ? UITheme.GoldBright : Color.Lerp(Color.white, SkillAttributes.ColorOf(u.skill.attribute), 0.55f);
             }
             if (ClashStage.OnStage.Contains(ex)) playerPanel.Hide(); else playerPanel.Tick(Camera.main, canvasForPanels, dt);
-            enemyPanels.Update(dt); stage.Update(dt);
+            enemyPanels.Update(dt); stage.Update(dt); bossBar.Update(dt);
             if (energy != null) { energyFill.anchorMax = new Vector2(energy.Ratio, 1); energyLabel.text = $"에너지 {energy.Current}/{energy.Max}"; }
             string ps = playerSe != null ? playerSe.Summary() : "";
             if (stats.IsStaggerBroken) ps = "<color=#F2D27F>경직!</color>  " + ps; else if (stats.StaggerGauge.Current > 0) ps = $"<color=#C9B27A>경직 {Mathf.RoundToInt(stats.StaggerGauge.Ratio * 100)}%</color>  " + ps;

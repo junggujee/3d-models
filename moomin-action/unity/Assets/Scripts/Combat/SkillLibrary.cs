@@ -60,7 +60,8 @@ namespace MoominAction
             Add(S("HUMAN_RUSH", "졸음 돌진", 9, 4, 1, 0.8f, 7f, 0, 0.5f, 0.35f, 1.1f, new[] { "Attack1" }, 5.0f, 60, 8f, windup: 0.75f, lunge: 10f));
             // ── 지상괴물형: 고래고래(지상 최대의 끼룩이). 거대해서 사거리가 김. hitTime = 클립 타격 프레임 / 30
             Add(S("WHALE_RAM", "고래박치기", 12, 5, 2, 1.0f, 4f, 0, 0.8f, 0.37f, 0.8f, A1, 3.4f, 80, 10f, windup: 0.7f, lunge: 9f, desc: "머리로 힘껏 들이받는다. 합 가능."));
-            Add(S("WHALE_BEAM", "고래빔", 16, 5, 2, 1.1f, 11f, 0, 0.8f, 0.67f, 1.1f, new[] { "Beam", "BeamHold" }, 13f, 30, 6f, windup: 0.9f, desc: "몸을 세우고 입을 크게 벌려 앞쪽 일직선을 쓸어 버린다. 합 불가 광역."));
+            Add(S("WHALE_BEAM", "고래빔", 12, 4, 4, 0.9f, 11f, 0, 0.5f, 0.27f, 0.85f, new[] { "Beam", "BeamHold", "BeamHold", "BeamHold" }, 13f, 30, 6f, windup: 0.9f,
+                  desc: "기를 모아 입을 크게 벌리고, 앞쪽 일직선을 오래도록 쓸어 버린다(4번 판정). 합 불가 광역."));
             Add(S("WHALE_JUMP", "점프 내려찍기", 14, 4, 1, 1.2f, 7f, 0, 0.8f, 0.8f, 1.0f, new[] { "Jump" }, 4f, 360, 9f, windup: 0.6f, lunge: 11f, desc: "높이 뛰어올라 덮친다. 착지한 자리 주변 모두에게 충격."));
             Add(S("WHALE_FLIPPER", "지느러미 연타", 7, 3, 3, 0.8f, 3f, 0, 0.5f, 0.37f, 0.6f, new[] { "Attack2" }, 3.0f, 110, 4f, windup: 0.45f, lunge: 2f));
             Add(S("WHALE_TAIL", "꼬리 휘두르기", 10, 4, 2, 0.9f, 6f, 0, 0.9f, 0.47f, 0.7f, new[] { "Attack3" }, 3.6f, 360, 8f, windup: 0.55f));
@@ -88,7 +89,7 @@ namespace MoominAction
             Area("SKILL_003", 3.2f); Area("SKILL_004", 4f); Area("ENEMY_SLAM", 2f);
             // 고래고래: 빔 = 앞으로 13m·폭 2.4m 직선(합 불가), 점프·꼬리·물기둥 = 원(점프·물기둥 합 불가)
             Area("WHALE_BEAM", 13f); Area("WHALE_JUMP", 4f); Area("WHALE_TAIL", 3.6f); Area("WHALE_SPOUT", 5f);
-            if (map.TryGetValue("WHALE_BEAM", out var wb)) { wb.areaShape = AreaShape.Line; wb.areaWidth = 2.4f; wb.canBeClashed = false; wb.vfx = SkillVfx.WhaleBeam; }
+            if (map.TryGetValue("WHALE_BEAM", out var wb)) { wb.areaShape = AreaShape.Line; wb.areaWidth = 2.4f; wb.canBeClashed = false; wb.vfx = SkillVfx.WhaleBeam; wb.windupAnimation = "BeamCharge"; wb.recoveryAnimation = "BeamEnd"; }   // 기 모으기 0.9초 → 발사 → 2초 가까이 유지 → 마무리
             if (map.TryGetValue("WHALE_JUMP", out var wj)) { wj.canBeClashed = false; wj.vfx = SkillVfx.Shockwave; wj.lungeDelay = 0.27f; wj.lungeTime = 0.5f; }   // 공중에 뜬 동안(8~23프레임) 날아감
             if (map.TryGetValue("WHALE_SPOUT", out var ws)) { ws.canBeClashed = false; ws.vfx = SkillVfx.WaterSpout; }
             if (map.TryGetValue("WHALE_RAM", out var wr)) wr.lungeTime = 0.35f;

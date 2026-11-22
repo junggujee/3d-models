@@ -34,8 +34,9 @@ namespace MoominAction
         public bool Busy => !stats.IsAlive || skillExecutor.IsExecuting || IsStaggered || IsDodging || Time.time < busyUntil;
 
         [Tooltip("쓰러뜨리면 플레이어가 얻는 경험치")] public int expReward = 40;
+        [Header("Boss Bar")] [Tooltip("화면 아래 보스바로 표시")] public bool showBossBar; [Tooltip("보스바 문장(Resources/UI/Bars/BossEmblem_이름)")] public string bossEmblem = "Default";
         [Header("Wave")] [Tooltip("이 웨이브부터 등장")] public int minWave = 1; [Tooltip("한 웨이브에 최대 몇 마리(0 = 제한 없음)")] public int maxPerWave = 0;
-        DefenseController defense; public Transform Target => target;
+        DefenseController defense; SkillPhase lastPhase; public Transform Target => target;
         CharacterStats stats; Transform target; Vector3 knock, dodgeDir, baseScale; float vy, staggerUntil, dodgeEnd, nextDodge, nextGuard, busyUntil, deadT = -1, nextRepath, nextWarp; bool navigating;
         TelegraphIndicator tele;
 
@@ -82,7 +83,8 @@ namespace MoominAction
 
         void OnSkillStarted(SkillDefinition s)
         {
-            if (s.windup <= 0f) return; HideTelegraph(); Play("Windup", 0.1f);
+            if (s.windup <= 0f) return; HideTelegraph(); Play(string.IsNullOrEmpty(s.windupAnimation) ? "Windup" : s.windupAnimation, 0.1f);
+            if (s.vfx == SkillVfx.WhaleBeam) WhaleChargeFx.Play(transform, s.windup);   // 고래빔 기 모으기
             Color tc = !s.canBeGuarded ? new Color(0.65f, 0.2f, 1f, 0.45f) : !s.canBeClashed ? new Color(0.2f, 0.55f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f);   // 보라 = 방어 불가 · 파랑 = 합 불가 · 빨강 = 일반
             if (s.isAreaAttack && s.areaShape == AreaShape.Line) { tele = TelegraphIndicator.ShowLine(transform, s.areaRadius / transform.localScale.z, s.areaWidth / transform.localScale.x, s.windup, tc); return; }
             bool aoe = s.isAreaAttack || s.angle >= 360f; float r = (aoe ? s.Reach : Mathf.Max(1f, s.range * 0.6f)) / transform.localScale.x;
@@ -119,6 +121,8 @@ namespace MoominAction
             Vector3 extra = knock; bool moveNav = false; var s = skillExecutor.CurrentSkill;
 
             UpdateAnimator();
+            // 회복 구간에 들어가면 마무리 동작(예: 고래빔 BeamEnd)
+            var ph = skillExecutor.Phase; if (ph != lastPhase) { if (ph == SkillPhase.Recovery && s != null && !string.IsNullOrEmpty(s.recoveryAnimation)) Play(s.recoveryAnimation, 0.12f); lastPhase = ph; }
             if (IsStaggered) { if (!Animated) { visual.localRotation = Quaternion.Euler(0, 0, 12f * Mathf.Sin(Time.time * 18f)); visual.localScale = baseScale * (1f + 0.05f * Mathf.Sin(Time.time * 30f)); } }   // 애니메이션이 있으면 Hit 동작
             else
             {
@@ -190,7 +194,7 @@ namespace MoominAction
         /// <summary>보스로 전환(웨이브 3마다): 체력 ×6, 크기 ×1.8, 위력 ×1.35, 보스 기술, 신중한 성격.</summary>
         public void ConfigureBoss()
         {
-            isBoss = true; score = 100; expReward *= 5; stats.displayName = "거대한 그림자"; stats.attribute = SkillAttribute.Red; stats.maxHealth *= 6f; stats.ResetStats(); stats.ChangeSanity(10, "보스");
+            isBoss = true; score = 100; expReward *= 5; showBossBar = true; stats.displayName = "거대한 그림자"; stats.attribute = SkillAttribute.Red; stats.maxHealth *= 6f; stats.ResetStats(); stats.ChangeSanity(10, "보스");
             transform.localScale *= 1.8f; moveSpeed *= 0.85f; if (agent) agent.speed = moveSpeed;
             skills = new List<SkillDefinition>();
             foreach (var id in new[] { "ENEMY_BUMP", "ENEMY_SLAM", "BOSS_LUNGE", "BOSS_FLURRY", "BOSS_BREAK" })
