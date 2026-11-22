@@ -20,6 +20,8 @@ def c255(*c): return tuple(int(round(v * 255)) for v in c)
 IVORY, BLUE, BLUE_B, BLUE_D = c255(.96, .94, .88), c255(.40, .60, .86), c255(.70, .86, 1), c255(.16, .27, .46)
 MIST, TITLE_TEXT = c255(.68, .73, .80), c255(.88, .86, .80)
 GOLD, GOLD_B, GOLD_D, CREAM, MUTED, RED = c255(.80, .65, .36), c255(1, .86, .5), c255(.45, .36, .2), c255(.92, .87, .76), c255(.62, .57, .47), c255(.66, .09, .09)
+SHADE_BAND, BAND_FILL, SHADE_RESULTS = .40, .55, .58   # GameOverScreen 밝기
+DEFEAT_RED, SUB_RED = c255(.93, .24, .2), c255(.96, .45, .38)
 FOG = np.array([.63, .71, .83]); FOG_DENSITY = 0.0012
 
 # TitleScreen 배치
@@ -145,23 +147,25 @@ def save_slots(bg, thumbs, title_style=True, mode="Load"):
 def game_over(bg, phase):
     img = bg.copy()
     if phase == "band":
-        img.alpha_composite(Image.new("RGBA", (W, H), (0, 0, 0, int(.62 * 255))))
-        band = Image.new("RGBA", (W, 260), (0, 0, 0, int(.78 * 255))); img.alpha_composite(band, (0, H // 2 - 20 - 130))
+        img.alpha_composite(Image.new("RGBA", (W, H), (0, 0, 0, int(SHADE_BAND * 255))))
+        band = Image.new("RGBA", (W, 260), (20, 13, 13, int(BAND_FILL * 255))); img.alpha_composite(band, (0, H // 2 - 20 - 130))
         for yy in (H // 2 - 20 - 130, H // 2 - 20 + 128):
             ln = np.zeros((2, W, 4), np.uint8); ln[..., :3] = GOLD; u = np.linspace(0, 1, W); ln[..., 3] = (255 * np.clip(np.minimum(u, 1 - u) * 5, 0, 1))[None]; img.alpha_composite(Image.fromarray(ln, "RGBA"), (0, yy))
-        text(img, (W / 2, H / 2 - 20), "쓰러졌다", 140, (184, 26, 26), F_B, anchor="mm", outline=(38, 0, 0), outline_w=1)
+        face_at(img, (W / 2, H / 2 - 20 - 300), 300, 0, glow=.35)
+        text(img, (W / 2, H / 2 - 20), "패배....", 140, DEFEAT_RED, F_B, anchor="mm", outline=(51, 0, 0), outline_w=1)
         return img
-    img.alpha_composite(Image.new("RGBA", (W, H), (0, 0, 0, int(.82 * 255))))
+    img.alpha_composite(Image.new("RGBA", (W, H), (0, 0, 0, int(SHADE_RESULTS * 255))))
     pw, ph = 1060, 820; px, py = (W - pw) / 2, (H - ph) / 2
-    d = ImageDraw.Draw(img); d.rectangle((px, py, px + pw, py + ph), fill=(14, 12, 10, 242), outline=GOLD, width=2); d.rectangle((px + 5, py + 5, px + pw - 5, py + ph - 5), outline=GOLD_D, width=1)
+    d = ImageDraw.Draw(img); d.rectangle((px, py, px + pw, py + ph), fill=(14, 12, 10, 242), outline=GOLD, width=2)
+    lift = Image.new("RGBA", (pw - 20, ph - 20), (115, 92, 64, int(.28 * 255))); img.alpha_composite(lift, (int(px + 10), int(py + 10))); d = ImageDraw.Draw(img); d.rectangle((px + 5, py + 5, px + pw - 5, py + ph - 5), outline=GOLD_D, width=1)
     text(img, (W / 2, py + 30 + 33), "여정의 기록", 50, GOLD_B, F_B, anchor="mm")
-    text(img, (W / 2, py + 96 + 19), "웨이브 7에서 쓰러졌다", 26, RED, F_R, anchor="mm")
+    text(img, (W / 2, py + 96 + 19), "웨이브 7에서 패배했다", 26, SUB_RED, F_R, anchor="mm")
     ln = np.zeros((2, 920, 4), np.uint8); ln[..., :3] = GOLD; u = np.linspace(0, 1, 920); ln[..., 3] = (255 * np.clip(np.minimum(u, 1 - u) * 5, 0, 1))[None]; img.alpha_composite(Image.fromarray(ln, "RGBA"), (int(W / 2 - 460), int(py + 146)))
     cells = [("처치한 적", "48"), ("합 승률", "62%"), ("최고 위력", "27"), ("도달 웨이브", "7"), ("레벨", "12"), ("플레이 시간", "3:12:05")]
     for i, (lab, val) in enumerate(cells):
         col, row = i % 2, i // 2; cx = W / 2 + (-240 if col == 0 else 240); cy = py + 200 + row * 128
-        d.rectangle((cx - 220, cy, cx + 220, cy + 112), fill=(18, 15, 12, 180), outline=GOLD_D)
-        text(img, (cx, cy + 8 + 17), lab, 24, MUTED, F_R, anchor="mm")
+        d.rectangle((cx - 220, cy, cx + 220, cy + 112), fill=(40, 33, 25, 225), outline=GOLD_D)
+        text(img, (cx, cy + 8 + 17), lab, 24, CREAM, F_R, anchor="mm")
         if i == 1: text(img, (cx - 40, cy + 112 - 8 - 31), val, 46, GOLD_B, F_B, anchor="mm"); text(img, (cx + 70, cy + 112 - 8 - 27), "8승 5패", 24, GOLD_B, F_B, anchor="mm")
         else: text(img, (cx, cy + 112 - 8 - 31), val, 46, GOLD_B, F_B, anchor="mm")
     for i, (lab, det) in enumerate([("마지막 저장에서 다시", "자동 저장  ·  Lv.12  ·  마을 광장  ·  웨이브 7  ·  3분 전"), ("타이틀로", "기록은 저장된 곳까지 남아 있다")]):
@@ -171,8 +175,18 @@ def game_over(bg, phase):
             img.alpha_composite(Image.fromarray(hl, "RGBA"), (int(rx), int(ry)))
         text(img, (rx + 30 + 30, ry + 40), "»", 42, GOLD_B if i == 0 else GOLD_D, F_B, anchor="mm")
         text(img, (rx + 100, ry + 40 - 10), lab, 34, (255, 255, 255) if i == 0 else CREAM, F_R)
-        text(img, (rx + 102, ry + 40 + 22), det, 21, MUTED, F_R)
+        text(img, (rx + 102, ry + 40 + 22), det, 21, (204, 191, 163), F_R)
+    face_at(img, (W / 2 - 445, H / 2 - 330), 210, -8, glow=.17)
     return img
+
+
+def face_at(img, center, size, angle, glow):
+    """GameOverScreen 얼굴(DefeatFace.png): center(화면 px) · 크기 · 기울기(도, 반시계 +) · 뒤의 붉은 후광."""
+    g = int(size + 80); yy, xx = np.mgrid[0:g, 0:g]; dd = np.hypot(xx - g / 2, yy - g / 2) / (g / 2); a = np.clip(1 - dd, 0, 1) ** 2 * glow
+    halo = np.zeros((g, g, 4), np.uint8); halo[..., 0], halo[..., 1], halo[..., 2] = 255, 140, 115; halo[..., 3] = (a * 255).astype(np.uint8)
+    img.alpha_composite(Image.fromarray(halo, "RGBA"), (int(center[0] - g / 2), int(center[1] - g / 2)))
+    f = Image.open(os.path.join(ROOT, "unity", "Assets", "Resources", "UI", "GameOver", "DefeatFace.png")).convert("RGBA").resize((size, size), Image.LANCZOS).rotate(angle, Image.BICUBIC, expand=True)
+    img.alpha_composite(f, (int(center[0] - f.width / 2), int(center[1] - f.height / 2)))
 
 
 if __name__ == "__main__":

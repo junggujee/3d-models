@@ -83,6 +83,10 @@ namespace MoominAction.UI
             titleArt[name] = s; return s != null ? s : fallback;
         }
 
+        static Sprite softCircle;
+        /// <summary>가운데가 밝고 가장자리로 사라지는 둥근 빛(얼굴 뒤 후광 등).</summary>
+        public static Sprite SoftCircle => softCircle ??= Make(64, 64, (i, j) => { float d = new Vector2(i - 31.5f, j - 31.5f).magnitude / 32f; float a = Mathf.Clamp01(1f - d); return new Color(1, 1, 1, a * a); }, Vector4.zero);
+
         static Sprite titleRow;
         /// <summary>타이틀 테마 목록 한 줄(저장 슬롯): 남색 바탕 + 갈색 테두리 + 안쪽 옅은 하얀 선.</summary>
         public static Sprite TitleRow => titleRow ??= Make(32, 32, (i, j) =>

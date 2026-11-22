@@ -76,4 +76,4 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 메뉴 페이지는 `MenuPage.host`(IMenuHost)로 열고 닫음 → 같은 페이지를 게임(UIRoot)·타이틀에서 공용(`BuildFor`). 게임 전용 페이지만 `ui`(UIRoot) 사용.
 - 저장 `Core/SaveSystem.cs`(SaveData JSON + jpg, 슬롯 0~2 수동 · 3 자동), 표시 규칙 `Core/SaveFormat.cs`(순수 C#, status_tests). 불러오기 = `SaveSystem.Pending` → `Inventory.Awake`(가방) + `GameManager.Start`(실행 순서 -50, 나머지). 가방은 PlayerPrefs 대신 슬롯에. 저장은 웨이브 사이에만(`SaveSystem.CanSave`).
 - 여정 기록 `Core/RunStats.cs`(처치·합 승패·최고 위력, 저장 파일에 포함). 장소 이름·좌표 `Core/MapPlaces.cs`(월드맵 데이터 + PlayerSpawn 으로 축 맞춤 — WorldMapView 도 이것을 씀).
-- 게임 오버 `UI/GameOverScreen.cs`(HUD 가 만듦): 쓰러졌다 띠 → 결과 + 마지막 저장에서 다시/타이틀로. R 재시작은 없어짐.
+- 게임 오버 `UI/GameOverScreen.cs`(HUD 가 만듦): "패배...." 띠 + 눈이 ×× 인 민미 얼굴 → 결과(얼굴은 패널 왼쪽 위로) + 마지막 저장에서 다시/타이틀로. 밝기 상수 ShadeBand·BandFill·ShadeResults(mock 의 SHADE_* 와 같게). 얼굴 그림 = `blender/render_defeat_face.py`(실제 모델, 눈 면 삭제 + 눈 자리 json) → `tools/defeat_face.py`(×× 2D 붓선·아래 흐리게) → `Resources/UI/GameOver/DefeatFace.png`. R 재시작은 없어짐.
