@@ -54,6 +54,15 @@ namespace MoominAction.EditorTools
                 foreach (var c in wc) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "BeamHold"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
                 whale.clipAnimations = wc; whale.SaveAndReimport();
             }
+            // 맵(City.fbx): 애니메이션·카메라·조명 없음, 충돌용으로 읽기 가능, 메시 최적화 · 텍스처: 밉맵 + 2048 + 고품질 압축 + 비스듬히 봐도 선명하게
+            if (AssetImporter.GetAtPath("Assets/City/City.fbx") is ModelImporter cityImp)
+            {
+                cityImp.importAnimation = false; cityImp.importCameras = false; cityImp.importLights = false; cityImp.isReadable = true;
+                cityImp.meshOptimizationFlags = MeshOptimizationFlags.Everything; cityImp.indexFormat = ModelImporterIndexFormat.Auto; cityImp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard; cityImp.SaveAndReimport();
+            }
+            foreach (var g in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/City" }))
+                if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(g)) is TextureImporter ti)
+                { ti.mipmapEnabled = true; ti.maxTextureSize = 2048; ti.textureCompression = TextureImporterCompression.CompressedHQ; ti.anisoLevel = 4; ti.wrapMode = TextureWrapMode.Repeat; ti.SaveAndReimport(); }
             foreach (var n in new[] { "StarSparkSword.fbx", "ShadowBlob.fbx" }) { var m = AssetImporter.GetAtPath(Models + n) as ModelImporter; if (m != null) { m.materialImportMode = ModelImporterMaterialImportMode.ImportStandard; m.SaveAndReimport(); } }
         }
 
@@ -237,10 +246,15 @@ namespace MoominAction.EditorTools
             {
                 var city = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guids[0]))); city.name = "City";
                 ground.GetComponent<MeshRenderer>().enabled = false; ground.transform.position = new Vector3(0, -0.05f, 0);   // 도시 밖으로 떨어지지 않게 투명 바닥은 남김
-                var colT = Find(city.transform, "City_Collision");
-                if (colT != null) { var mf = colT.GetComponent<MeshFilter>(); var mc = colT.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = mf.sharedMesh; var mr = colT.GetComponent<MeshRenderer>(); if (mr) mr.enabled = false; }
-                else foreach (var m in city.GetComponentsInChildren<MeshRenderer>()) if (m.GetComponent<Collider>() == null) m.gameObject.AddComponent<MeshCollider>();
-                foreach (var t in city.GetComponentsInChildren<Transform>()) t.gameObject.isStatic = true;
+                var world = Find(city.transform, "World");
+                if (world != null) EditorTools.MapTools.Apply(world);   // 최적화 맵: 구역·LOD·구역별 충돌 + 소품 자리(Props·Interiors·Decor) — 규칙은 MapTools
+                else
+                {   // 예전 한 덩어리 맵(City · City_Collision)
+                    var colT = Find(city.transform, "City_Collision");
+                    if (colT != null) { var mf = colT.GetComponent<MeshFilter>(); var mc = colT.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = mf.sharedMesh; var mr = colT.GetComponent<MeshRenderer>(); if (mr) mr.enabled = false; }
+                    else foreach (var m in city.GetComponentsInChildren<MeshRenderer>()) if (m.GetComponent<Collider>() == null) m.gameObject.AddComponent<MeshCollider>();
+                    foreach (var t in city.GetComponentsInChildren<Transform>()) t.gameObject.isStatic = true;
+                }
                 var sp = Find(city.transform, "PlayerSpawn"); if (sp != null) spawn = sp.position + Vector3.up * 0.1f;
             }
             var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Player.prefab")); player.transform.position = spawn;

@@ -185,14 +185,14 @@ namespace MoominAction
                 win.owner.stats.ChangeSanity(CharacterStats.ClashWin, "클래시 승리");
                 if (win.owner.energy != null) win.owner.energy.Gain(win.owner.energy.onClashWinGain, "클래시 승리");
                 lose.owner.stats.ChangeSanity(CharacterStats.ClashLose, "클래시 패배");
-                lose.cancelled = true; lose.owner.Interrupt(); lose.owner.GetComponent<ICombatant>()?.Stagger(loserStagger, loserVulnerable);
+                lose.cancelled = true; lose.owner.Interrupt(); if (lose.owner.TryGetComponent<ICombatant>(out var lc)) lc.Stagger(loserStagger, loserVulnerable);
                 if (lose.owner.stats.IsAlive) win.owner.resolver.ApplyHit(win, lose.owner.stats);   // 이긴 공격은 그대로 명중
                 if (!choreography) { SparkBurst.Spawn(mid, Vector3.up, 45, 7f, win == p ? SparkBurst.Gold : SparkBurst.Crimson); HitStop.Do(0.12f); }
             }
             else
             {
                 p.cancelled = e.cancelled = true; p.owner.Interrupt(); e.owner.Interrupt();
-                p.owner.GetComponent<ICombatant>()?.Stagger(drawRecovery); e.owner.GetComponent<ICombatant>()?.Stagger(drawRecovery);
+                if (p.owner.TryGetComponent<ICombatant>(out var pc)) pc.Stagger(drawRecovery); if (e.owner.TryGetComponent<ICombatant>(out var ec)) ec.Stagger(drawRecovery);
                 SparkBurst.Spawn(mid, Vector3.up, 30, 5f); HitStop.Do(0.08f);
             }
         }

@@ -110,7 +110,7 @@ namespace MoominAction
                 {
                     target.ChangeSanity(CharacterStats.ParrySuccess, "패링"); attack.cancelled = true;
                     SparkBurst.Spawn(hitPoint, -to.normalized + Vector3.up, 50, 7f, SparkBurst.Gold); HitStop.Do(0.14f);
-                    GetComponent<ICombatant>()?.Stagger(1.0f, 1.5f); ClashManager.RaiseParry(target, stats);
+                    if (TryGetComponent<ICombatant>(out var me)) me.Stagger(1.0f, 1.5f); ClashManager.RaiseParry(target, stats);
                     var de = target.GetComponent<EnergyManager>(); if (de != null) de.Gain(de.onParryGain, "패링"); return;
                 }
                 r *= def != null ? def.GetDamageMultiplier() : target.guardDamageMultiplier; target.ChangeSanity(CharacterStats.GuardBlock, "방어");

@@ -123,7 +123,7 @@ namespace MoominAction
             if (s.coinEffect == CoinEffect.None || !stats.ExtraEffectsEnabled) return;
             foreach (var r in results) if (!r.isHeads) return;
             if (s.coinEffect == CoinEffect.SanityOnAllHeads) stats.ChangeSanity(10, s.skillName + " 전부 앞면");
-            else if (s.coinEffect == CoinEffect.StaggerOnAllHeads) foreach (var target in CurrentAttack.hitTargets) target.GetComponent<ICombatant>()?.Stagger(1.6f, 1.3f);
+            else if (s.coinEffect == CoinEffect.StaggerOnAllHeads) foreach (var target in CurrentAttack.hitTargets) { if (target.TryGetComponent<ICombatant>(out var tc)) tc.Stagger(1.6f, 1.3f); }
         }
 
         /// <summary>클래시 패배·피격 경직·회피 등으로 중단. 남은 코인은 소모하지 않음.</summary>

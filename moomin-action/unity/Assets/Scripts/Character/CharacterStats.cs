@@ -57,7 +57,7 @@ namespace MoominAction
         {
             if (!IsAlive || amount <= 0f || IsStaggerBroken) return false;
             bool broke = StaggerGauge.Add(amount);
-            if (broke) { staggerBrokenUntil = Time.time + staggerDuration; GetComponent<ICombatant>()?.Stagger(staggerDuration, staggerVulnerable); }
+            if (broke) { staggerBrokenUntil = Time.time + staggerDuration; if (TryGetComponent<ICombatant>(out var cb)) cb.Stagger(staggerDuration, staggerVulnerable); }
             StaggerDamaged?.Invoke(amount, broke); if (broke) AnyStaggerBroken?.Invoke(this);
             return broke;
         }

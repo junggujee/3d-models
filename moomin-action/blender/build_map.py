@@ -16,7 +16,7 @@ import bpy, bmesh, numpy as np
 from mathutils import Vector, Matrix
 from mathutils.bvhtree import BVHTree
 
-ap = argparse.ArgumentParser(); ap.add_argument("src"); ap.add_argument("--scale", type=float, default=0.14); ap.add_argument("--preview", action="store_true")
+ap = argparse.ArgumentParser(); ap.add_argument("src"); ap.add_argument("--scale", type=float, default=0.14); ap.add_argument("--preview", action="store_true"); ap.add_argument("--cell", type=float, default=48.0, help="최적화 구역 크기(m)")
 args = ap.parse_args([a for a in sys.argv[1:] if a != "--"])
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, "..")
 OUT_CITY = os.path.join(ROOT, "unity", "Assets", "City"); TEX = os.path.join(OUT_CITY, "Textures"); OUT_EXP = os.path.join(ROOT, "exports"); OUT_PRE = os.path.join(ROOT, "previews")
@@ -217,7 +217,7 @@ write_report()
 # bpy.ops.object.join 은 물체 2만 개에서 제곱으로 느려져서, 정점·면·UV·재질 번호를 numpy 로 모아 새 메시를 직접 만든다.
 GAME = bpy.data.scenes.new("Game"); S = args.scale; DUP = {}
 Tm = np.array(Matrix.Diagonal((S, S, S, 1)) @ Matrix.Translation((-CENTER[0], -CENTER[1], -GROUND_Z)))
-def merge(objs, name, with_mats=True, double_sided=False):
+def merge(objs, name, with_mats=True, double_sided=False, coll=None):
     cos, lvs, lts, uvs, fms = [], [], [], [], []; voff = 0
     for o in objs:
         me = o.data; nv, nl, npy = len(me.vertices), len(me.loops), len(me.polygons)
@@ -252,7 +252,7 @@ def merge(objs, name, with_mats=True, double_sided=False):
     if with_mats:
         for m in FINAL: me.materials.append(m)
         me.polygons.foreach_set("material_index", fm)
-    me.update(); ob = bpy.data.objects.new(name, me); GAME.collection.objects.link(ob); return ob
+    me.update(); ob = bpy.data.objects.new(name, me); (coll or GAME.collection).objects.link(ob); return ob
 fol = [o for o in meshes if cats.get(o.name) == "foliage"]; rest = [o for o in meshes if cats.get(o.name) != "foliage"]
 def diag(o):
     ws = [o.matrix_world @ Vector(c) for c in o.bound_box]; return (Vector((max(w.x for w in ws), max(w.y for w in ws), max(w.z for w in ws))) - Vector((min(w.x for w in ws), min(w.y for w in ws), min(w.z for w in ws)))).length
@@ -261,21 +261,24 @@ collision = merge([o for o in rest if diag(o) >= 30], "City_Collision", with_mat
 log("합침", len(city.data.polygons), "면 / 나무", len(foliage.data.polygons) if foliage else 0, "/ 충돌", len(collision.data.polygons), "/ 겹친 면 제거", DUP)
 
 # ── 5. 상자 투영 UV(월드 좌표, 미터 기준 반복 크기) ─────
-me = city.data
-if not me.uv_layers: me.uv_layers.new(name="UVMap")
-uvl = me.uv_layers.active; nP = len(me.polygons); nL = len(me.loops)
-mi = np.zeros(nP, np.int32); me.polygons.foreach_get("material_index", mi)
-nr = np.zeros(nP * 3, np.float32); me.polygons.foreach_get("normal", nr); nr = nr.reshape(-1, 3)
-ls = np.zeros(nP, np.int32); me.polygons.foreach_get("loop_start", ls); lt = np.zeros(nP, np.int32); me.polygons.foreach_get("loop_total", lt)
-lv = np.zeros(nL, np.int32); me.loops.foreach_get("vertex_index", lv); co = np.zeros(len(me.vertices) * 3, np.float32); me.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
-face_of_loop = np.repeat(np.arange(nP), lt)
-uv = np.zeros(nL * 2, np.float32); uvl.data.foreach_get("uv", uv); uv = uv.reshape(-1, 2)
-tile = np.zeros(len(FINAL), np.float32)
-for k, s in BOX_UV.items(): tile[k] = s
-ft = tile[mi][face_of_loop]; sel = ft > 0; ax = np.argmax(np.abs(nr), axis=1)[face_of_loop]; p = co[lv]
-u = np.where(ax == 0, p[:, 1], p[:, 0]); v = np.where(ax == 2, p[:, 1], p[:, 2])
-uv[sel, 0] = (u / np.maximum(ft, 1e-6))[sel]; uv[sel, 1] = (v / np.maximum(ft, 1e-6))[sel]
-uvl.data.foreach_set("uv", uv.ravel()); me.update(); log("상자 투영 UV", int(sel.sum()), "루프")
+def box_uv(obj):
+    me = obj.data
+    if not me.uv_layers: me.uv_layers.new(name="UVMap")
+    uvl = me.uv_layers.active; nP = len(me.polygons); nL = len(me.loops)
+    if nP == 0: return 0
+    mi = np.zeros(nP, np.int32); me.polygons.foreach_get("material_index", mi)
+    nr = np.zeros(nP * 3, np.float32); me.polygons.foreach_get("normal", nr); nr = nr.reshape(-1, 3)
+    lt = np.zeros(nP, np.int32); me.polygons.foreach_get("loop_total", lt)
+    lv = np.zeros(nL, np.int32); me.loops.foreach_get("vertex_index", lv); co = np.zeros(len(me.vertices) * 3, np.float32); me.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
+    face_of_loop = np.repeat(np.arange(nP), lt)
+    uv = np.zeros(nL * 2, np.float32); uvl.data.foreach_get("uv", uv); uv = uv.reshape(-1, 2)
+    tile = np.zeros(len(FINAL), np.float32)
+    for k, s_ in BOX_UV.items(): tile[k] = s_
+    ft = tile[mi][face_of_loop]; sel = ft > 0; ax = np.argmax(np.abs(nr), axis=1)[face_of_loop]; p = co[lv]
+    u = np.where(ax == 0, p[:, 1], p[:, 0]); v = np.where(ax == 2, p[:, 1], p[:, 2])
+    uv[sel, 0] = (u / np.maximum(ft, 1e-6))[sel]; uv[sel, 1] = (v / np.maximum(ft, 1e-6))[sel]
+    uvl.data.foreach_set("uv", uv.ravel()); me.update(); return int(sel.sum())
+log("상자 투영 UV", box_uv(city), "루프")
 
 # ── 6. 시작 위치(마을 광장 근처의 빈 바닥) ───────────
 bm = bmesh.new(); bm.from_mesh(collision.data); tree = BVHTree.FromBMesh(bm); bm.free()
@@ -297,16 +300,107 @@ for r in np.arange(0, 60, 1.5):
 sp = bpy.data.objects.new("PlayerSpawn", None); sp.location = spawn if spawn is not None else Vector((tx, ty, 0.5)); GAME.collection.objects.link(sp)
 log("시작 위치", tuple(round(c, 1) for c in sp.location), "자동" if spawn is not None else "기본값")
 
-# ── 7. 내보내기(Game 장면만) ───────────────────────────
-ctx = dict(scene=GAME, view_layer=GAME.view_layers[0])
-with bpy.context.temp_override(**ctx):
+# ── 7. 최적화(Unity 용): 구역 · LOD · 구역별 충돌 ─────────
+# 가까이서 보이는 모습(LOD0)은 원본 그대로. 원래 부품(건물 하나·산 하나) 단위로 48m 칸에 배정해서 건물이 칸 경계에서 잘리지 않음.
+#   World ─ Terrain · Castle · Town · Foliage(칸마다 *_LOD0/1/2 → Unity 가 LOD Group 자동 생성) · Collision(칸마다 충돌 메시)
+#         └ Props · Interiors · Decor(빈 자리: 이후 소품·인테리어를 여기에 넣고 메뉴 "맵 정리" 를 누르면 같은 규칙 적용) · PlayerSpawn
+OPT = bpy.data.scenes.new("Optimized"); CELL = args.cell; STATS = {}
+def empty(name, parent=None, loc=(0, 0, 0)):
+    e = bpy.data.objects.new(name, None); e.location = loc; OPT.collection.objects.link(e)
+    if parent: e.parent = parent
+    return e
+def gcenter(o):
+    ws = [o.matrix_world @ Vector(c) for c in o.bound_box]; c = sum(ws, Vector()) / 8; g = Tm @ np.array([c.x, c.y, c.z, 1.0]); return g[0], g[1]
+def cell_key(o): x, y = gcenter(o); return int(math.floor(x / CELL)), int(math.floor(y / CELL))
+def mesh_arrays(me):
+    nv, nl, npy = len(me.vertices), len(me.loops), len(me.polygons)
+    co = np.empty(nv * 3, np.float32); me.vertices.foreach_get("co", co); lv = np.empty(nl, np.int32); me.loops.foreach_get("vertex_index", lv)
+    lt = np.empty(npy, np.int32); me.polygons.foreach_get("loop_total", lt); mi = np.empty(npy, np.int32); me.polygons.foreach_get("material_index", mi)
+    uv = np.zeros(nl * 2, np.float32)
+    if me.uv_layers.active: me.uv_layers.active.data.foreach_get("uv", uv)
+    return co.reshape(-1, 3), lv, lt, uv.reshape(-1, 2), mi
+def build_mesh(name, co, lv, lt, uv, mi, mats, parent):
+    used, inv = np.unique(lv, return_inverse=True); co = co[used]; lv = inv.astype(np.int32)   # 안 쓰는 정점 정리
+    me = bpy.data.meshes.new(name); me.vertices.add(len(co)); me.vertices.foreach_set("co", co.ravel())
+    me.loops.add(len(lv)); me.loops.foreach_set("vertex_index", lv); me.polygons.add(len(lt)); me.polygons.foreach_set("loop_start", np.concatenate([[0], np.cumsum(lt)[:-1]]).astype(np.int32))
+    me.update(calc_edges=True); me.uv_layers.new(name="UVMap").data.foreach_set("uv", uv.ravel())
+    for m in mats: me.materials.append(m)
+    me.polygons.foreach_set("material_index", mi); me.update()
+    ob = bpy.data.objects.new(name, me); OPT.collection.objects.link(ob); ob.parent = parent; return ob
+def strip_small(src, name, min_diag, parent):
+    """작은 장식 덩어리(창틀·등불·울타리 조각 등, 연결된 면 묶음의 크기 < min_diag m)를 통째로 뺀 사본 — 큰 면에 구멍이 나지 않음."""
+    co, lv, lt, uv, mi = mesh_arrays(src.data); nF = len(lt); ls = np.concatenate([[0], np.cumsum(lt)[:-1]])
+    lab = np.arange(len(co))                                       # 정점 묶음 번호(최솟값 전파 = 연결 요소)
+    for _ in range(400):
+        fmin = np.minimum.reduceat(lab[lv], ls); new = lab.copy(); np.minimum.at(new, lv, np.repeat(fmin, lt))
+        new = new[new]                                             # 경로 압축(빨리 수렴)
+        if np.array_equal(new, lab): break
+        lab = new
+    comp = lab[lv[ls]]; uniq, ci = np.unique(comp, return_inverse=True)
+    lo = np.full((len(uniq), 3), np.inf, np.float32); hi = np.full((len(uniq), 3), -np.inf, np.float32); vc = np.repeat(ci, lt)
+    np.minimum.at(lo, vc, co[lv]); np.maximum.at(hi, vc, co[lv]); keepc = np.linalg.norm(hi - lo, axis=1) >= min_diag
+    keep = keepc[ci]
+    if keep.all(): keep = keep   # 그대로
+    lk = np.repeat(keep, lt)
+    return build_mesh(name, co, lv[lk], lt[keep], uv[lk], mi[keep], list(src.data.materials), parent)
+def decimate(ob, kind, value):
+    m = ob.modifiers.new("D", "DECIMATE")
+    if kind == "planar": m.decimate_type = "DISSOLVE"; m.angle_limit = math.radians(value); m.delimit = {"MATERIAL", "UV"}
+    else: m.decimate_type = "COLLAPSE"; m.ratio = value
+    with bpy.context.temp_override(scene=OPT, view_layer=OPT.view_layers[0], object=ob, active_object=ob, selected_objects=[ob]):
+        bpy.ops.object.modifier_apply(modifier=m.name)
+def copy_obj(src, name, parent):
+    ob = bpy.data.objects.new(name, src.data.copy()); OPT.collection.objects.link(ob); ob.parent = parent; return ob
+# LOD 규칙: (LOD1, LOD2) — 건물 = 작은 덩어리 빼기 + 같은 평면 합치기, 산·언덕 = 형태를 유지하며 줄이기, 나무 = 작은 수풀 빼기(LOD2 없음 → 멀면 사라짐)
+RULES = {
+    "Town":    (lambda b, n, p: (decimate(o := strip_small(b, n, 0.6, p), "planar", 4) or o), lambda b, n, p: (decimate(o := strip_small(b, n, 2.5, p), "planar", 10) or o)),
+    "Castle":  (lambda b, n, p: (decimate(o := strip_small(b, n, 0.6, p), "planar", 4) or o), lambda b, n, p: (decimate(o := strip_small(b, n, 2.5, p), "planar", 10) or o)),
+    "Terrain": (lambda b, n, p: (decimate(o := copy_obj(b, n, p), "collapse", 0.45) or o), lambda b, n, p: (decimate(o := copy_obj(b, n, p), "collapse", 0.15) or o)),
+    "Foliage": (lambda b, n, p: strip_small(b, n, 1.2, p), None),
+}
+world = empty("World"); groups = {k: empty(k, world) for k in ("Terrain", "Castle", "Town", "Foliage", "Collision", "Props", "Interiors", "Decor")}
+def chunks(objs, cat):
+    out = {}
+    for o in objs:
+        c = cats.get(o.name)
+        if cat == "Terrain" and c == "mountain": key = "M" + o.name.replace("#", "").replace(".", "_")     # 큰 산은 한 덩어리씩
+        elif cat == "Terrain" and c == "ground": key = "Ground"
+        else: kx, ky = cell_key(o); key = f"c{kx:+d}_{ky:+d}".replace("+", "p").replace("-", "m")
+        out.setdefault(key, []).append(o)
+    return out
+CAT_OF = {"mountain": "Terrain", "hill": "Terrain", "ground": "Terrain", "castle": "Castle", "build": "Town", "foliage": "Foliage"}
+for cat in ("Terrain", "Castle", "Town", "Foliage"):
+    objs = [o for o in meshes if CAT_OF.get(cats.get(o.name)) == cat]; f0 = f1 = f2 = 0; n = 0
+    for key, part in sorted(chunks(objs, cat).items()):
+        name = f"{cat}_{key}"; parent = empty(name, groups[cat])
+        lod0 = merge(part, name + ("" if key == "Ground" else "_LOD0"), double_sided=(cat == "Foliage"), coll=OPT.collection); lod0.parent = parent
+        if len(lod0.data.polygons) == 0: continue
+        box_uv(lod0); n += 1; f0 += len(lod0.data.polygons)
+        if key == "Ground": continue                                     # 평평한 바닥은 LOD 없음
+        r1, r2 = RULES[cat]
+        l1 = r1(lod0, name + "_LOD1", parent); f1 += len(l1.data.polygons)
+        if r2: l2 = r2(lod0, name + "_LOD2", parent); f2 += len(l2.data.polygons)
+    STATS[cat] = (n, f0, f1, f2); log("최적화", cat, f"구역 {n}개 · LOD0 {f0:,} · LOD1 {f1:,} · LOD2 {f2:,} 면")
+nc = 0
+for key, part in sorted(chunks([o for o in rest if diag(o) >= 30], "Collision").items()):
+    c = merge(part, f"Collision_{key}", with_mats=False, coll=OPT.collection); c.parent = groups["Collision"]; nc += len(c.data.polygons)
+STATS["Collision"] = (len(groups["Collision"].children), nc, 0, 0); log("최적화 충돌", STATS["Collision"])
+sp2 = empty("PlayerSpawn", world, sp.location)
+
+# ── 8. 내보내기: Unity = 최적화 장면(FBX) · 도구(월드맵 등) = 합친 장면(GLB) ──
+with bpy.context.temp_override(scene=OPT, view_layer=OPT.view_layers[0]):
     bpy.ops.export_scene.fbx(filepath=os.path.join(OUT_CITY, "City.fbx"), use_selection=False, object_types={"MESH", "EMPTY"}, apply_scale_options="FBX_SCALE_ALL", path_mode="RELATIVE",
                              axis_forward="-Z", axis_up="Y", mesh_smooth_type="FACE")
+ctx = dict(scene=GAME, view_layer=GAME.view_layers[0])
+with bpy.context.temp_override(**ctx):
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_EXP, "City.glb"), export_format="GLB", use_active_scene=True)
+with open(os.path.join(ROOT, "docs", "map_optimization.md"), "w") as f:
+    f.write("# 맵 최적화 결과 (자동 생성: blender/build_map.py)\n\n| 분류 | 구역 | LOD0 면 | LOD1 면 | LOD2 면 |\n|---|---|---|---|---|\n")
+    for k, (n_, a, b_, c_) in STATS.items(): f.write(f"| {k} | {n_} | {a:,} | {b_:,} | {c_:,} |\n")
 co = np.empty(len(city.data.vertices) * 3, np.float32); city.data.vertices.foreach_get("co", co); co = co.reshape(-1, 3); lo, hi = co.min(0), co.max(0)
 log("내보냄", f"크기 {hi[0]-lo[0]:.0f} x {hi[1]-lo[1]:.0f} x {hi[2]-lo[2]:.0f} m")
 
-# ── 8. 미리보기 ───────────────────────────────────────
+# ── 9. 미리보기 ───────────────────────────────────────
 if args.preview:
     sc = GAME; sc.render.engine = "CYCLES"; sc.cycles.samples = 16; sc.cycles.device = "CPU"; sc.render.resolution_x = 1400; sc.render.resolution_y = 860
     collision.hide_render = True

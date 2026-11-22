@@ -79,7 +79,7 @@ namespace MoominAction
                 counts[prefab] = counts.TryGetValue(prefab, out var c0) ? c0 + 1 : 1;
                 alive.Add(Instantiate(prefab, p, Quaternion.identity));
             }
-            if (boss) { Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(enemyPrefab, bp, Quaternion.identity); b.GetComponent<EnemyCombatController>()?.ConfigureBoss(); alive.Add(b); }
+            if (boss) { Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(enemyPrefab, bp, Quaternion.identity); if (b.TryGetComponent<EnemyCombatController>(out var becc)) becc.ConfigureBoss(); alive.Add(b); }
             WaveStarted?.Invoke(Wave);
         }
     }
