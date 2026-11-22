@@ -120,7 +120,7 @@ namespace MoominAction.EditorTools
             var cc = player.AddComponent<CharacterController>(); cc.height = 1.3f; cc.radius = 0.35f; cc.center = new Vector3(0, 0.65f, 0); cc.stepOffset = 0.3f;
             var anim = player.GetComponentInChildren<Animator>(); anim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "Moomin.controller"); anim.applyRootMotion = false;
             var stats = player.AddComponent<CharacterStats>(); stats.displayName = "민미"; stats.team = Team.Player; stats.attribute = SkillAttribute.Black; stats.maxHealth = stats.currentHealth = 100f;
-            player.AddComponent<Stamina>(); player.AddComponent<CoinSystem>(); player.AddComponent<StatusEffectManager>(); player.AddComponent<DefenseController>(); player.AddComponent<EnergyManager>(); var res = player.AddComponent<CombatResolver>(); res.targetMask = enemyMask;
+            player.AddComponent<Stamina>(); player.AddComponent<CoinSystem>(); player.AddComponent<StatusEffectManager>(); player.AddComponent<Experience>(); player.AddComponent<DefenseController>(); player.AddComponent<EnergyManager>(); var res = player.AddComponent<CombatResolver>(); res.targetMask = enemyMask;
             var ex = player.AddComponent<SkillExecutor>(); ex.useAnimationEvents = true; ex.animator = anim;
             var cm = player.AddComponent<CombatManager>();
             cm.basic1 = SkillAsset("BASIC_1"); cm.basic2 = SkillAsset("BASIC_2"); cm.basic3 = SkillAsset("BASIC_3"); cm.skill1 = SkillAsset("SKILL_001"); cm.skill2 = SkillAsset("SKILL_002"); cm.ultimate = SkillAsset("SKILL_003"); SkillAsset("SKILL_004");   // 충격파(광역 테스트) 에셋도 생성
@@ -164,6 +164,7 @@ namespace MoominAction.EditorTools
                 var bcc = b.AddComponent<EnemyCombatController>(); bcc.archetype = EnemyArchetype.Humanoid; bcc.animator = bAnim; bcc.agent = ba; bcc.visual = b.transform; bcc.moveSpeed = 2.2f; bcc.score = 15;
                 bcc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("HUMAN_JAB"), SkillAsset("HUMAN_SLAM"), SkillAsset("HUMAN_RUSH") }; bcc.basicSkill = bcc.skills[0];
                 b.AddComponent<EnemyBrain>().personality = EnemyPersonality.Humanoid;
+                var becc = b.GetComponent<EnemyCombatController>(); if (becc != null) becc.expReward = 70;   // 인간형은 경험치 더 많이
                 SetLayer(b, enemyLayer);
                 PrefabUtility.SaveAsPrefabAsset(b, Prefabs + "SleepyBear.prefab"); Object.DestroyImmediate(b);
             }

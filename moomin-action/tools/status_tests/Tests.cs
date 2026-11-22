@@ -71,6 +71,21 @@ static class Tests
         var e14 = new EvadeState(); e14.Start(14, true); var e11 = new EvadeState(); e11.Start(11, true);
         Eq(D(null, false), 13f, "광역: 방어 없는 적 13"); Eq(D(null, true), 6.5f, "광역: 가드한 적 6.5"); Eq(D(e14, false), 0f, "광역: 회피 14 ≥ 13 → 0"); Eq(D(e11, false), 13f, "광역: 회피 11 < 13 → 13");
 
+        // ── 체력바 피해 조각 · 경험치 · 숫자 표기
+        var ch = new DamageChunk(1f); ch.Set(0.72f);
+        Eq(ch.Active, true, "맞으면 조각 생김"); Eq(ch.Top, 1f, "조각 위쪽 = 맞기 전 체력"); Eq(ch.Current, 0.72f, "현재 = 맞은 뒤");
+        ch.Advance(0.3f); Eq(ch.Top, 1f, "유지 시간 동안 그대로");
+        ch.Set(0.6f); Eq(ch.Top, 1f, "연속 피해: 조각이 이어서 커짐"); Eq(ch.Age, 0f, "연속 피해: 타이머 다시 시작");
+        ch.Advance(0.45f + 0.175f); Eq(ch.Top, 0.8f, "줄어드는 중간(절반)", 1e-3f);
+        ch.Advance(0.2f); Eq(ch.Active, false, "다 줄면 사라짐"); Eq(ch.Top, 0.6f, "사라진 뒤 위쪽 = 현재");
+        var ch2 = new DamageChunk(1f); ch2.Set(0.5f); ch2.Set(0.9f); Eq(ch2.Active, true, "조각보다 덜 회복 → 유지"); ch2.Set(1f); Eq(ch2.Active, false, "조각 위까지 회복 → 사라짐");
+        var ch3 = new DamageChunk(1f); float t3 = 0; ch3.Set(0.5f); for (int i = 0; i < 200 && ch3.Active; i++) { ch3.Advance(1f / 144); t3 += 1f / 144; }
+        Eq(Math.Abs(t3 - 0.8f) < 0.02f, true, "144fps 에서도 0.45+0.35초에 사라짐");
+        Eq(ExpCurve.ToNext(1), 100L, "Lv1 → 100"); int lv = 1; long xp = 0;
+        Eq(ExpCurve.Add(ref lv, ref xp, 350), 1, "350 → 레벨 1 오름(100, 다음 303)"); Eq(lv, 2, "Lv2"); Eq(xp, 250L, "남은 경험치 250");
+        Eq(NumberFormat.Short(39100), "39.1K", "39100 → 39.1K"); Eq(NumberFormat.Short(2_600_000), "2.6M", "2.6M"); Eq(NumberFormat.Short(14_440_000), "14.44M", "14.44M");
+        Eq(NumberFormat.Short(9999), "9,999", "9999 → 9,999"); Eq(NumberFormat.Comma(28347), "28,347", "쉼표");
+
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }

@@ -46,6 +46,12 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 코인 위력 효과: 힘(자신)·위력 감소·마비 → `SkillExecutor.OnCoinAttack` 에서 `StatusEffectManager.UseCoinModifiers(ctx.id)` 로 코인마다 1회 소모, 위력 = 기본 + (앞면 ? CoinModifiers.CoinValue(코인 위력) : 0).
 - 핵심 로직은 순수 C#(UnityEngine 없음) → `cd tools && dotnet run --project status_tests` 로 검증. 이 파일들에 UnityEngine 을 쓰지 말 것.
 
+## 체력바·경험치바
+- `UI/VitalBars.cs`(HUD 왼쪽 위): 체력 "체력 283/391" + 줄었을 때만 붉은 [72%] 꼬리표, 맞으면 줄어든 만큼 빨간 조각(0.45초 유지 → 0.35초 동안 줄며 사라짐, 연속 피해는 이어서 커짐), 체력 25% 아래면 붉게 깜빡. 경험치바 + 레벨 원판, 얻은 만큼 밝게 번쩍이며 차오름, 레벨 업이면 끝까지 찼다가 다시.
+- 순수 로직 `Core/VitalsMath.cs`(DamageChunk · ExpCurve 100×레벨^1.6 · NumberFormat 2.6M/14.44M) → status_tests. 레벨·경험치 `Player/Experience.cs`(적 처치 시 `EnemyCombatController.expReward`: 그림자 40 · 곰 70 · 보스 ×5, 레벨 업 최대 체력 +10).
+- 그림 `tools/bar_art.py` → `Resources/UI/Bars/*.png`(BarArt 가 9분할로 로드, 테두리 값은 두 파일이 같아야 함). 미리보기 `tools/vital_bars_mock.py` → `previews/vital_bars_mock.png`.
+- HUD 세로 배치: 체력 -22 · 경험치 -80 · 스태미나 -124 · 정신력 -142 · 에너지 -166 · 상태 -196 · 목표 -236.
+
 ## 맵(blender/build_map.py)
 - 원본 GLB(SketchUp→openskp→Blender): 맨 위 계층 + 메시 공유 = 부품 원본 → 삭제. 1단위 = 0.14m, 바닥 z=-51 → 0.
 - 순서: 분석(형태: 수직 벽 비율·축 정렬 비율로 산/언덕 ↔ 건물) → 질감(면 종류·텍스처·상자 투영 UV) → 채색(산 높이별, 집마다 벽 5색·지붕 4색, 성은 석재+슬레이트).

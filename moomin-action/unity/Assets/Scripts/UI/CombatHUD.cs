@@ -30,12 +30,12 @@ namespace MoominAction.UI
             this.ui = ui; var p = ui.player.gameObject; stats = ui.player; ex = p.GetComponent<SkillExecutor>(); cm = p.GetComponent<CombatManager>(); lockOn = p.GetComponent<LockOnSystem>();
             canvasRect = (RectTransform)hudRoot.GetComponentInParent<Canvas>().transform; var tl = new Vector2(0, 1);
             // 정신력
-            var sg = Img(core, "Sanity", UITheme.Bar, Color.white); Set(sg.rectTransform, tl, tl, tl, new Vector2(44, -98), new Vector2(380, 14));
+            var sg = Img(core, "Sanity", UITheme.Bar, Color.white); Set(sg.rectTransform, tl, tl, tl, new Vector2(44, -142), new Vector2(380, 14));
             var inner = NewRect("Inner", sg.transform); Stretch(inner, 3);
             sanityNeg = Box(inner, "Neg", new Color(.35f, .5f, .95f)).rectTransform; sanityPos = Box(inner, "Pos", UITheme.Gold).rectTransform;
             foreach (var r in new[] { sanityNeg, sanityPos }) { r.offsetMin = r.offsetMax = Vector2.zero; r.anchorMin = new Vector2(.5f, 0); r.anchorMax = new Vector2(.5f, 1); }
             var mid = Box(inner, "Mid", UITheme.Cream); Set(mid.rectTransform, new Vector2(.5f, 0), new Vector2(.5f, 1), new Vector2(.5f, .5f), Vector2.zero, new Vector2(2, 4));
-            sanityLabel = Txt(core, "", 22, UITheme.Cream); Set(sanityLabel.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(436, -105), new Vector2(560, 30));
+            sanityLabel = Txt(core, "", 22, UITheme.Cream); Set(sanityLabel.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(436, -149), new Vector2(560, 30));
             // 스킬 슬롯
             var bc = new Vector2(.5f, 0); string[] keys = { "좌클릭", "Q", "E", "R" };
             for (int i = 0; i < 4; i++)
@@ -56,12 +56,12 @@ namespace MoominAction.UI
             canvasForPanels = canvasRect;
             // 에너지 게이지(정신력 아래)
             energy = p.GetComponent<EnergyManager>(); playerSe = p.GetComponent<StatusEffectManager>();
-            var eg = Img(core, "Energy", UITheme.Bar, Color.white); Set(eg.rectTransform, tl, tl, tl, new Vector2(44, -122), new Vector2(380, 12));
+            var eg = Img(core, "Energy", UITheme.Bar, Color.white); Set(eg.rectTransform, tl, tl, tl, new Vector2(44, -166), new Vector2(380, 12));
             var ein = NewRect("Inner", eg.transform); Stretch(ein, 3); energyFill = Box(ein, "Fill", new Color(.3f, .85f, .95f)).rectTransform; Stretch(energyFill); energyFill.anchorMax = new Vector2(0, 1);
-            energyLabel = Txt(core, "", 20, new Color(.55f, .9f, 1f)); Set(energyLabel.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(462, -128), new Vector2(300, 26));
-            var eIcon = SkillPanelArt.EnergyIcon; if (eIcon != null) { var ei = Img(core, "EnergyIcon", eIcon, Color.white, false); Set(ei.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(446, -128), new Vector2(34, 34)); }
-            else energyLabel.rectTransform.anchoredPosition = new Vector2(436, -128);
-            playerStatus = Txt(core, "", 20, UITheme.Cream); Set(playerStatus.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(44, -152), new Vector2(640, 26));   // 내 상태이상·경직
+            energyLabel = Txt(core, "", 20, new Color(.55f, .9f, 1f)); Set(energyLabel.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(462, -172), new Vector2(300, 26));
+            var eIcon = SkillPanelArt.EnergyIcon; if (eIcon != null) { var ei = Img(core, "EnergyIcon", eIcon, Color.white, false); Set(ei.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(446, -172), new Vector2(34, 34)); }
+            else energyLabel.rectTransform.anchoredPosition = new Vector2(436, -172);
+            playerStatus = Txt(core, "", 20, UITheme.Cream); Set(playerStatus.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(44, -196), new Vector2(640, 26));   // 내 상태이상·경직
             // 클래시
             var kp = Img(hudRoot, "ClashPanel", UITheme.Frame, Color.white); clashPanel = kp.gameObject; clashGroup = clashPanel.AddComponent<CanvasGroup>(); At(kp.rectTransform, new Vector2(.5f, .7f), Vector2.zero, new Vector2(620, 240));
             clashTitle = Txt(kp.transform, "클래시", 34, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Bold); Set(clashTitle.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(.5f, 1), new Vector2(0, -12), new Vector2(-40, 44));

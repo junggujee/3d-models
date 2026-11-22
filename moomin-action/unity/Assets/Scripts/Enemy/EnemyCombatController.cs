@@ -33,6 +33,7 @@ namespace MoominAction
         /// <summary>스킬·경직·회피·방어 중이면 새 판단을 하지 않음.</summary>
         public bool Busy => !stats.IsAlive || skillExecutor.IsExecuting || IsStaggered || IsDodging || Time.time < busyUntil;
 
+        [Tooltip("쓰러뜨리면 플레이어가 얻는 경험치")] public int expReward = 40;
         DefenseController defense; public Transform Target => target;
         CharacterStats stats; Transform target; Vector3 knock, dodgeDir, baseScale; float vy, staggerUntil, dodgeEnd, nextDodge, nextGuard, busyUntil, deadT = -1, nextRepath, nextWarp; bool navigating;
         TelegraphIndicator tele;
@@ -97,7 +98,7 @@ namespace MoominAction
         {
             skillExecutor.Interrupt(); HideTelegraph(); stats.Guarding = false; deadT = 0f; if (agent && agent.enabled) agent.enabled = false; Play("Death", 0.05f);
             foreach (var c in GetComponents<Collider>()) c.enabled = false;
-            GameManager.Instance?.AddScore(score); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
+            GameManager.Instance?.AddScore(score); if (Experience.Instance != null) Experience.Instance.Gain(expReward); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
         }
 
         void Update()
@@ -180,7 +181,7 @@ namespace MoominAction
         /// <summary>보스로 전환(웨이브 3마다): 체력 ×6, 크기 ×1.8, 위력 ×1.35, 보스 기술, 신중한 성격.</summary>
         public void ConfigureBoss()
         {
-            isBoss = true; score = 100; stats.displayName = "거대한 그림자"; stats.attribute = SkillAttribute.Red; stats.maxHealth *= 6f; stats.ResetStats(); stats.ChangeSanity(10, "보스");
+            isBoss = true; score = 100; expReward *= 5; stats.displayName = "거대한 그림자"; stats.attribute = SkillAttribute.Red; stats.maxHealth *= 6f; stats.ResetStats(); stats.ChangeSanity(10, "보스");
             transform.localScale *= 1.8f; moveSpeed *= 0.85f; if (agent) agent.speed = moveSpeed;
             skills = new List<SkillDefinition>();
             foreach (var id in new[] { "ENEMY_BUMP", "ENEMY_SLAM", "BOSS_LUNGE", "BOSS_FLURRY", "BOSS_BREAK" })
