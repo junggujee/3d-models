@@ -6,3 +6,4 @@ moomin-action/unity/Assets/City/
 moomin-action/exports/City.*
 moomin-action/tools/status_tests/bin/
 moomin-action/tools/status_tests/obj/
+__pycache__/
