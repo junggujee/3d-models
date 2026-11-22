@@ -20,6 +20,8 @@ namespace MoominAction
         public static Sprite Get(ItemDef d)
         {
             if (d == null) return null; if (cache.TryGetValue(d.id, out var s)) return s;
+            var art = Resources.Load<Texture2D>("ItemIcons/" + d.id);   // 렌더한 아이콘(blender 로 만든 장비 등)이 있으면 그것
+            if (art != null) { s = Sprite.Create(art, new Rect(0, 0, art.width, art.height), new Vector2(.5f, .5f), 100f); cache[d.id] = s; return s; }
             var layers = new List<(Sdf sdf, Color c)>(); Color c = d.color, dark = c * 0.55f; dark.a = 1f; Color light = Color.Lerp(c, Color.white, 0.55f);
             switch (d.icon)
             {
@@ -38,6 +40,11 @@ namespace MoominAction
                 case IconKind.Sword:
                     layers.Add(((x, y) => Seg(.26f, .24f, .76f, .78f, .045f, x, y), c)); layers.Add(((x, y) => Seg(.3f, .28f, .72f, .74f, .012f, x, y), Color.white));
                     layers.Add(((x, y) => Seg(.22f, .4f, .4f, .22f, .03f, x, y), new Color(.8f, .1f, .1f))); layers.Add(((x, y) => Seg(.2f, .2f, .3f, .3f, .035f, x, y), new Color(.2f, .2f, .24f))); break;
+                case IconKind.Headband:   // 주름진 고리(머리띠)
+                    layers.Add(((x, y) => Mathf.Abs(Ell(.5f, .5f, .33f, .24f, x, y)) - .07f - .012f * Mathf.Sin(Mathf.Atan2(y - .5f, x - .5f) * 22f), c));
+                    layers.Add(((x, y) => Mathf.Abs(Ell(.5f, .53f, .3f, .21f, x, y)) - .02f, light)); break;
+                case IconKind.Artifact:   // 빛나는 보석
+                    layers.Add(((x, y) => Circ(.5f, .5f, .3f, x, y), new Color(c.r, c.g, c.b, .35f))); layers.Add(((x, y) => Diamond(.5f, .5f, .2f, x, y), c)); layers.Add(((x, y) => Diamond(.46f, .55f, .07f, x, y), light)); break;
                 case IconKind.Key:
                     layers.Add(((x, y) => Ring(.34f, .64f, .15f, .04f, x, y), c)); layers.Add(((x, y) => Seg(.45f, .53f, .78f, .2f, .035f, x, y), c));
                     layers.Add(((x, y) => Seg(.68f, .3f, .76f, .38f, .03f, x, y), c)); layers.Add(((x, y) => Seg(.6f, .38f, .67f, .45f, .03f, x, y), c)); break;

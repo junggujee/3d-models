@@ -30,6 +30,7 @@ namespace MoominAction
         public static bool RestartPressed() => K(Key.R);
         public static bool PausePressed() => K(Key.Escape) || (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame);
         public static bool InventoryPressed() => K(Key.I);
+        public static bool EquipPressed() => K(Key.C);
         public static bool MapPressed() => K(Key.M);
         public static int QuickPressed() { Key[] ks = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4 }; for (int i = 0; i < 4; i++) if (K(ks[i])) return i; return -1; }
         // ── 메뉴 조작
@@ -52,6 +53,7 @@ namespace MoominAction
         public static bool RestartPressed() => K(KeyCode.R);
         public static bool PausePressed() => K(KeyCode.Escape);
         public static bool InventoryPressed() => K(KeyCode.I);
+        public static bool EquipPressed() => K(KeyCode.C);
         public static bool MapPressed() => K(KeyCode.M);
         public static int QuickPressed() { KeyCode[] ks = { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4 }; for (int i = 0; i < 4; i++) if (K(ks[i])) return i; return -1; }
         public static Vector2Int NavPressed() => new Vector2Int((K(KeyCode.D) || K(KeyCode.RightArrow) ? 1 : 0) - (K(KeyCode.A) || K(KeyCode.LeftArrow) ? 1 : 0), (K(KeyCode.W) || K(KeyCode.UpArrow) ? 1 : 0) - (K(KeyCode.S) || K(KeyCode.DownArrow) ? 1 : 0));

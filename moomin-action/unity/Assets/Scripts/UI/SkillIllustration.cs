@@ -305,7 +305,8 @@ namespace MoominAction.UI
             {
                 float dd = Seg(x, y, ax, ay, bx, by, out float h); float t = taper ? Mathf.Sin(Mathf.PI * Mathf.Clamp(h, .02f, .98f)) : 1f; float d = dd - w * t;
                 float L = Mathf.Max(1e-9f, Mathf.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay))), across = ((x - ax) * -(by - ay) + (y - ay) * (bx - ax)) / L;
-                float core = Mathf.Clamp01(0.5f - d * H * 0.8f) * Mathf.Clamp01(0.45f + 0.75f * SkillPanelArt.Noise(h * L * 8, across * 260 + 17));   // 마른 붓결 lum[idx] = Mathf.Max(lum[idx], core * l); glow[idx] += Mathf.Exp(-Mathf.Max(d, 0) * 40f) * w * 6f * l; acc[idx] = Mathf.Max(acc[idx], core * ac);
+                float core = Mathf.Clamp01(0.5f - d * H * 0.8f) * Mathf.Clamp01(0.45f + 0.75f * SkillPanelArt.Noise(h * L * 8, across * 260 + 17));   // 마른 붓결
+                lum[idx] = Mathf.Max(lum[idx], core * l); glow[idx] += Mathf.Exp(-Mathf.Max(d, 0) * 40f) * w * 6f * l; acc[idx] = Mathf.Max(acc[idx], core * ac);
             });
         }
 

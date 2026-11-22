@@ -17,6 +17,11 @@ namespace MoominAction
         public string displayName = "민미"; [Tooltip("이름 옆 별칭(예: 지상 최대의 끼룩이)")] public string epithet = ""; public Team team = Team.Player;
         [Tooltip("몸 속성(공격 중이 아닐 때 맞는 쪽 상성). 검정 = 상성 없음")] public SkillAttribute attribute = SkillAttribute.Black;
         [Header("Health")] public float maxHealth = 100f; public float currentHealth = 100f;
+        [Header("Attack")] [Tooltip("기본 공격력. 피해 = 공격력 × (최종 위력 ÷ 10) × 배율 (EquipmentMath.Damage) — 10 이면 예전 공식과 같음")] public float attack = 10f;
+        /// <summary>레벨(Experience)·장비(Inventory)가 더하는 값. 장비 체력은 maxHealth 에 이미 더해져 있고 equipHealth 로 기억(저장 시 뺌).</summary>
+        [NonSerialized] public float levelAttack, equipAttack, equipHealth, equipDamageReduction; [NonSerialized] public int equipFinalPower;
+        /// <summary>최종 공격력 = 기본 + 레벨 + 장비.</summary>
+        public float Attack => attack + levelAttack + equipAttack;
         [Header("Sanity")] [Tooltip("끄면 침잠이 정신력 대신 StatusEffectManager.OnSinkingWithoutSanity 효과를 줌")] public bool hasSanity = true; public int maxSanity = 45; public int minSanity = -45; public int currentSanity = 0; public float sanityRecoverPerSecond = 3f;
         [Header("Defense")] public float invulnerableTime = 0.05f; [Tooltip("DefenseController 가 없을 때만 쓰는 가드 피해 배율")] public float guardDamageMultiplier = 0.5f; public float parryWindow = 0.2f; public float strongHitDamage = 14f;
 
@@ -100,7 +105,7 @@ namespace MoominAction
         // ── 받는 피해 보정(R): 붕괴 ×1.25, 경직 중 취약 ×(설정값)
         public void SetVulnerable(float multiplier, float seconds) { vulnerableMult = multiplier; vulnerableUntil = Time.time + seconds; }
         public bool IsVulnerable => Time.time < vulnerableUntil && vulnerableMult > 1f;
-        public float DamageTakenMultiplier => (Sanity == SanityState.Breakdown ? 1.25f : 1f) * (IsVulnerable ? vulnerableMult : 1f);
+        public float DamageTakenMultiplier => (Sanity == SanityState.Breakdown ? 1.25f : 1f) * (IsVulnerable ? vulnerableMult : 1f) * (1f - equipDamageReduction);
 
         void Update()
         {

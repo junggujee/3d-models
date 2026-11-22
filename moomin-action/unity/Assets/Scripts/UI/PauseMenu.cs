@@ -14,7 +14,7 @@ namespace MoominAction.UI
         {
             base.Build(ui, canvas);
             var dim = UIFactory.Box(canvas, "PauseRoot", UITheme.Dim); UIFactory.Stretch(dim.rectTransform); dim.raycastTarget = true; root = dim.gameObject;
-            var defs = new (string, Action)[] { ("계속하기", ui.CloseAll), ("가방", () => ui.Open(ui.inventoryPage)), ("기록 남기기", () => ui.Open(ui.savePage)), ("기록 불러오기", () => ui.Open(ui.loadPage)), ("설정", () => ui.Open(ui.settingsPage)), ("조작법", () => ui.Open(ui.controlsPage)), ("타이틀로", ui.ToTitle), ("게임 종료", ui.QuitGame) };
+            var defs = new (string, Action)[] { ("계속하기", ui.CloseAll), ("가방", () => ui.Open(ui.inventoryPage)), ("장비", () => ui.Open(ui.equipmentPage)), ("기록 남기기", () => ui.Open(ui.savePage)), ("기록 불러오기", () => ui.Open(ui.loadPage)), ("설정", () => ui.Open(ui.settingsPage)), ("조작법", () => ui.Open(ui.controlsPage)), ("타이틀로", ui.ToTitle), ("게임 종료", ui.QuitGame) };
             float step = 82f; var panel = UIFactory.Panel(root.transform, "Panel", new Vector2(820, 230 + defs.Length * step)); UIFactory.Header(panel.transform, "휴식", 820);
             entries = new Entry[defs.Length];
             for (int i = 0; i < defs.Length; i++)

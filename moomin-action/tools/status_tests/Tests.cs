@@ -100,6 +100,17 @@ static class Tests
         Eq(SaveFormat.Latest(new[] { (2, "망가짐"), (1, SaveFormat.Stamp(utc)) }), 1, "망가진 시각은 건너뜀");
         Eq(SaveFormat.Summary(12, "마을 광장", 7), "Lv.12  ·  마을 광장  ·  웨이브 7", "슬롯 요약"); Eq(SaveFormat.Summary(1, "", 0), "Lv.1  ·  여정의 시작", "새 여정 요약");
 
+        // ── 장비·공격력 공식
+        Eq(EquipmentMath.Damage(13, 10f, 1f, 1f), 13, "공격력 10 = 예전 공식(P×M×R)"); Eq(EquipmentMath.Damage(13, 20f, 1f, 1f), 26, "공격력 2배 → 피해 2배");
+        Eq(EquipmentMath.Damage(10, 15f, 1f, 1f) < EquipmentMath.Damage(13, 15f, 1f, 1f), true, "같은 공격력이면 코인 위력이 클수록 큼");
+        Eq(EquipmentMath.Damage(13, 10f, 1.25f, 0.5f), 8, "배율·가드(8.125 → 8)"); Eq(EquipmentMath.Damage(0, 10f, 1f, 1f), 1, "최소 1");
+        Eq(EquipmentMath.FinalPower(10, 3, true, 1), 14, "앞면 + 머리띠 +1"); Eq(EquipmentMath.FinalPower(10, 3, false, 1), 11, "뒷면도 +1"); Eq(EquipmentMath.FinalPower(2, 0, false, -5), 0, "0 아래 없음");
+        var hb = new EquipStats { finalPower = 1 }; var ar = new EquipStats { attack = 2, damageReduction = 0.1f }; var sum = EquipmentMath.Sum(new[] { hb, ar, new EquipStats { damageReduction = 0.1f } });
+        Eq(sum.finalPower, 1, "합: 최종 위력"); Eq(sum.attack, 2f, "합: 공격력", 1e-5f); Eq(sum.damageReduction, 0.19f, "피해 감소는 곱으로 겹침", 1e-5f);
+        Eq(string.Join("/", EquipmentMath.Describe(hb)), "코인 최종 위력 +1", "머리띠 설명"); Eq(EquipmentMath.Describe(default).Count, 0, "빈 능력치");
+        Eq(EquipmentMath.LevelAttack(1, 0.5f), 0f, "Lv1 공격력 보너스 0", 1e-5f); Eq(EquipmentMath.LevelAttack(11, 0.5f), 5f, "Lv11 +5", 1e-5f);
+        Eq(EquipmentMath.CombatPower(10, 1, 100, 0, 1) > EquipmentMath.CombatPower(10, 0, 100, 0, 1), true, "머리띠 끼면 전투력 오름");
+
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }

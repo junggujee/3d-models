@@ -128,7 +128,7 @@ namespace MoominAction
             }
             int aff = SkillAttributes.Affinity(skill.attribute, SkillAttributes.DefenderAttribute(target)); attack.affinity = aff; r *= SkillAttributes.DamageMultiplier(aff);   // 속성 상성
             float m = skill.damageMultiplier * (executor ? executor.weaponMultiplier : 1f) * stats.DamageDealtMultiplier;
-            int dmg = DamageCalculator.Final(attack.power, m, r);
+            int dmg = EquipmentMath.Damage(attack.power, stats.Attack, m, r);   // 공격력 × (최종 위력 ÷ 10) × 배율 × 받는 쪽 보정
             bool wasInvulnerable = target.Invulnerable;
             target.TakeDamage(dmg, hitPoint, to.normalized * skill.knockback + Vector3.up * 1.5f);
             if (wasInvulnerable) return;   // 회피됨

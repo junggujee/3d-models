@@ -10,7 +10,7 @@ namespace MoominAction.UI
     public class InventoryMenu : MenuPage
     {
         const int Cols = 6, Rows = 5, Cells = Cols * Rows; const float CellSize = 100f, Gap = 8f;
-        static readonly string[] TabNames = { "전체", "소모품", "무기", "재료", "중요" };
+        static readonly string[] TabNames = { "전체", "소모품", "장비", "재료", "중요" };
         Inventory inv; int tab, cursor; int[] view = new int[Cells];
         Image[] cellFrame = new Image[Cells], cellIcon = new Image[Cells]; Text[] cellCount = new Text[Cells], cellTag = new Text[Cells];
         Image[] tabBar = new Image[5]; Text[] tabText = new Text[5];
@@ -63,11 +63,11 @@ namespace MoominAction.UI
                 quickCount[i] = UIFactory.Txt(q.transform, "", 22, UITheme.Cream, TextAnchor.LowerRight, FontStyle.Bold); UIFactory.Set(quickCount[i].rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(-6, 2), Vector2.zero);
             }
             messageText = UIFactory.Txt(panel.transform, "", 26, UITheme.GoldBright, TextAnchor.MiddleLeft); UIFactory.Set(messageText.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0), new Vector2(46, 70), new Vector2(700, 40));
-            var hint = UIFactory.Txt(panel.transform, "Enter 사용·장착    X 버리기    1~4 퀵슬롯 지정    R 정렬    [ ] 탭    Esc 닫기", 22, UITheme.Muted, TextAnchor.MiddleCenter); UIFactory.Set(hint.rectTransform, new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(0, 22), new Vector2(1400, 40));
+            var hint = UIFactory.Txt(panel.transform, "Enter 사용·장착    X 버리기    1~4 퀵슬롯 지정    R 정렬    [ ] 탭    C 장비 화면    Esc 닫기", 22, UITheme.Muted, TextAnchor.MiddleCenter); UIFactory.Set(hint.rectTransform, new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(0, 22), new Vector2(1400, 40));
             root.SetActive(false);
         }
 
-        bool Match(ItemDef d) => tab switch { 0 => true, 1 => d.type == ItemType.Consumable, 2 => d.type == ItemType.Weapon, 3 => d.type == ItemType.Material, _ => d.type == ItemType.Key };
+        bool Match(ItemDef d) => tab switch { 0 => true, 1 => d.type == ItemType.Consumable, 2 => d.Equippable, 3 => d.type == ItemType.Material, _ => d.type == ItemType.Key };
         int Slot() => cursor >= 0 && cursor < Cells ? view[cursor] : -1;
 
         public override void Open() { inv = ui.player ? ui.player.GetComponent<Inventory>() : inv; if (inv != null) { inv.Changed -= Refresh; inv.Changed += Refresh; inv.Message -= Say; inv.Message += Say; } cursor = 0; base.Open(); Refresh(); }
@@ -85,7 +85,7 @@ namespace MoominAction.UI
             {
                 int si = view[i]; bool has = si >= 0; var s = has ? inv.slots[si] : null; var d = has ? s.Def : null;
                 cellIcon[i].enabled = has; cellIcon[i].sprite = has ? ItemIcons.Get(d) : null; cellCount[i].text = has && s.count > 1 ? s.count.ToString() : "";
-                cellTag[i].text = has && d.type == ItemType.Weapon && s.id == inv.equippedWeapon ? "장착" : "";
+                cellTag[i].text = has && d.Equippable && inv.IsEquipped(s.id) ? "장착" : "";
                 cellFrame[i].color = i == cursor ? new Color(1f, .86f, .5f, 1f) : new Color(1, 1, 1, has ? 1f : .55f);
             }
             for (int i = 0; i < 5; i++) { bool on = i == tab; tabBar[i].color = on ? new Color(1f, .86f, .5f) : Color.white; tabText[i].color = on ? Color.white : UITheme.Cream; }
@@ -102,7 +102,9 @@ namespace MoominAction.UI
         {
             var sb = new System.Text.StringBuilder();
             if (d.heal > 0) sb.AppendLine("체력 회복  +" + d.heal); if (d.stamina > 0) sb.AppendLine("스태미나 회복  +" + d.stamina);
-            if (d.type == ItemType.Weapon) sb.AppendLine("공격력  ×" + d.damageMultiplier.ToString("0.00")); if (d.value > 0) sb.AppendLine("가치  " + d.value + " 금화");
+            if (d.type == ItemType.Weapon) sb.AppendLine("공격력  ×" + d.damageMultiplier.ToString("0.00"));
+            foreach (var l in EquipmentMath.Describe(d.stats)) sb.AppendLine(l);
+            if (!string.IsNullOrEmpty(d.grade)) sb.AppendLine("등급  " + d.grade); if (d.value > 0) sb.AppendLine("가치  " + d.value + " 금화");
             return sb.ToString();
         }
 

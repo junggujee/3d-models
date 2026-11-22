@@ -83,3 +83,10 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 그린볼런 `blender/build_green_block.py`(판 6개 = 뼈 6개 100%, 겹치지 않게 x 판 전체·y 판 x 안쪽·z 판 x·y 안쪽, 칸 FR 비율, 모서리 칸 STEP 낮춤, 톱니 gear 뼈). Death = 판마다 포물선 + 기울어 납작 착지(death_frame). 재질은 MoominSetup.PlasticMaterial(이름 정확히 일치로 교체 — Block_GreenInner 는 그대로).
 - 원거리 = `SkillDefinition.isProjectile` → `Combat/Projectile.cs`(근접과 합 없음 = `MeleeClashable`, 투사체끼리만 공중 합). 새 원거리 기술은 SkillLibrary 에서 isProjectile + projectile* 값만 넣으면 됨.
 - 프리팹 `MoominSetup.BuildMonster`(애니메이션 있는 일반 몬스터 공용) · 컨트롤러 `BuildMonsterControllers`. 일러스트 subject Slime/Block(C# CubeScene ↔ Python cube()).
+
+## 장비 · 공격력 (상세: docs/EQUIPMENT.md)
+- 피해 D = 공격력 × (최종 위력 ÷ 10) × M × R (`Core/EquipmentMath.Damage`, 순수 C# · status_tests). 최종 위력 = 기본 + (앞면 ? 코인 위력 : 0) + `CharacterStats.equipFinalPower`. 공격력 `CharacterStats.Attack` = attack(10) + levelAttack(Experience, 레벨당 0.5) + equipAttack.
+- 장비 = `Inventory.armor[4]`(머리·가슴·다리·발) · `artifacts[3]` · `equippedWeapon` · `presets[3]`. 새 장비는 ItemDatabase 한 줄(type Armor/Artifact, slot, grade, stats, model, attachBone). `Inventory.ApplyEquipment` 가 능력치·최대 체력(equipHealth 는 저장 시 뺌)·`EquipmentVisuals` 동기화.
+- 장비 3D 모양은 **민미 모델 공간(기본 자세)** 에서 만들어 내보내고, EquipmentVisuals 가 스킨 메시 bindpose 로 뼈에 붙임(blender/build_headband.py 참고). 아이콘은 Resources/ItemIcons/<id>.png 우선.
+- 장비 화면 `UI/EquipmentMenu.cs`(C 키) + `EquipmentPreview`(플레이어 레이어만 그리는 카메라 → RenderTexture). 배치를 바꾸면 `tools/equipment_mock.py` 도.
+- **한 줄에 `코드; // 설명 코드;` 쓰지 말 것** — 주석 뒤 코드가 사라짐(실제로 4군데 있었음). unity_audit 4b 가 잡음.

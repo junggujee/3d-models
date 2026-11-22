@@ -113,7 +113,7 @@ namespace MoominAction
             var d = new SaveData
             {
                 savedAt = SaveFormat.Stamp(DateTime.UtcNow), scene = GameScene, playSeconds = PlayTime, place = MapPlaces.NearestName(tf.position),
-                maxHealth = p.maxHealth, health = p.currentHealth, sanity = p.currentSanity,
+                maxHealth = p.maxHealth - p.equipHealth, health = p.currentHealth,   // 최대 체력은 장비 보너스를 뺀 값(불러올 때 장비가 다시 더함) sanity = p.currentSanity,
                 position = new[] { tf.position.x, tf.position.y, tf.position.z }, yaw = tf.eulerAngles.y,
                 wave = gm.Wave, score = gm.Score,
                 kills = RunStats.Kills, bossKills = RunStats.BossKills, clashWins = RunStats.ClashWins, clashLosses = RunStats.ClashLosses, bestPower = RunStats.BestPower,
@@ -132,9 +132,9 @@ namespace MoominAction
             RunStats.Kills = d.kills; RunStats.BossKills = d.bossKills; RunStats.ClashWins = d.clashWins; RunStats.ClashLosses = d.clashLosses; RunStats.BestPower = d.bestPower;
             gm.RestoreProgress(d.wave, d.score);
             var p = gm.player; if (p == null) return;
-            if (p.TryGetComponent<Experience>(out var xp)) { xp.level = Mathf.Max(1, d.level); xp.exp = Math.Max(0, d.exp); }
-            if (d.maxHealth > 0) p.maxHealth = d.maxHealth;
-            p.currentHealth = d.health > 0 ? Mathf.Min(d.health, p.maxHealth) : p.maxHealth;
+            if (p.TryGetComponent<Experience>(out var xp)) { xp.level = Mathf.Max(1, d.level); xp.exp = Math.Max(0, d.exp); xp.Refresh(); }
+            if (d.maxHealth > 0) { p.maxHealth = d.maxHealth; p.equipHealth = 0f; }   // 장비 체력은 Inventory.Start 의 ApplyEquipment 가 다시 더함
+            p.currentHealth = d.health > 0 ? d.health : p.maxHealth;   // 장비 체력까지 포함한 값일 수 있음 — Inventory.ApplyEquipment(처음) 가 최대치에 맞춰 자름
             p.currentSanity = Mathf.Clamp(d.sanity, p.minSanity, p.maxSanity);
             if (d.position != null && d.position.Length == 3)
             {

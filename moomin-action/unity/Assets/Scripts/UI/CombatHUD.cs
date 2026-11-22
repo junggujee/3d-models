@@ -99,7 +99,8 @@ namespace MoominAction.UI
             };
             DefenseController.AnyEvadeResolved += onEvade;
             stats.SanityChanged += (a, b, why) => { if (why == "패링" || why.Contains("앞면")) Popup(why + "  " + (b > a ? "+" : "") + (b - a), UITheme.GoldBright); };
-            onClash = o => { if (!o.parry && o.playerAttack != null) { stage.Show(o); clash = null; } else { clash = o; clashT = 0f; } };   // 합 = 가운데 연출, 패링 = 작은 패널 ClashManager.Clashed += onClash;
+            onClash = o => { if (!o.parry && o.playerAttack != null) { stage.Show(o); clash = null; } else { clash = o; clashT = 0f; } };   // 합 = 가운데 연출, 패링 = 작은 패널
+            ClashManager.Clashed += onClash;
             onExchange = (o, i, r) => stage.Exchange(o, i, r); ClashManager.ClashExchange += onExchange;
             onClashEnd = o => stage.End(o); ClashManager.ClashEnded += onClashEnd;
             onHit = (a, target, dmg) => { if (a.owner == ex && a.affinity != 0) Popup(a.affinity > 0 ? $"약점!  ×{SkillAttributes.AdvantageDamage:0.00}" : $"저항  ×{SkillAttributes.DisadvantageDamage:0.0}", a.affinity > 0 ? new Color(.5f, 1f, .5f) : new Color(1f, .5f, .5f)); };

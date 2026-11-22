@@ -12,13 +12,15 @@ namespace MoominAction
     {
         public static Experience Instance { get; private set; }
         [Min(1)] public int level = 1; [Min(0)] public long exp = 0; [Min(1)] public int maxLevel = 99;
-        public float healthPerLevel = 10f;
+        public float healthPerLevel = 10f; [Tooltip("레벨당 공격력 +")] public float attackPerLevel = 0.5f;
         public long ToNext => ExpCurve.ToNext(level);
         public float Ratio => ToNext > 0 ? Mathf.Clamp01((float)exp / ToNext) : 0f;
         /// <summary>(얻은 양)</summary>
         public event Action<long> Gained; public event Action<int> LeveledUp;
         CharacterStats stats;
-        void Awake() { Instance = this; stats = GetComponent<CharacterStats>(); }
+        void Awake() { Instance = this; stats = GetComponent<CharacterStats>(); Refresh(); }
+        /// <summary>레벨에 따른 공격력을 CharacterStats 에 반영(불러오기로 레벨을 바꾼 뒤에도 부름).</summary>
+        public void Refresh() { if (stats != null) stats.levelAttack = EquipmentMath.LevelAttack(level, attackPerLevel); }
         void OnDestroy() { if (Instance == this) Instance = null; }
 
         public void Gain(long amount)
@@ -26,7 +28,7 @@ namespace MoominAction
             if (amount <= 0 || stats == null || !stats.IsAlive) return;
             int ups = ExpCurve.Add(ref level, ref exp, amount, maxLevel); Gained?.Invoke(amount);
             for (int i = 0; i < ups; i++) { stats.maxHealth += healthPerLevel; stats.Heal(healthPerLevel); }
-            if (ups > 0) LeveledUp?.Invoke(level);
+            if (ups > 0) { Refresh(); LeveledUp?.Invoke(level); }
         }
     }
 }

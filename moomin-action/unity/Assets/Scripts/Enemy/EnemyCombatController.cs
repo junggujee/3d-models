@@ -72,7 +72,8 @@ namespace MoominAction
             if (Time.time < nextDodge) { Guard(t, 0.6f); return; }
             target = t; navigating = false; stats.Guarding = false; Vector3 away = transform.position - t.position; away.y = 0; away.Normalize();
             Vector3 side = Vector3.Cross(Vector3.up, away) * (Random.value < 0.5f ? 1f : -1f);
-            dodgeDir = (away * 0.6f + side * 0.8f).normalized; dodgeEnd = Time.time + dodgeTime; nextDodge = dodgeEnd + dodgeCooldown; if (defense != null) defense.StartEvade();   // 회피 코인 한 번 Play("Dodge", 0.04f);
+            dodgeDir = (away * 0.6f + side * 0.8f).normalized; dodgeEnd = Time.time + dodgeTime; nextDodge = dodgeEnd + dodgeCooldown; if (defense != null) defense.StartEvade();   // 회피 코인 한 번
+            Play("Dodge", 0.04f);
         }
 
         public void Stagger(float seconds, float vulnerable = 1f)

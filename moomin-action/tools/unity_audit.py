@@ -89,6 +89,15 @@ for p, s in SRC.items():
     for m in re.finditer(r'(GetComponent(?:InChildren|InParent)?<[^>]+>\(\))\s*(\?\.|\?\?)', s):
         err(f"가짜 null 위험: {m.group(1)}{m.group(2)} ({rel(p)}:{line_of(s, m.start())}) — TryGetComponent 로")
 
+# ── 4b) 주석이 코드를 삼킴: 한 줄 안에서 "코드;   // 설명 다음코드;" 처럼 주석 뒤에 문장이 이어지면 그 코드는 실행되지 않음
+for p, s in SRC.items():
+    for i, line in enumerate(s.split("\n"), 1):
+        m = re.search(r'(?<![:/"])//(?!/)(.*)$', line)
+        if not m: continue
+        c = m.group(1)
+        if re.search(r'[\w\]\)]\s*(=|\+=|-=|\*=)\s*[^=].*;|\b(var|return|if|foreach)\b[^;]*;|\b[A-Z]\w*(\.\w+)*\([^()]*\)\s*;', c) and c.count(";") >= 1 and re.search(r';\s*$|;\s*\w', c):
+            err(f"주석 안에 코드처럼 보이는 문장 — 실행되지 않음: {rel(p)}:{i}  ({c.strip()[:60]}…)")
+
 # ── 5) Shader.Find
 ALWAYS = {"Sprites/Default", "UI/Default", "Standard", "Unlit/Color", "Unlit/Texture", "Unlit/Transparent", "Particles/Standard Unlit", "Hidden/InternalErrorShader"}
 for p, s in SRC.items():
