@@ -50,7 +50,9 @@
 - 연출 중 두 캐릭터는 `CharacterStats.InClash` + `SkillExecutor.Held` 로 묶임(이동·입력·AI·스킬 시간 정지). 수치는 ClashManager Inspector 에서 조절
 - 미리보기: `previews/skill_panel_v3_mock.png` (`python3 tools/skill_panel_mock.py`)
 
-방어: 정면 피해 ×0.3, 방어 시작 0.2초 안이면 **패링**(피해 없음, 공격자 경직 1초·취약 ×1.5, 정신력 +5). `unblockable` 스킬(보스 방어 부수기)은 막을 수 없음.
+가드·회피·광역 공격: **[DEFENSE.md](DEFENSE.md)** (가드 = 감소율, 회피 = 회피 코인 위력 비교, 광역 = 공통 코인).
+
+(이전 규칙) 방어: 정면 피해 ×0.3, 방어 시작 0.2초 안이면 **패링**(피해 없음, 공격자 경직 1초·취약 ×1.5, 정신력 +5). `unblockable` 스킬(보스 방어 부수기)은 막을 수 없음.
 
 ## 적 AI 행동 점수(명세 8-3)
 | 상황 | 공격 | 방어 | 회피 |

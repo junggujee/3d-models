@@ -13,11 +13,11 @@ namespace MoominAction
         [Header("회피(구르기)")] public float rollSpeed = 7.8f, rollDuration = 0.66f, rollCost = 18f, iFrameStart = 0.05f, iFrameEnd = 0.40f, rollCooldown = 0.12f, sprintDrain = 9f;
         public Animator animator; public Transform cam;
         public bool Rolling { get; private set; }
-        CharacterController cc; CharacterStats health; Stamina stamina; CombatManager cm; SkillExecutor skills; LockOnSystem lockOn; Vector3 vel, rollDir; float speed01, rollT, nextRoll; Vector2 lastInput;
+        CharacterController cc; CharacterStats health; DefenseController defense; Stamina stamina; CombatManager cm; SkillExecutor skills; LockOnSystem lockOn; Vector3 vel, rollDir; float speed01, rollT, nextRoll; Vector2 lastInput;
 
         void Awake()
         {
-            cc = GetComponent<CharacterController>(); health = GetComponent<CharacterStats>(); stamina = GetComponent<Stamina>(); cm = GetComponent<CombatManager>(); skills = GetComponent<SkillExecutor>(); lockOn = GetComponent<LockOnSystem>();
+            cc = GetComponent<CharacterController>(); health = GetComponent<CharacterStats>(); defense = GetComponent<DefenseController>(); stamina = GetComponent<Stamina>(); cm = GetComponent<CombatManager>(); skills = GetComponent<SkillExecutor>(); lockOn = GetComponent<LockOnSystem>();
             health.invulnerableTime = 0.05f;   // 적의 코인 연타가 각각 들어가도록 짧게
             if (!animator) animator = GetComponentInChildren<Animator>(); if (!cam && Camera.main) cam = Camera.main.transform;
         }
@@ -61,17 +61,18 @@ namespace MoominAction
             skills?.Interrupt(); health.Guarding = false;
             rollDir = dir.sqrMagnitude > 0.01f ? dir.normalized : transform.forward; transform.rotation = Quaternion.LookRotation(rollDir); Rolling = true; rollT = 0f;
             if (animator) animator.CrossFadeInFixedTime("Roll", 0.04f);
+            if (defense != null) defense.StartEvade();   // 회피: 코인 한 번 → 구르는 동안 이 위력으로 판정(성공하면 유지)
         }
 
         void UpdateRoll()
         {
-            rollT += Time.deltaTime; health.Invulnerable = rollT >= iFrameStart && rollT <= iFrameEnd;
+            rollT += Time.deltaTime;
             float k = rollT / rollDuration, curve = Mathf.Lerp(1.15f, 0.35f, k * k);
             if (cc.isGrounded && vel.y < 0) vel.y = -2f; vel.y += gravity * Time.deltaTime;
             cc.Move((rollDir * rollSpeed * curve + new Vector3(0, vel.y, 0)) * Time.deltaTime);
             if (rollT >= rollDuration) { EndRoll(); if (animator) animator.CrossFadeInFixedTime("Locomotion", 0.1f); }
         }
-        void EndRoll() { Rolling = false; health.Invulnerable = false; nextRoll = Time.time + rollCooldown; }
+        void EndRoll() { Rolling = false; if (defense != null) defense.EndEvade(); nextRoll = Time.time + rollCooldown; }
 
         public void Knockback(Vector3 force) { cc.Move(new Vector3(force.x, 0, force.z) * 0.15f); }
         public void CancelRoll() { if (Rolling) EndRoll(); }

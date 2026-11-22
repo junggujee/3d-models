@@ -20,6 +20,7 @@ namespace MoominAction.UI
         // 에너지 · 상태이상 · 경직
         RectTransform energyFill; Text energyLabel; EnergyManager energy; StatusEffectManager playerSe;
         Gauge targetStagger; Text targetStaggerLabel; readonly Image[] tIcons = new Image[StatusInfo.All.Length]; readonly Text[] tIconNums = new Text[StatusInfo.All.Length]; readonly float[] tFlash = new float[StatusInfo.All.Length]; float staggerFlash;
+        System.Action<DefenseController, bool, int, int> onEvade; DefenseController playerDef;
         System.Action<AttackContext, CharacterStats, int, bool> onTremor; System.Action<StatusEffectManager, StatusType, int> onStatus;
         ClashStage stage;
         System.Action<ClashOutcome> onClash, onClashEnd; System.Action<ClashOutcome, int, int> onExchange; System.Action<AttackContext> onEnemyCoin; System.Action<AttackContext, CharacterStats, int> onHit;
@@ -87,7 +88,15 @@ namespace MoominAction.UI
             popup = Txt(hudRoot, "", 34, UITheme.GoldBright, TextAnchor.MiddleCenter, FontStyle.Bold, "Popup"); At(popup.rectTransform, new Vector2(.5f, .44f), Vector2.zero, new Vector2(800, 50));
 
             ex.SkillRefused += (s, why) => Popup(s.skillName + " — " + why, UITheme.Muted);
-            stats.Evaded += () => Popup("회피", UITheme.Cream);
+            // 회피 코인: 시작할 때 위력, 판정마다 성공/실패(내 회피 · 적 회피)
+            playerDef = p.GetComponent<DefenseController>();
+            if (playerDef != null) playerDef.EvadeStarted += (pw, heads) => Popup($"회피 코인 {(heads ? "앞면" : "뒷면")} · 위력 {pw}", heads ? UITheme.GoldBright : UITheme.Cream);
+            onEvade = (d, ok, ep, inc) =>
+            {
+                if (d == playerDef) Popup(ok ? $"회피 성공  {ep} ≥ {inc}" : $"회피 실패  {ep} < {inc}", ok ? new Color(.7f, .9f, 1f) : new Color(1f, .5f, .45f));
+                else if (lockOn != null && lockOn.Target != null && d.gameObject == lockOn.Target.gameObject) Popup(ok ? $"적 회피  {ep} ≥ {inc}" : $"적 회피 실패  {ep} < {inc}", ok ? new Color(1f, .6f, .5f) : UITheme.GoldBright);
+            };
+            DefenseController.AnyEvadeResolved += onEvade;
             stats.SanityChanged += (a, b, why) => { if (why == "패링" || why.Contains("앞면")) Popup(why + "  " + (b > a ? "+" : "") + (b - a), UITheme.GoldBright); };
             onClash = o => { if (!o.parry && o.playerAttack != null) { stage.Show(o); clash = null; } else { clash = o; clashT = 0f; } };   // 합 = 가운데 연출, 패링 = 작은 패널 ClashManager.Clashed += onClash;
             onExchange = (o, i, r) => stage.Exchange(o, i, r); ClashManager.ClashExchange += onExchange;
@@ -112,7 +121,7 @@ namespace MoominAction.UI
         }
 
         /// <summary>정적 이벤트·적 구독 해제(씬 재시작 시 파괴된 UI 를 건드리지 않도록).</summary>
-        public void Dispose() { stage?.Dispose(); if (onExchange != null) ClashManager.ClashExchange -= onExchange; if (onClashEnd != null) ClashManager.ClashEnded -= onClashEnd; if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
+        public void Dispose() { if (onEvade != null) DefenseController.AnyEvadeResolved -= onEvade; stage?.Dispose(); if (onExchange != null) ClashManager.ClashExchange -= onExchange; if (onClashEnd != null) ClashManager.ClashEnded -= onClashEnd; if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
         void Popup(string t, Color c) { popup.text = t; popup.color = c; popupT = 1.2f; }
 
         public void Update(float dt)
@@ -171,7 +180,7 @@ namespace MoominAction.UI
                     x += 18 + 6 + tIconNums[i].preferredWidth + 18;
                 }
                 var s = t.Executor.CurrentSkill; var brain = t.GetComponent<EnemyBrain>();
-                if (s != null) targetIntent.text = (t.Executor.Phase == SkillPhase.Windup ? "<color=#E06060>예고</color> " : "<color=#E06060>공격</color> ") + $"{s.skillName} · 기본 {s.basePower} · 코인 {s.coinCount}개 +{s.coinPower}" + (s.unblockable ? "  <color=#B070FF>방어 불가</color>" : "");
+                if (s != null) targetIntent.text = (t.Executor.Phase == SkillPhase.Windup ? "<color=#E06060>예고</color> " : "<color=#E06060>공격</color> ") + $"{s.skillName} · 기본 {s.basePower} · 코인 {s.coinCount}개 +{s.coinPower}" + (!s.canBeGuarded ? "  <color=#B070FF>방어 불가</color>" : "") + (!s.canBeEvaded ? "  <color=#B070FF>회피 불가</color>" : "") + (s.isAreaAttack ? $"  <color=#E8C97A>광역 {s.areaRadius:0.#}m</color>" : "");
                 else targetIntent.text = t.IsStaggered ? "경직" : t.Stats.Guarding ? "방어" : t.IsDodging ? "회피" : brain != null ? brain.LastAction switch { EnemyAction.Approach => "접근", EnemyAction.Attack => "공격 준비", EnemyAction.Guard => "방어", EnemyAction.Dodge => "회피", _ => "관찰" } : "";
                 if (enemyCoinT > 0) enemyCoinT -= dt; targetCoins.text = enemyCoinT > 0 ? "적 코인  " + string.Join("  ", enemyCoins) : "";
                 var cam = Camera.main;

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace MoominAction
 {
@@ -51,7 +52,12 @@ namespace MoominAction
         [Tooltip("스킬 일러스트(비우면 motif 로 스케치를 자동 생성)")] public Sprite illustration;
         [Header("Coin Settings")] public int basePower = 10; public int coinPower = 3; public int coinCount = 3;
         [Header("Attack Settings")] public float damageMultiplier = 1.0f; public float cooldown = 5f; public int sanityCost = 0;
-        [Header("Clash Settings")] public bool clashEnabled = true; public bool unblockable;
+        [Header("Area Attack")]
+        [Tooltip("켜면 공격자 중심 원(areaRadius) 안의 모든 적. 코인은 공격마다 한 번만 굴리고 같은 결과·위력을 모두에게(공통 코인)")] public bool isAreaAttack;
+        public float areaRadius = 4f;
+        [Tooltip("광역 대상 레이어(비우면 CombatResolver.targetMask)")] public LayerMask targetLayers;
+        [Header("Attack Type")] [FormerlySerializedAs("clashEnabled")] [Tooltip("상대 공격과 겹치면 합")] public bool canBeClashed = true;
+        [Header("Defense")] [Tooltip("끄면 가드로 피해를 줄일 수 없음(예전 '방어 불가')")] public bool canBeGuarded = true; [Tooltip("끄면 회피 코인으로 피할 수 없음")] public bool canBeEvaded = true;
 
         [Header("Timing (초)")]
         [Tooltip("첫 공격 전 준비 시간(적의 공격 예고)")] public float windup = 0f;
@@ -72,7 +78,7 @@ namespace MoominAction
         [Tooltip("적중 시 상대에게: 앞면 코인 위력 -강도")] public StatusAmount powerDownOnHeads, powerDownOnTails;
         [Tooltip("적중 시 상대에게: 코인 위력 0 (강도 무시, 횟수만)")] public StatusAmount paralysisOnHeads, paralysisOnTails;
         [Header("Energy")] [Tooltip("사용에 필요한(소비하는) 에너지")] [Min(0)] public int energyCost; [Tooltip("공격이 명중할 때마다 얻는 에너지(기본 명중 보너스에 더해짐)")] [Min(0)] public int energyGain;
-        [Header("Hit")] public float range = 2f; public float angle = 120f; public float knockback = 4f; [Tooltip("공격마다 앞으로 미끄러지는 속도")] public float lunge = 0f;
+        [Header("Hit (단일 공격: 사거리·각도 안에서 한 명)")] public float range = 2f; public float angle = 120f; public float knockback = 4f; [Tooltip("공격마다 앞으로 미끄러지는 속도")] public float lunge = 0f;
         public CoinEffect coinEffect = CoinEffect.None;
         [TextArea] public string description;
 
@@ -85,6 +91,8 @@ namespace MoominAction
         };
         public bool InflictsStatus(StatusType t) => !StatusOn(t, true).IsEmpty || !StatusOn(t, false).IsEmpty;
         public bool HasAnyStatus { get { foreach (var t in StatusInfo.All) if (InflictsStatus(t)) return true; return false; } }
+        /// <summary>공격이 닿는 거리(광역 = 반경, 단일 = range). AI 접근 거리에 사용.</summary>
+        public float Reach => isAreaAttack ? areaRadius : range;
         public int MinPower => basePower; public int MaxPower => basePower + coinPower;
         public float ExpectedPower(int sanity) => CoinMath.ExpectedPower(basePower, coinPower, sanity);
         public float Duration => windup + (coinCount - 1) * attackInterval + hitTime + activeWindow + recovery;

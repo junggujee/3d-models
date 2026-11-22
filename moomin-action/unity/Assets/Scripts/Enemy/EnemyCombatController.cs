@@ -33,13 +33,14 @@ namespace MoominAction
         /// <summary>스킬·경직·회피·방어 중이면 새 판단을 하지 않음.</summary>
         public bool Busy => !stats.IsAlive || skillExecutor.IsExecuting || IsStaggered || IsDodging || Time.time < busyUntil;
 
+        DefenseController defense; public Transform Target => target;
         CharacterStats stats; Transform target; Vector3 knock, dodgeDir, baseScale; float vy, staggerUntil, dodgeEnd, nextDodge, nextGuard, busyUntil, deadT = -1, nextRepath, nextWarp; bool navigating;
         TelegraphIndicator tele;
 
         void OnEnable() { All.Add(this); } void OnDisable() { All.Remove(this); }
         void Awake()
         {
-            stats = GetComponent<CharacterStats>(); if (!skillExecutor) skillExecutor = GetComponent<SkillExecutor>(); if (!agent) agent = GetComponent<NavMeshAgent>(); if (!animator) animator = GetComponentInChildren<Animator>();
+            stats = GetComponent<CharacterStats>(); defense = GetComponent<DefenseController>(); if (!skillExecutor) skillExecutor = GetComponent<SkillExecutor>(); if (!agent) agent = GetComponent<NavMeshAgent>(); if (!animator) animator = GetComponentInChildren<Animator>();
             if (!visual) visual = transform.childCount > 0 ? transform.GetChild(0) : transform; baseScale = visual.localScale;
             if (agent) { agent.updateRotation = false; agent.speed = moveSpeed; agent.stoppingDistance = 1.0f; agent.acceleration = 20f; }
             skills.RemoveAll(s => s == null); if (skills.Count == 0) { skills.Add(basicSkill != null ? basicSkill : SkillLibrary.Get("ENEMY_BUMP")); skills.Add(SkillLibrary.Get("ENEMY_SLAM")); }
@@ -61,14 +62,14 @@ namespace MoominAction
         public void Guard(Transform t, float seconds)
         {
             if (Time.time < nextGuard) { Hold(); return; }
-            target = t; navigating = false; stats.Guarding = true; stats.GuardStartTime = Time.time; busyUntil = Time.time + seconds; nextGuard = busyUntil + guardCooldown; Play("Guard");
+            target = t; navigating = false; if (defense != null) defense.StartGuard(); else { stats.Guarding = true; stats.GuardStartTime = Time.time; } busyUntil = Time.time + seconds; nextGuard = busyUntil + guardCooldown; Play("Guard");
         }
         public void Dodge(Transform t)
         {
             if (Time.time < nextDodge) { Guard(t, 0.6f); return; }
             target = t; navigating = false; stats.Guarding = false; Vector3 away = transform.position - t.position; away.y = 0; away.Normalize();
             Vector3 side = Vector3.Cross(Vector3.up, away) * (Random.value < 0.5f ? 1f : -1f);
-            dodgeDir = (away * 0.6f + side * 0.8f).normalized; dodgeEnd = Time.time + dodgeTime; nextDodge = dodgeEnd + dodgeCooldown; stats.Invulnerable = true; Play("Dodge", 0.04f);
+            dodgeDir = (away * 0.6f + side * 0.8f).normalized; dodgeEnd = Time.time + dodgeTime; nextDodge = dodgeEnd + dodgeCooldown; if (defense != null) defense.StartEvade();   // 회피 코인 한 번 Play("Dodge", 0.04f);
         }
 
         public void Stagger(float seconds, float vulnerable = 1f)
@@ -80,9 +81,9 @@ namespace MoominAction
         void OnSkillStarted(SkillDefinition s)
         {
             if (s.windup <= 0f) return; HideTelegraph(); Play("Windup", 0.1f);
-            bool aoe = s.angle >= 360f; float r = (aoe ? s.range : Mathf.Max(1f, s.range * 0.6f)) / transform.localScale.x;
+            bool aoe = s.isAreaAttack || s.angle >= 360f; float r = (aoe ? s.Reach : Mathf.Max(1f, s.range * 0.6f)) / transform.localScale.x;
             Vector3 off = aoe ? Vector3.zero : Vector3.forward * (s.range * 0.5f / transform.localScale.z);
-            tele = TelegraphIndicator.Show(transform, off, r, s.windup, s.unblockable ? new Color(0.65f, 0.2f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f));
+            tele = TelegraphIndicator.Show(transform, off, r, s.windup, !s.canBeGuarded ? new Color(0.65f, 0.2f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f));
         }
         void HideTelegraph() { if (tele) tele.Hide(); tele = null; }
 
@@ -109,7 +110,7 @@ namespace MoominAction
             }
             if (stats.InClash) { if (agent && agent.enabled && agent.isOnNavMesh) agent.isStopped = true; UpdateAnimator(); return; }   // 합 연출 중: ClashManager 가 움직임
             knock = Vector3.Lerp(knock, Vector3.zero, 8f * Time.deltaTime);
-            if (stats.Invulnerable && !IsDodging) stats.Invulnerable = false;
+            if (defense != null && defense.IsEvading && !IsDodging) defense.EndEvade();   // 회피 동작이 끝나면 회피 판정도 끝
             Vector3 extra = knock; bool moveNav = false; var s = skillExecutor.CurrentSkill;
 
             UpdateAnimator();
@@ -184,7 +185,7 @@ namespace MoominAction
             skills = new List<SkillDefinition>();
             foreach (var id in new[] { "ENEMY_BUMP", "ENEMY_SLAM", "BOSS_LUNGE", "BOSS_FLURRY", "BOSS_BREAK" })
             {
-                var c = Instantiate(SkillLibrary.Get(id)); c.basePower = Mathf.RoundToInt(c.basePower * 1.35f); c.range *= 1.5f; skills.Add(c);
+                var c = Instantiate(SkillLibrary.Get(id)); c.basePower = Mathf.RoundToInt(c.basePower * 1.35f); c.range *= 1.5f; c.areaRadius *= 1.5f; skills.Add(c);
             }
             basicSkill = skills[0]; var brain = GetComponent<EnemyBrain>(); if (brain) brain.personality = EnemyPersonality.Boss;
         }

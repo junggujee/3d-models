@@ -18,7 +18,7 @@ namespace MoominAction
         [Tooltip("몸 속성(공격 중이 아닐 때 맞는 쪽 상성). 검정 = 상성 없음")] public SkillAttribute attribute = SkillAttribute.Black;
         [Header("Health")] public float maxHealth = 100f; public float currentHealth = 100f;
         [Header("Sanity")] [Tooltip("끄면 침잠이 정신력 대신 StatusEffectManager.OnSinkingWithoutSanity 효과를 줌")] public bool hasSanity = true; public int maxSanity = 45; public int minSanity = -45; public int currentSanity = 0; public float sanityRecoverPerSecond = 3f;
-        [Header("Defense")] public float invulnerableTime = 0.05f; public float guardDamageMultiplier = 0.3f; public float parryWindow = 0.2f; public float strongHitDamage = 14f;
+        [Header("Defense")] public float invulnerableTime = 0.05f; [Tooltip("DefenseController 가 없을 때만 쓰는 가드 피해 배율")] public float guardDamageMultiplier = 0.5f; public float parryWindow = 0.2f; public float strongHitDamage = 14f;
 
         [Header("Stagger Gauge (체력과 별개)")]
         [Min(1)] public float maxStagger = 100f; [Tooltip("게이지가 가득 차면 이 시간 동안 경직(이동·공격 불가)")] public float staggerDuration = 3f;
@@ -67,13 +67,15 @@ namespace MoominAction
         public void TakeDamage(float damage, Vector3 hitPoint, Vector3 knockback)
         {
             if (!IsAlive) return;
-            if (Invulnerable) { if (Time.time - lastEvade > 0.3f) { lastEvade = Time.time; ChangeSanity(DodgeSuccess, "회피"); Evaded?.Invoke(); } return; }
+            if (Invulnerable) return;   // 연출 등 특수 무적(회피는 DefenseController 의 코인 비교로 처리)
             if (Time.time - lastHit < invulnerableTime) return;
             lastHit = Time.time; currentHealth = Mathf.Max(0, currentHealth - damage);
             if (damage >= strongHitDamage) ChangeSanity(StrongHitTaken, "강한 공격 피격");
             Damaged?.Invoke(damage, hitPoint, knockback);
             if (!IsAlive) Died?.Invoke();
         }
+        /// <summary>회피 성공 알림(DefenseController): 정신력 +1, Evaded 이벤트(에너지·HUD). 같은 순간 여러 번이면 한 번만.</summary>
+        public void NotifyEvaded() { if (Time.time - lastEvade < 0.05f) return; lastEvade = Time.time; ChangeSanity(DodgeSuccess, "회피"); Evaded?.Invoke(); }
         /// <summary>상태이상 등으로 체력 손실: 회피·무적 시간·경직과 무관(Damaged 이벤트 없이 HealthLost).</summary>
         public void LoseHealth(float amount, string reason = "")
         {

@@ -159,7 +159,7 @@ namespace MoominAction.UI
             baseText.text = s.basePower.ToString(); baseText.color = new Color(.97f, .94f, .86f); baseText.GetComponent<Outline>().effectColor = deep;
             plus.text = "+" + s.coinPower; plus.color = light; plus.GetComponent<Outline>().effectColor = deep;
             UpdateModifierRow();
-            attrLine.text = SkillAttributes.Names[(int)s.attribute] + " 속성 · " + SkillAttributes.WeaknessText(s.attribute) + (s.unblockable ? " · <color=#C080FF>방어 불가</color>" : "") + (s.energyCost > 0 ? $" · <color=#6FE0F0>에너지 {s.energyCost}</color>" : "");
+            attrLine.text = SkillAttributes.Names[(int)s.attribute] + " 속성 · " + SkillAttributes.WeaknessText(s.attribute) + (s.isAreaAttack ? $" · <color=#E8C97A>광역</color>" : "") + (!s.canBeGuarded ? " · <color=#C080FF>방어 불가</color>" : "") + (!s.canBeEvaded ? " · <color=#C080FF>회피 불가</color>" : "") + (s.energyCost > 0 ? $" · <color=#6FE0F0>에너지 {s.energyCost}</color>" : "");
             art.sprite = SkillIllustration.Get(s);
             string line = StatusLine(s, out var first); bool hasStatus = line.Length > 0; statusIcon.gameObject.SetActive(hasStatus);
             if (hasStatus) { statusIcon.sprite = SkillPanelArt.StatusIcon(first); statusIcon.color = SkillPanelArt.StatusTint(first); status.text = "적중 시      " + line; }

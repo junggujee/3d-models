@@ -19,7 +19,7 @@ namespace MoominAction
             var s = ScriptableObject.CreateInstance<SkillDefinition>(); s.name = id;
             s.skillId = id; s.skillName = name; s.basePower = b; s.coinPower = c; s.coinCount = n; s.damageMultiplier = mult; s.cooldown = cd; s.sanityCost = sanity;
             s.attackInterval = interval; s.hitTime = hit; s.recovery = recovery; s.attackAnimations = anims; s.range = range; s.angle = angle; s.knockback = kb;
-            s.windup = windup; s.lunge = lunge; s.coinEffect = fx; s.unblockable = unblockable; s.description = desc; return s;
+            s.windup = windup; s.lunge = lunge; s.coinEffect = fx; s.canBeGuarded = !unblockable; s.description = desc; return s;
         }
 
         static void Ensure()
@@ -40,6 +40,7 @@ namespace MoominAction
             }
             void Energy(string id, int cost, int gain, bool burst = false) { if (map.TryGetValue(id, out var s)) { s.energyCost = cost; s.energyGain = gain; s.tremorBurstEnabled = burst; } }
             void Add(SkillDefinition s) => map[s.skillId] = s;
+            void Area(string id, float radius) { if (map.TryGetValue(id, out var s)) { s.isAreaAttack = true; s.areaRadius = radius; s.angle = 360f; } }
             string[] A1 = { "Attack1" }, A2 = { "Attack2" }, A23 = { "Attack2", "Attack3" }, A123 = { "Attack1", "Attack2", "Attack3" }, A5 = { "Attack1", "Attack2", "Attack1", "Attack2", "Attack3" }, A33 = { "Attack3", "Attack3" };
             // ── 플레이어: 일반 공격(좌클릭 3연타)
             Add(S("BASIC_1", "베기", 8, 3, 1, 1f, 0f, 0, 0.8f, 0.35f, 0.25f, A1, 1.9f, 110, 4f));
@@ -51,6 +52,8 @@ namespace MoominAction
                   desc: "두 번 깊게 찌른다. 둘 다 앞면이면 적이 크게 휘청인다. 정신력 8 이상일 때 사용, 8 소모."));
             Add(S("SKILL_003", "별빛 난무", 14, 5, 5, 1.3f, 20f, 0, 0.42f, 0.33f, 0.5f, A5, 3.2f, 360, 8f, fx: CoinEffect.SanityOnAllHeads,
                   desc: "강화 스킬 — 에너지 60 소비. 주위를 다섯 번 베어 내며 쌓인 진동을 폭발시킨다. 다섯 번 모두 앞면이면 정신력 +10."));
+            // 명세 테스트 스킬: 충격파(광역 · 공통 코인). 슬롯에 넣으려면 CombatManager 의 skill1/skill2/ultimate 에 SKILL_004 에셋 연결
+            Add(S("SKILL_004", "충격파", 8, 3, 3, 1.0f, 5f, 0, 0.5f, 0.35f, 0.4f, A123, 4f, 360, 6f, desc: "주위에 충격파를 세 번 터뜨린다. 코인은 매번 한 번만, 범위 안의 모든 적에게 같은 위력."));
             // ── 인간형 적: 잠꾸러기 곰(애니메이션 있음 — hitTime 을 클립 타격 프레임에 맞춤: Attack1/2 0.35초, Attack3 0.43초)
             Add(S("HUMAN_JAB", "솜주먹 연타", 6, 3, 3, 0.6f, 2.5f, 0, 0.4f, 0.35f, 0.7f, new[] { "Attack1", "Attack2", "Attack1" }, 1.7f, 90, 3f, windup: 0.45f, lunge: 2f));
             Add(S("HUMAN_SLAM", "베개 내려찍기", 10, 4, 2, 0.8f, 5f, 0, 0.6f, 0.43f, 1.0f, new[] { "Attack3" }, 2.0f, 140, 7f, windup: 0.85f, lunge: 1.5f));
@@ -74,6 +77,9 @@ namespace MoominAction
             // 코인 위력: 힘(자신) · 위력 감소 · 마비(상대). 횟수 = 영향받는 코인 수
             St("SKILL_001", StatusType.PowerUp, 1, 2); St("SKILL_002", StatusType.PowerDown, 2, 2); St("BASIC_3", StatusType.PowerUp, 1, 1);
             St("HUMAN_JAB", StatusType.Paralysis, 1, 1); St("ENEMY_BUMP", StatusType.PowerDown, 1, 2); St("BOSS_FLURRY", StatusType.PowerDown, 2, 2); St("BOSS_BREAK", StatusType.Paralysis, 1, 2);
+            // 광역(공통 코인): 공격자 중심 반경 안 모든 적
+            Area("SKILL_003", 3.2f); Area("SKILL_004", 4f); Area("ENEMY_SLAM", 2f);
+            Look("SKILL_004", SkillAttribute.Yellow, SkillMotif.Smash);
             // 에너지: (소비, 명중 시 추가 획득, 진동 폭발)
             Energy("BASIC_1", 0, 4); Energy("BASIC_2", 0, 4); Energy("BASIC_3", 0, 4);
             Energy("SKILL_001", 0, 2); Energy("SKILL_002", 0, 2);

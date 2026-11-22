@@ -4,6 +4,7 @@ using MoominAction;
 static class Tests
 {
     static int fail, pass;
+    static void Eq(float actual, float expected, string what, float tol) { if (Math.Abs(actual - expected) <= tol) pass++; else { fail++; Console.WriteLine($"  ✘ {what}: {actual} (기대 {expected})"); } }
     static void Eq<T>(T actual, T expected, string what) { if (Equals(actual, expected)) pass++; else { fail++; Console.WriteLine($"  ✘ {what}: {actual} (기대 {expected})"); } }
 
     static int Main()
@@ -53,7 +54,24 @@ static class Tests
         Eq(new CoinModifiers { powerDown = 9 }.CoinValue(3), 0, "위력 감소는 0 아래로 안 내려감");
         Eq(new CoinModifiers().CoinValue(4), 4, "보정 없음");
 
-        Console.WriteLine(fail == 0 ? $"✔ 상태이상·경직·에너지 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
+        // ── 명세 체크리스트: 가드 · 회피 · 광역 공통 코인 · 중복 피해 방지
+        Eq(100f * DefenseRules.GuardMultiplier(true, 0.5f), 50f, "가드 50%: 100 → 50");
+        Eq(DefenseRules.GuardMultiplier(false, 0.5f), 1f, "가드 안 함 → 그대로");
+        Eq(DefenseRules.GuardMultiplier(true, 2f), 0.1f, "감소율 상한 0.9", 1e-4f);
+        var ev = new EvadeState(); ev.Start(8 + 3, true);   // 회피 코인 앞면: 8 + 3 = 11
+        Eq(ev.TryEvade(8), true, "회피 11 vs 8 성공"); Eq(ev.TryEvade(10), true, "회피 11 vs 10 성공(연속 유지)"); Eq(ev.TryEvade(11), true, "회피 11 vs 11 성공(같으면 성공)");
+        Eq(ev.Active, true, "성공하는 동안 회피 유지"); Eq(ev.Successes, 3, "연속 성공 3회");
+        Eq(ev.TryEvade(12), false, "회피 11 vs 12 실패"); Eq(ev.Active, false, "실패하면 회피 종료"); Eq(ev.TryEvade(1), false, "종료 뒤엔 회피 판정 없음");
+        var ev2 = new EvadeState(); ev2.Start(8, false); Eq(ev2.Power, 8, "뒷면 회피 위력 8");
+        string a1 = "곰A", b1 = "곰B";
+        var u = DefenseRules.Unique(new[] { a1, a1, b1, null, a1 }); Eq(u.Count, 2, "콜라이더 여러 개 → 캐릭터당 한 번"); Eq(u[0], a1, "처음 나온 순서 유지");
+        // 광역 공통 코인: 위력 13 하나를 세 대상에게 — 대상마다 방어는 따로
+        int shared = 10 + 3;
+        float D(EvadeState e, bool guard) => e != null && e.TryEvade(shared) ? 0f : shared * DefenseRules.GuardMultiplier(guard, 0.5f);
+        var e14 = new EvadeState(); e14.Start(14, true); var e11 = new EvadeState(); e11.Start(11, true);
+        Eq(D(null, false), 13f, "광역: 방어 없는 적 13"); Eq(D(null, true), 6.5f, "광역: 가드한 적 6.5"); Eq(D(e14, false), 0f, "광역: 회피 14 ≥ 13 → 0"); Eq(D(e11, false), 13f, "광역: 회피 11 < 13 → 13");
+
+        Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }
 }

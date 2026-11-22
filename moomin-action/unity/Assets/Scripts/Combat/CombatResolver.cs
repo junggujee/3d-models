@@ -4,18 +4,22 @@ using UnityEngine;
 namespace MoominAction
 {
     /// <summary>
-    /// 공격 충돌과 피해 처리(명세 v2 6장). 히트박스가 열린 동안 매 프레임 범위·각도 안의 상대 팀을 찾아
-    ///  · 상대도 히트박스가 열려 있고 나를 겨누고 있으면 → 클래시(ClashManager)
-    ///  · 아니면 → 피해 D = P × M × R (한 공격당 대상별 1회, 방어·패링·회피 반영)
+    /// 공격 대상 탐색과 피해 처리. <b>코인 판정(SkillExecutor, 공격마다 1번 → AttackContext)과 대상별 피해 판정(여기)을 분리.</b>
+    /// 히트박스가 열린 동안 대상을 찾아
+    ///  · 단일 공격: 사거리·각도 안에서 <b>한 명</b>(조준 대상 우선, 없으면 가장 가까운 적)
+    ///  · 광역 공격(isAreaAttack): 공격자 중심 areaRadius 안의 <b>모든 적</b> — 같은 AttackContext(같은 코인 결과·위력)를 모두에게
+    ///  · 상대도 히트박스가 열려 있고 나를 겨누고 있으면 → 합(ClashManager)
+    ///  · 아니면 대상마다 따로: ① 회피(회피 코인 위력 ≥ 공격 위력이면 피해 없음) ② 가드(피해 × (1-감소율)) ③ 피해 D = P × M × R
+    /// 한 캐릭터에 콜라이더가 여러 개여도 한 코인에 한 번만(hitTargets + 중복 제거).
     /// </summary>
     [RequireComponent(typeof(CharacterStats))]
     public class CombatResolver : MonoBehaviour
     {
         public LayerMask targetMask = ~0; public Transform attackPoint; public Transform sparkOrigin;
-        CharacterStats stats; SkillExecutor executor; static readonly Collider[] buffer = new Collider[32];
-        readonly List<CharacterStats> found = new();
+        CharacterStats stats; SkillExecutor executor; LockOnSystem lockOn; EnemyCombatController enemy; static readonly Collider[] buffer = new Collider[64];
+        readonly List<CharacterStats> found = new(), picked = new();
 
-        void Awake() { stats = GetComponent<CharacterStats>(); executor = GetComponent<SkillExecutor>(); }
+        void Awake() { stats = GetComponent<CharacterStats>(); executor = GetComponent<SkillExecutor>(); lockOn = GetComponent<LockOnSystem>(); enemy = GetComponent<EnemyCombatController>(); }
         Vector3 Origin => (attackPoint ? attackPoint.position : transform.position + Vector3.up * 0.8f);
 
         /// <summary>코인이 판정된 순간 호출(첫 검사). 이후 히트박스가 열려 있는 동안 Tick 으로 계속 검사.</summary>
@@ -28,6 +32,7 @@ namespace MoominAction
         public void Tick(AttackContext attack, SkillDefinition skill)
         {
             if (attack.cancelled || !stats.IsAlive || (executor != null && executor.Held)) return;
+            if (!skill.isAreaAttack && attack.hitTargets.Count > 0) return;   // 단일 공격: 이 코인은 이미 한 명에게 판정됨
             foreach (var target in FindTargets(skill))
             {
                 if (attack.cancelled) return;
@@ -35,7 +40,7 @@ namespace MoominAction
                 // 클래시: 양쪽 공격이 동시에 활성화되어 있을 때만
                 var other = target.GetComponent<SkillExecutor>();
                 var theirs = other != null ? other.CurrentAttack : null;
-                if (skill.clashEnabled && theirs != null && theirs.HitboxOpen && !theirs.clashed && !attack.clashed && theirs.skill.clashEnabled && other.resolver.IsTargeting(stats, theirs.skill))
+                if (skill.canBeClashed && theirs != null && theirs.HitboxOpen && !theirs.clashed && !attack.clashed && theirs.skill.canBeClashed && other.resolver.IsTargeting(stats, theirs.skill))
                 {
                     ClashManager.Instance.Resolve(attack, theirs);
                     return;   // 이 공격은 합으로 넘어감(결과는 ClashManager 가 연출 뒤 적용)
@@ -48,41 +53,56 @@ namespace MoominAction
         public bool IsTargeting(CharacterStats target, SkillDefinition skill)
         {
             Vector3 to = target.transform.position - transform.position; to.y = 0;
+            if (skill.isAreaAttack) return to.magnitude <= skill.areaRadius + 0.6f;
             return to.magnitude <= skill.range + 0.6f && (skill.angle >= 360f || Vector3.Angle(transform.forward, to) <= skill.angle * 0.5f + 15f);
         }
 
         List<CharacterStats> FindTargets(SkillDefinition skill)
         {
-            found.Clear(); int n = Physics.OverlapSphereNonAlloc(Origin, skill.range, buffer, targetMask, QueryTriggerInteraction.Ignore);
-            for (int i = 0; i < n; i++)
+            found.Clear(); picked.Clear();
+            bool area = skill.isAreaAttack; int mask = area && skill.targetLayers.value != 0 ? skill.targetLayers.value : targetMask.value;
+            Vector3 center = area ? transform.position + Vector3.up * 0.8f : Origin; float radius = area ? skill.areaRadius : skill.range;
+            int n = Physics.OverlapSphereNonAlloc(center, radius, buffer, mask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++) found.Add(buffer[i].GetComponentInParent<CharacterStats>());
+            foreach (var t in DefenseRules.Unique(found))   // 콜라이더가 여러 개여도 캐릭터당 한 번
             {
-                var t = buffer[i].GetComponentInParent<CharacterStats>();
-                if (t == null || t == stats || t.team == stats.team || !t.IsAlive || found.Contains(t)) continue;
-                Vector3 to = t.transform.position - transform.position; to.y = 0;
-                if (skill.angle < 360f && to.magnitude > 0.8f && Vector3.Angle(transform.forward, to) > skill.angle * 0.5f) continue;
-                found.Add(t);
+                if (t == stats || t.team == stats.team || !t.IsAlive) continue;
+                if (!area) { Vector3 to = t.transform.position - transform.position; to.y = 0; if (skill.angle < 360f && to.magnitude > 0.8f && Vector3.Angle(transform.forward, to) > skill.angle * 0.5f) continue; }
+                picked.Add(t);
             }
-            return found;
+            if (area || picked.Count <= 1) return picked;
+            // 단일 공격: 조준 대상(플레이어 = 락온, 적 = 쫓는 대상)이 범위 안이면 그 대상, 아니면 가장 가까운 적 한 명
+            CharacterStats want = lockOn != null && lockOn.Target != null ? lockOn.Target.Stats : enemy != null && enemy.Target != null ? enemy.Target.GetComponentInParent<CharacterStats>() : null;
+            CharacterStats best = picked.Contains(want) ? want : null; float bd = float.MaxValue;
+            if (best == null) foreach (var t in picked) { float d = (t.transform.position - transform.position).sqrMagnitude; if (d < bd) { bd = d; best = t; } }
+            picked.Clear(); picked.Add(best); return picked;
         }
 
-        /// <summary>명중 처리: 방어(정면)·패링·회피 무적 → 피해 D = P × M × R.</summary>
+        /// <summary>대상 한 명에 대한 판정(같은 코인이면 광역이라도 같은 attack.power): ① 회피 → ② 가드(패링) → ③ 피해 D = P × M × R.</summary>
         public void ApplyHit(AttackContext attack, CharacterStats target)
         {
             if (!target.IsAlive || attack.hitTargets.Contains(target)) return;
             attack.hitTargets.Add(target); var skill = attack.skill;
             Vector3 to = target.transform.position - transform.position; to.y = 0; Vector3 hitPoint = target.transform.position + Vector3.up * 0.8f - to.normalized * 0.3f;
-            float r = target.DamageTakenMultiplier;
-            bool facing = Vector3.Angle(target.transform.forward, -to) <= 70f;
-            if (target.Guarding && facing && !skill.unblockable)
+            var def = target.GetComponent<DefenseController>();
+            // ① 회피: 회피 코인 위력 ≥ 공격 위력이면 피해 없음(회피 유지), 아니면 회피가 끝나고 피해
+            if (skill.canBeEvaded && def != null && def.IsEvading && def.TryEvade(attack.power))
             {
-                if (target.IsParryWindow)   // 패링: 피해 없음, 공격자 경직
+                SparkBurst.Spawn(hitPoint, -to.normalized + Vector3.up, 14, 4f, new Color(0.75f, 0.9f, 1f)); Evaded?.Invoke(attack, target); return;
+            }
+            float r = target.DamageTakenMultiplier;
+            // ② 가드: 위력 비교 없이 피해 감소율만큼 줄임(가드 시작 직후면 패링 — DefenseController.parryEnabled)
+            bool facing = Vector3.Angle(target.transform.forward, -to) <= 70f;
+            if (target.Guarding && skill.canBeGuarded && (def == null || !def.guardRequiresFacing || facing))
+            {
+                if ((def == null || def.parryEnabled) && target.IsParryWindow && facing)   // 패링: 피해 없음, 공격자 경직
                 {
                     target.ChangeSanity(CharacterStats.ParrySuccess, "패링"); attack.cancelled = true;
                     SparkBurst.Spawn(hitPoint, -to.normalized + Vector3.up, 50, 7f, SparkBurst.Gold); HitStop.Do(0.14f);
                     GetComponent<ICombatant>()?.Stagger(1.0f, 1.5f); ClashManager.RaiseParry(target, stats);
                     var de = target.GetComponent<EnergyManager>(); if (de != null) de.Gain(de.onParryGain, "패링"); return;
                 }
-                r *= target.guardDamageMultiplier; target.ChangeSanity(CharacterStats.GuardBlock, "방어");
+                r *= def != null ? def.GetDamageMultiplier() : target.guardDamageMultiplier; target.ChangeSanity(CharacterStats.GuardBlock, "방어");
             }
             int aff = SkillAttributes.Affinity(skill.attribute, SkillAttributes.DefenderAttribute(target)); attack.affinity = aff; r *= SkillAttributes.DamageMultiplier(aff);   // 속성 상성
             float m = skill.damageMultiplier * (executor ? executor.weaponMultiplier : 1f) * stats.DamageDealtMultiplier;
@@ -96,6 +116,8 @@ namespace MoominAction
             DamageDealt?.Invoke(attack, target, dmg);
         }
         public static event System.Action<AttackContext, CharacterStats, int> DamageDealt;
+        /// <summary>회피 코인으로 피함: (공격, 피한 대상).</summary>
+        public static event System.Action<AttackContext, CharacterStats> Evaded;
         /// <summary>진동 폭발: (공격, 대상, 경직 피해, 경직이 깨졌는가) — HUD 연출용.</summary>
         public static event System.Action<AttackContext, CharacterStats, int, bool> TremorBurst;
 

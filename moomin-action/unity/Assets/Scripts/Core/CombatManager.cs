@@ -13,12 +13,12 @@ namespace MoominAction
         public float hitStagger = 0.35f;
         public CharacterStats Stats => stats; public SkillExecutor Executor => executor;
         public CombatState State { get; private set; }
-        CharacterStats stats; SkillExecutor executor; PlayerController pc; Animator animator; float staggerUntil; bool moving, buffered; int basicIndex = -1;
+        CharacterStats stats; DefenseController defense; SkillExecutor executor; PlayerController pc; Animator animator; float staggerUntil; bool moving, buffered; int basicIndex = -1;
         SkillDefinition[] basics;
 
         void Awake()
         {
-            stats = GetComponent<CharacterStats>(); executor = GetComponent<SkillExecutor>(); pc = GetComponent<PlayerController>(); animator = GetComponentInChildren<Animator>();
+            stats = GetComponent<CharacterStats>(); defense = GetComponent<DefenseController>(); executor = GetComponent<SkillExecutor>(); pc = GetComponent<PlayerController>(); animator = GetComponentInChildren<Animator>();
             // 비어 있으면 기본값(Unity 의 '가짜 null' 때문에 ??= 대신 == null 로 검사)
             if (basic1 == null) basic1 = SkillLibrary.Get("BASIC_1"); if (basic2 == null) basic2 = SkillLibrary.Get("BASIC_2"); if (basic3 == null) basic3 = SkillLibrary.Get("BASIC_3");
             if (skill1 == null) skill1 = SkillLibrary.Get("SKILL_001"); if (skill2 == null) skill2 = SkillLibrary.Get("SKILL_002"); if (ultimate == null) ultimate = SkillLibrary.Get("SKILL_003");
@@ -50,8 +50,8 @@ namespace MoominAction
 
             // 방어(우클릭 유지): 공격 중이 아닐 때
             bool guardHeld = InputAdapter.GuardHeld();
-            if (guardHeld && !stats.Guarding && executor.CanCancel) { if (executor.IsExecuting) executor.Interrupt(); stats.Guarding = true; stats.GuardStartTime = Time.time; if (animator) animator.CrossFadeInFixedTime("Guard", 0.06f); }
-            else if (!guardHeld && stats.Guarding) { stats.Guarding = false; if (animator) animator.CrossFadeInFixedTime("Locomotion", 0.12f); }
+            if (guardHeld && !stats.Guarding && executor.CanCancel) { if (executor.IsExecuting) executor.Interrupt(); if (defense != null) defense.StartGuard(); else { stats.Guarding = true; stats.GuardStartTime = Time.time; } if (animator) animator.CrossFadeInFixedTime("Guard", 0.06f); }
+            else if (!guardHeld && stats.Guarding) { if (defense != null) defense.StopGuard(); else stats.Guarding = false; if (animator) animator.CrossFadeInFixedTime("Locomotion", 0.12f); }
 
             // 일반 공격 3연타: 회복 구간에 다음 타로 이어짐
             if (InputAdapter.AttackPressed())

@@ -41,9 +41,9 @@ namespace MoominAction
             chosen = null; float bestExp = float.MinValue, maxRange = 0f;
             foreach (var sk in skills)
             {
-                if (sk == null) continue; maxRange = Mathf.Max(maxRange, sk.range);
-                if (!ex.IsReady(sk) || s.distance > sk.range * 0.95f) continue;
-                float exp = sk.ExpectedPower(s.sanity) * sk.coinCount * (s.playerGuarding && sk.unblockable ? 2f : 1f)   // 막고 있으면 방어 불가 기술 선호
+                if (sk == null) continue; maxRange = Mathf.Max(maxRange, sk.Reach);
+                if (!ex.IsReady(sk) || s.distance > sk.Reach * 0.95f) continue;
+                float exp = sk.ExpectedPower(s.sanity) * sk.coinCount * (s.playerGuarding && !sk.canBeGuarded ? 2f : 1f)   // 막고 있으면 방어 불가 기술 선호
                           * SkillAttributes.DamageMultiplier(SkillAttributes.Affinity(sk.attribute, s.playerAttribute));            // 상성 유리한 기술 선호
                 if (exp > bestExp) { bestExp = exp; chosen = sk; }
             }
@@ -62,7 +62,7 @@ namespace MoominAction
                 if (s.healthRatio < 0.2f) { attack = Mathf.Min(attack, 20); guard = 90; dodge = 70; }
                 if (s.playerHealthRatio < 0.3f && canAttack) attack += 25;      // 마무리
                 if (s.sanity >= 15 && canAttack) attack += 15; if (s.sanity <= -20) { attack -= 20; guard += 15; }
-                if (s.playerGuarding && canAttack && chosen.unblockable) attack += 40;
+                if (s.playerGuarding && canAttack && !chosen.canBeGuarded) attack += 40;
                 if (!canAttack && !s.playerAttacking) { approach = s.distance > 1.2f ? 40 : 0; wait = 30; }
             }
             attack *= w.aggression; guard *= w.caution; dodge *= w.evasion;
