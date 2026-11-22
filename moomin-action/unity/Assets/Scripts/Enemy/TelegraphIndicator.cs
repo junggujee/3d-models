@@ -2,10 +2,10 @@ using UnityEngine;
 
 namespace MoominAction
 {
-    /// <summary>적 공격 예고: 바닥에 원형 경고(가장자리 고리 + 안쪽이 시간에 따라 차오름). 빨강 = 일반, 보라 = 방어 불가.</summary>
+    /// <summary>적 공격 예고: 바닥에 원형 경고(가장자리 고리 + 안쪽이 시간에 따라 차오름), 빔은 앞으로 뻗은 직사각형(앞쪽으로 차오름). 빨강 = 일반, 파랑 = 합 불가, 보라 = 방어 불가.</summary>
     public class TelegraphIndicator : MonoBehaviour
     {
-        static Material baseMat; static Texture2D ring;
+        static Material baseMat; static Texture2D ring, rect; bool lineFill;
         Material mat; Color color; float duration, t; Transform fill;
 
         static Texture2D Ring()
@@ -13,6 +13,20 @@ namespace MoominAction
             if (ring != null) return ring; const int N = 128; ring = new Texture2D(N, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp }; var c = new Color[N * N];
             for (int j = 0; j < N; j++) for (int i = 0; i < N; i++) { float x = (i + .5f) / N * 2 - 1, y = (j + .5f) / N * 2 - 1, r = Mathf.Sqrt(x * x + y * y); float a = r > 1 ? 0 : r > 0.92f ? 1 : 0.25f + 0.25f * r; c[j * N + i] = new Color(1, 1, 1, a); }
             ring.SetPixels(c); ring.Apply(); return ring;
+        }
+
+        static Texture2D Rect()
+        {
+            if (rect != null) return rect; const int W = 32, H = 128; rect = new Texture2D(W, H, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp }; var c = new Color[W * H];
+            for (int j = 0; j < H; j++) for (int i = 0; i < W; i++) { float ex = Mathf.Min(i, W - 1 - i), ey = Mathf.Min(j, H - 1 - j); float a = ex < 2 || ey < 2 ? 1f : 0.22f + 0.18f * j / H; if (j % 16 < 3 && ex > 3) a = Mathf.Max(a, 0.45f); c[j * W + i] = new Color(1, 1, 1, a); }   // 테두리 + 앞으로 향하는 줄무늬
+            rect.SetPixels(c); rect.Apply(); return rect;
+        }
+
+        /// <summary>직선(빔) 예고: 주인 앞쪽으로 길이 length, 폭 width 의 직사각형(로컬 단위). 안쪽이 주인 쪽부터 앞으로 차오름.</summary>
+        public static TelegraphIndicator ShowLine(Transform owner, float length, float width, float duration, Color color)
+        {
+            var t = Show(owner, Vector3.forward * length * 0.5f, 1f, duration, color);
+            t.transform.localScale = new Vector3(width, length, 1f); t.mat.mainTexture = Rect(); t.lineFill = true; return t;
         }
 
         public static TelegraphIndicator Show(Transform owner, Vector3 localOffset, float radius, float duration, Color color)
@@ -30,7 +44,8 @@ namespace MoominAction
         void Update()
         {
             t += Time.deltaTime; float k = Mathf.Clamp01(t / duration);
-            if (fill) fill.localScale = Vector3.one * k;                                   // 안쪽 원이 차오르면 곧 공격
+            if (fill && lineFill) { fill.localScale = new Vector3(1f, k, 1f); fill.localPosition = new Vector3(0, -0.5f + k * 0.5f, -0.001f); }   // 빔: 뒤에서 앞으로
+            else if (fill) fill.localScale = Vector3.one * k;                                   // 안쪽 원이 차오르면 곧 공격
             if (mat) mat.color = new Color(color.r, color.g, color.b, color.a * (0.6f + 0.4f * Mathf.Sin(t * 18f) * k));
             if (t > duration + 0.5f) Destroy(gameObject);
         }

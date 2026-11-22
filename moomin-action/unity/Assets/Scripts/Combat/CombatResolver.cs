@@ -25,6 +25,7 @@ namespace MoominAction
         /// <summary>코인이 판정된 순간 호출(첫 검사). 이후 히트박스가 열려 있는 동안 Tick 으로 계속 검사.</summary>
         public void ResolveAttack(AttackContext attack, SkillDefinition skill)
         {
+            if (skill.vfx != SkillVfx.None) SkillVfxPlayer.Play(skill, transform, attack.isHeads);   // 빔·충격파·물기둥(코인마다 한 번)
             Tick(attack, skill);
             if (!attack.isHit && !attack.clashed && sparkOrigin) SparkBurst.Spawn(sparkOrigin.position, transform.forward, 8, 3f, attack.isHeads ? SparkBurst.Gold : (Color?)null);   // 헛스윙
         }
@@ -49,11 +50,18 @@ namespace MoominAction
             }
         }
 
+        /// <summary>직선 광역(빔) 안인가: 앞으로 0 ~ areaRadius, 옆으로 ±areaWidth/2 (+여유).</summary>
+        bool InLine(Vector3 p, SkillDefinition skill, float pad)
+        {
+            Vector3 local = transform.InverseTransformDirection(p - transform.position); local.x *= transform.lossyScale.x; local.z *= transform.lossyScale.z;
+            return local.z >= -pad && local.z <= skill.areaRadius + pad && Mathf.Abs(local.x) <= skill.areaWidth * 0.5f + pad;
+        }
+
         /// <summary>내 공격 범위·각도 안에 이 대상이 있는가(클래시 조건).</summary>
         public bool IsTargeting(CharacterStats target, SkillDefinition skill)
         {
             Vector3 to = target.transform.position - transform.position; to.y = 0;
-            if (skill.isAreaAttack) return to.magnitude <= skill.areaRadius + 0.6f;
+            if (skill.isAreaAttack) return skill.areaShape == AreaShape.Line ? InLine(target.transform.position, skill, 0.6f) : to.magnitude <= skill.areaRadius + 0.6f;
             return to.magnitude <= skill.range + 0.6f && (skill.angle >= 360f || Vector3.Angle(transform.forward, to) <= skill.angle * 0.5f + 15f);
         }
 
@@ -61,12 +69,15 @@ namespace MoominAction
         {
             found.Clear(); picked.Clear();
             bool area = skill.isAreaAttack; int mask = area && skill.targetLayers.value != 0 ? skill.targetLayers.value : targetMask.value;
-            Vector3 center = area ? transform.position + Vector3.up * 0.8f : Origin; float radius = area ? skill.areaRadius : skill.range;
+            bool line = area && skill.areaShape == AreaShape.Line;
+            Vector3 center = line ? transform.position + transform.forward * skill.areaRadius * 0.5f + Vector3.up * 0.8f : area ? transform.position + Vector3.up * 0.8f : Origin;
+            float radius = line ? Mathf.Sqrt(skill.areaRadius * skill.areaRadius * 0.25f + skill.areaWidth * skill.areaWidth * 0.25f) + 0.5f : area ? skill.areaRadius : skill.range;
             int n = Physics.OverlapSphereNonAlloc(center, radius, buffer, mask, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < n; i++) found.Add(buffer[i].GetComponentInParent<CharacterStats>());
             foreach (var t in DefenseRules.Unique(found))   // 콜라이더가 여러 개여도 캐릭터당 한 번
             {
                 if (t == stats || t.team == stats.team || !t.IsAlive) continue;
+                if (line && !InLine(t.transform.position, skill, 0.4f)) continue;   // 빔: 앞쪽 직사각형 안만
                 if (!area) { Vector3 to = t.transform.position - transform.position; to.y = 0; if (skill.angle < 360f && to.magnitude > 0.8f && Vector3.Angle(transform.forward, to) > skill.angle * 0.5f) continue; }
                 picked.Add(t);
             }

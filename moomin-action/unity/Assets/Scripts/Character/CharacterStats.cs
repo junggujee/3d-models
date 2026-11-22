@@ -14,7 +14,7 @@ namespace MoominAction
     /// </summary>
     public class CharacterStats : MonoBehaviour, IDamageable
     {
-        public string displayName = "민미"; public Team team = Team.Player;
+        public string displayName = "민미"; [Tooltip("이름 옆 별칭(예: 지상 최대의 끼룩이)")] public string epithet = ""; public Team team = Team.Player;
         [Tooltip("몸 속성(공격 중이 아닐 때 맞는 쪽 상성). 검정 = 상성 없음")] public SkillAttribute attribute = SkillAttribute.Black;
         [Header("Health")] public float maxHealth = 100f; public float currentHealth = 100f;
         [Header("Sanity")] [Tooltip("끄면 침잠이 정신력 대신 StatusEffectManager.OnSinkingWithoutSanity 효과를 줌")] public bool hasSanity = true; public int maxSanity = 45; public int minSanity = -45; public int currentSanity = 0; public float sanityRecoverPerSecond = 3f;

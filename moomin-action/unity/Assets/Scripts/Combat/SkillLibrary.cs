@@ -58,6 +58,13 @@ namespace MoominAction
             Add(S("HUMAN_JAB", "솜주먹 연타", 6, 3, 3, 0.6f, 2.5f, 0, 0.4f, 0.35f, 0.7f, new[] { "Attack1", "Attack2", "Attack1" }, 1.7f, 90, 3f, windup: 0.45f, lunge: 2f));
             Add(S("HUMAN_SLAM", "베개 내려찍기", 10, 4, 2, 0.8f, 5f, 0, 0.6f, 0.43f, 1.0f, new[] { "Attack3" }, 2.0f, 140, 7f, windup: 0.85f, lunge: 1.5f));
             Add(S("HUMAN_RUSH", "졸음 돌진", 9, 4, 1, 0.8f, 7f, 0, 0.5f, 0.35f, 1.1f, new[] { "Attack1" }, 5.0f, 60, 8f, windup: 0.75f, lunge: 10f));
+            // ── 지상괴물형: 고래고래(지상 최대의 끼룩이). 거대해서 사거리가 김. hitTime = 클립 타격 프레임 / 30
+            Add(S("WHALE_RAM", "고래박치기", 12, 5, 2, 1.0f, 4f, 0, 0.8f, 0.37f, 0.8f, A1, 3.4f, 80, 10f, windup: 0.7f, lunge: 9f, desc: "머리로 힘껏 들이받는다. 합 가능."));
+            Add(S("WHALE_BEAM", "고래빔", 16, 5, 2, 1.1f, 11f, 0, 0.8f, 0.67f, 1.1f, new[] { "Beam", "BeamHold" }, 13f, 30, 6f, windup: 0.9f, desc: "몸을 세우고 입을 크게 벌려 앞쪽 일직선을 쓸어 버린다. 합 불가 광역."));
+            Add(S("WHALE_JUMP", "점프 내려찍기", 14, 4, 1, 1.2f, 7f, 0, 0.8f, 0.8f, 1.0f, new[] { "Jump" }, 4f, 360, 9f, windup: 0.6f, lunge: 11f, desc: "높이 뛰어올라 덮친다. 착지한 자리 주변 모두에게 충격."));
+            Add(S("WHALE_FLIPPER", "지느러미 연타", 7, 3, 3, 0.8f, 3f, 0, 0.5f, 0.37f, 0.6f, new[] { "Attack2" }, 3.0f, 110, 4f, windup: 0.45f, lunge: 2f));
+            Add(S("WHALE_TAIL", "꼬리 휘두르기", 10, 4, 2, 0.9f, 6f, 0, 0.9f, 0.47f, 0.7f, new[] { "Attack3" }, 3.6f, 360, 8f, windup: 0.55f));
+            Add(S("WHALE_SPOUT", "물기둥", 9, 3, 2, 0.8f, 9f, 0, 0.9f, 0.53f, 0.8f, new[] { "Spout" }, 5f, 360, 5f, windup: 0.8f, desc: "숨구멍으로 물기둥을 뿜어 주위를 적신다."));
             // ── 적(같은 SkillExecutor 사용). windup = 바닥 경고 시간
             Add(S("ENEMY_BUMP", "몸통 박치기", 7, 3, 2, 0.7f, 1.2f, 0, 0.35f, 0.12f, 0.8f, A1, 1.6f, 100, 4f, windup: 0.65f, lunge: 5f));
             Add(S("ENEMY_SLAM", "내려찍기", 9, 4, 2, 0.8f, 4f, 0, 0.45f, 0.15f, 1.1f, A1, 2.0f, 360, 7f, windup: 1.0f, lunge: 1f));
@@ -79,6 +86,16 @@ namespace MoominAction
             St("HUMAN_JAB", StatusType.Paralysis, 1, 1); St("ENEMY_BUMP", StatusType.PowerDown, 1, 2); St("BOSS_FLURRY", StatusType.PowerDown, 2, 2); St("BOSS_BREAK", StatusType.Paralysis, 1, 2);
             // 광역(공통 코인): 공격자 중심 반경 안 모든 적
             Area("SKILL_003", 3.2f); Area("SKILL_004", 4f); Area("ENEMY_SLAM", 2f);
+            // 고래고래: 빔 = 앞으로 13m·폭 2.4m 직선(합 불가), 점프·꼬리·물기둥 = 원(점프·물기둥 합 불가)
+            Area("WHALE_BEAM", 13f); Area("WHALE_JUMP", 4f); Area("WHALE_TAIL", 3.6f); Area("WHALE_SPOUT", 5f);
+            if (map.TryGetValue("WHALE_BEAM", out var wb)) { wb.areaShape = AreaShape.Line; wb.areaWidth = 2.4f; wb.canBeClashed = false; wb.vfx = SkillVfx.WhaleBeam; }
+            if (map.TryGetValue("WHALE_JUMP", out var wj)) { wj.canBeClashed = false; wj.vfx = SkillVfx.Shockwave; wj.lungeDelay = 0.27f; wj.lungeTime = 0.5f; }   // 공중에 뜬 동안(8~23프레임) 날아감
+            if (map.TryGetValue("WHALE_SPOUT", out var ws)) { ws.canBeClashed = false; ws.vfx = SkillVfx.WaterSpout; }
+            if (map.TryGetValue("WHALE_RAM", out var wr)) wr.lungeTime = 0.35f;
+            Look("WHALE_RAM", SkillAttribute.Blue, SkillMotif.Rush); Look("WHALE_BEAM", SkillAttribute.Blue, SkillMotif.Thrust); Look("WHALE_JUMP", SkillAttribute.Purple, SkillMotif.Smash);
+            Look("WHALE_FLIPPER", SkillAttribute.Green, SkillMotif.Flurry); Look("WHALE_TAIL", SkillAttribute.Blue, SkillMotif.Slash); Look("WHALE_SPOUT", SkillAttribute.Blue, SkillMotif.Smash);
+            St("WHALE_RAM", StatusType.Tremor, 2, 1); St("WHALE_BEAM", StatusType.Sinking, 2, 2, 1, 1); St("WHALE_JUMP", StatusType.Tremor, 3, 1, 1, 1);
+            St("WHALE_FLIPPER", StatusType.PowerDown, 1, 1); St("WHALE_SPOUT", StatusType.Sinking, 1, 2);
             Look("SKILL_004", SkillAttribute.Yellow, SkillMotif.Smash);
             // 에너지: (소비, 명중 시 추가 획득, 진동 폭발)
             Energy("BASIC_1", 0, 4); Energy("BASIC_2", 0, 4); Energy("BASIC_3", 0, 4);

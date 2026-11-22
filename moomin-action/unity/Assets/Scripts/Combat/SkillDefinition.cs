@@ -8,6 +8,10 @@ namespace MoominAction
     public enum SkillAttribute { Red, Blue, Yellow, Green, Orange, Purple, Black }
     /// <summary>일러스트를 따로 넣지 않았을 때 코드로 그리는 스케치의 동작 종류.</summary>
     public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry }
+    /// <summary>광역 모양: 원 = 공격자 중심 반경 areaRadius · 직선 = 앞으로 길이 areaRadius, 폭 areaWidth(빔).</summary>
+    public enum AreaShape { Circle, Line }
+    /// <summary>코인 판정 순간의 특수 연출(Effects/SkillVfx).</summary>
+    public enum SkillVfx { None, WhaleBeam, Shockwave, WaterSpout }
 
     public static class SkillAttributes
     {
@@ -55,6 +59,8 @@ namespace MoominAction
         [Header("Area Attack")]
         [Tooltip("켜면 공격자 중심 원(areaRadius) 안의 모든 적. 코인은 공격마다 한 번만 굴리고 같은 결과·위력을 모두에게(공통 코인)")] public bool isAreaAttack;
         public float areaRadius = 4f;
+        public AreaShape areaShape = AreaShape.Circle; [Tooltip("직선 광역의 폭(m)")] public float areaWidth = 2f;
+        [Tooltip("코인 판정 순간의 특수 연출")] public SkillVfx vfx = SkillVfx.None;
         [Tooltip("광역 대상 레이어(비우면 CombatResolver.targetMask)")] public LayerMask targetLayers;
         [Header("Attack Type")] [FormerlySerializedAs("clashEnabled")] [Tooltip("상대 공격과 겹치면 합")] public bool canBeClashed = true;
         [Header("Defense")] [Tooltip("끄면 가드로 피해를 줄일 수 없음(예전 '방어 불가')")] public bool canBeGuarded = true; [Tooltip("끄면 회피 코인으로 피할 수 없음")] public bool canBeEvaded = true;
@@ -79,6 +85,7 @@ namespace MoominAction
         [Tooltip("적중 시 상대에게: 코인 위력 0 (강도 무시, 횟수만)")] public StatusAmount paralysisOnHeads, paralysisOnTails;
         [Header("Energy")] [Tooltip("사용에 필요한(소비하는) 에너지")] [Min(0)] public int energyCost; [Tooltip("공격이 명중할 때마다 얻는 에너지(기본 명중 보너스에 더해짐)")] [Min(0)] public int energyGain;
         [Header("Hit (단일 공격: 사거리·각도 안에서 한 명)")] public float range = 2f; public float angle = 120f; public float knockback = 4f; [Tooltip("공격마다 앞으로 미끄러지는 속도")] public float lunge = 0f;
+        [Tooltip("돌진 시작(공격 시작부터 초)")] public float lungeDelay = 0f; [Tooltip("돌진 시간(초)")] public float lungeTime = 0.3f;
         public CoinEffect coinEffect = CoinEffect.None;
         [TextArea] public string description;
 

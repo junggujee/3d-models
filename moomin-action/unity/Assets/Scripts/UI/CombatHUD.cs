@@ -161,7 +161,7 @@ namespace MoominAction.UI
             if (t != null)
             {
                 float r = t.Stats.HealthRatio; targetHp.SetFill(r); targetTrail = r < targetTrail ? Mathf.MoveTowards(targetTrail, r, .4f * dt) : r; targetHp.SetTrail(targetTrail);
-                targetName.text = t.Stats.displayName + (t.Stats.IsVulnerable ? "   <color=#E8C97A><size=20>경직 — 반격 기회</size></color>" : "") + $"   <size=18><color=#9E9178>정신력 {t.Stats.currentSanity:+0;-0;0} · {SkillAttributes.Names[(int)t.Stats.attribute]} 속성 · {SkillAttributes.WeaknessText(t.Stats.attribute)}</color></size>";
+                targetName.text = t.Stats.displayName + (string.IsNullOrEmpty(t.Stats.epithet) ? "" : $"  <size=19><color=#CFC4A8>{t.Stats.epithet}</color></size>") + (t.Stats.IsVulnerable ? "   <color=#E8C97A><size=20>경직 — 반격 기회</size></color>" : "") + $"   <size=18><color=#9E9178>정신력 {t.Stats.currentSanity:+0;-0;0} · {SkillAttributes.Names[(int)t.Stats.attribute]} 속성 · {SkillAttributes.WeaknessText(t.Stats.attribute)}</color></size>";
                 // 경직 게이지
                 targetStagger.SetFill(t.Stats.IsStaggerBroken ? 1f : t.Stats.StaggerGauge.Ratio); if (staggerFlash > 0) staggerFlash -= dt;
                 targetStagger.fill.GetComponent<Image>().color = staggerFlash > 0 ? Color.white : t.Stats.IsStaggerBroken ? UITheme.GoldBright : new Color(.95f, .8f, .3f);

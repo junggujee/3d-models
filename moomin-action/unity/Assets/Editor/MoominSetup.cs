@@ -17,7 +17,7 @@ namespace MoominAction.EditorTools
         const string Models = "Assets/Models/", Prefabs = "Assets/Prefabs/", Anims = "Assets/Animations/", Scenes = "Assets/Scenes/";
 
         [MenuItem("Moomin/한 번에 설정 (전부 실행)")]
-        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildPrefabs(); BuildScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Main.unity 를 열고 Play!"); }
+        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildWhaleController(); BuildPrefabs(); BuildScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Main.unity 를 열고 Play!"); }
 
         [MenuItem("Moomin/1. FBX 임포트 설정")]
         public static void ConfigureImports()
@@ -45,6 +45,15 @@ namespace MoominAction.EditorTools
                 foreach (var c in bc) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
                 bear.clipAnimations = bc; bear.SaveAndReimport();
             }
+            // 지상괴물형 적: 고래고래(루프 = Idle·Walk·Run·Guard·BeamHold)
+            var whale = AssetImporter.GetAtPath(Models + "Goraegorae.fbx") as ModelImporter;
+            if (whale != null)
+            {
+                whale.animationType = ModelImporterAnimationType.Generic; whale.importAnimation = true; whale.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                var wc = whale.defaultClipAnimations;
+                foreach (var c in wc) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "BeamHold"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
+                whale.clipAnimations = wc; whale.SaveAndReimport();
+            }
             foreach (var n in new[] { "StarSparkSword.fbx", "ShadowBlob.fbx" }) { var m = AssetImporter.GetAtPath(Models + n) as ModelImporter; if (m != null) { m.materialImportMode = ModelImporterMaterialImportMode.ImportStandard; m.SaveAndReimport(); } }
         }
 
@@ -70,6 +79,14 @@ namespace MoominAction.EditorTools
         }
 
         static AnimationClip Clip(string name) => AssetDatabase.LoadAllAssetsAtPath(Models + "Moomin.fbx").OfType<AnimationClip>().FirstOrDefault(c => !c.name.StartsWith("__preview") && c.name.EndsWith(name));
+
+        [MenuItem("Moomin/2-2. 고래고래(지상괴물형 적) Animator 만들기")]
+        public static void BuildWhaleController()
+        {
+            if (AssetImporter.GetAtPath(Models + "Goraegorae.fbx") == null) { Debug.LogWarning("Assets/Models/Goraegorae.fbx 가 없습니다."); return; }
+            MakeController("Goraegorae.fbx", Anims + "Goraegorae.controller", new[] { "Windup", "Attack1", "Attack2", "Attack3", "Jump", "Beam", "BeamHold", "Spout", "Guard", "Dodge", "Hit", "Death" },
+                           new[] { "Attack1", "Attack2", "Attack3", "Jump", "Beam", "Spout", "Dodge", "Hit" });
+        }
 
         [MenuItem("Moomin/2. Animator Controller 만들기")]
         public static void BuildController()
@@ -168,6 +185,28 @@ namespace MoominAction.EditorTools
                 SetLayer(b, enemyLayer);
                 PrefabUtility.SaveAsPrefabAsset(b, Prefabs + "SleepyBear.prefab"); Object.DestroyImmediate(b);
             }
+
+            // ── 지상괴물형 적: 고래고래(지상 최대의 끼룩이). 플레이어보다 훨씬 큼(×2), 느리지만 체력·경직 게이지가 큼. 2웨이브부터 한 웨이브에 1마리
+            var whaleModel = AssetDatabase.LoadAssetAtPath<GameObject>(Models + "Goraegorae.fbx");
+            if (whaleModel != null)
+            {
+                var w = (GameObject)PrefabUtility.InstantiatePrefab(whaleModel); w.name = "Goraegorae"; w.transform.localScale = Vector3.one * 2f;
+                var wAnim = w.GetComponentInChildren<Animator>(); if (wAnim == null) wAnim = w.AddComponent<Animator>();
+                wAnim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "Goraegorae.controller"); wAnim.applyRootMotion = false;
+                var wcol = w.AddComponent<CapsuleCollider>(); wcol.direction = 2; wcol.center = new Vector3(0, 0.55f, -0.15f); wcol.radius = 0.55f; wcol.height = 2.3f;   // 몸이 앞뒤로 길어서 Z 방향 캡슐(로컬, ×2 배율)
+                var wa = w.AddComponent<UnityEngine.AI.NavMeshAgent>(); wa.radius = 0.6f; wa.height = 1.1f; wa.speed = 1.8f; wa.angularSpeed = 0f; wa.stoppingDistance = 2.5f;
+                var ws = w.AddComponent<CharacterStats>(); ws.displayName = "고래고래"; ws.epithet = "지상 최대의 끼룩이"; ws.team = Team.Enemy; ws.attribute = SkillAttribute.Blue;
+                ws.maxHealth = ws.currentHealth = 220f; ws.invulnerableTime = 0.1f; ws.maxStagger = 180f; ws.staggerDuration = 2.5f;
+                w.AddComponent<CoinSystem>(); w.AddComponent<StatusEffectManager>(); w.AddComponent<DefenseController>(); w.AddComponent<EnergyManager>(); var wr = w.AddComponent<CombatResolver>(); wr.targetMask = playerMask;
+                var wex = w.AddComponent<SkillExecutor>(); wex.useAnimationEvents = false; wex.animator = wAnim;
+                var wcc = w.AddComponent<EnemyCombatController>(); wcc.archetype = EnemyArchetype.GroundMonster; wcc.animator = wAnim; wcc.agent = wa; wcc.visual = w.transform; wcc.moveSpeed = 1.8f; wcc.score = 40;
+                wcc.expReward = 150; wcc.minWave = 2; wcc.maxPerWave = 1;
+                wcc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("WHALE_FLIPPER"), SkillAsset("WHALE_RAM"), SkillAsset("WHALE_BEAM"), SkillAsset("WHALE_JUMP"), SkillAsset("WHALE_TAIL"), SkillAsset("WHALE_SPOUT") };
+                wcc.basicSkill = wcc.skills[0];
+                w.AddComponent<EnemyBrain>().personality = EnemyPersonality.Grunt;
+                SetLayer(w, enemyLayer);
+                PrefabUtility.SaveAsPrefabAsset(w, Prefabs + "Goraegorae.prefab"); Object.DestroyImmediate(w);
+            }
             AssetDatabase.SaveAssets();
         }
 
@@ -209,7 +248,7 @@ namespace MoominAction.EditorTools
             player.GetComponent<PlayerController>().cam = camGo.transform;
             var gmGo = new GameObject("GameManager"); var gm = gmGo.AddComponent<GameManager>(); gmGo.AddComponent<NavMeshBaker>(); gmGo.AddComponent<ClashManager>();
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
-            foreach (var n in new[] { "ShadowBlob", "SleepyBear" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
+            foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Scenes + "Main.unity", true) };
         }

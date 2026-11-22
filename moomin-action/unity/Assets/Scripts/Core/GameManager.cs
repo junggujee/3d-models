@@ -16,6 +16,19 @@ namespace MoominAction
         readonly List<GameObject> alive = new(); float nextWave = 2f; bool waveActive;
 
         void Awake() { Instance = this; }
+
+        /// <summary>웨이브에 섞을 적 고르기: 등장 웨이브(minWave)·한 웨이브 최대 수(maxPerWave)를 지킴(거대한 고래고래는 2웨이브부터 1마리).</summary>
+        GameObject PickPrefab(Dictionary<GameObject, int> counts)
+        {
+            var ok = new List<GameObject>();
+            foreach (var e in enemyPrefabs)
+            {
+                if (e == null) continue; var ecc = e.GetComponent<EnemyCombatController>();
+                if (ecc != null && (Wave < ecc.minWave || (ecc.maxPerWave > 0 && counts.TryGetValue(e, out var c) && c >= ecc.maxPerWave))) continue;
+                ok.Add(e);
+            }
+            return ok.Count > 0 ? ok[UnityEngine.Random.Range(0, ok.Count)] : enemyPrefab;
+        }
         void Start()
         {
             if (!player) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<CharacterStats>(); }
@@ -58,10 +71,12 @@ namespace MoominAction
         void SpawnWave()
         {
             Wave++; waveActive = true; if (player) player.inCombat = true; bool boss = bossEvery > 0 && Wave % bossEvery == 0; int n = boss ? Mathf.Max(1, firstWave - 1) + Wave / bossEvery : firstWave + (Wave - 1) * perWave;
+            var counts = new Dictionary<GameObject, int>();
             for (int i = 0; i < n; i++)
             {
                 Vector3 p = SpawnPoint(spawnRadius + UnityEngine.Random.value * 4f);
-                var prefab = enemyPrefabs.Count > 0 ? enemyPrefabs[UnityEngine.Random.Range(0, enemyPrefabs.Count)] : enemyPrefab; if (prefab == null) prefab = enemyPrefab;
+                var prefab = PickPrefab(counts); if (prefab == null) prefab = enemyPrefab;
+                counts[prefab] = counts.TryGetValue(prefab, out var c0) ? c0 + 1 : 1;
                 alive.Add(Instantiate(prefab, p, Quaternion.identity));
             }
             if (boss) { Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(enemyPrefab, bp, Quaternion.identity); b.GetComponent<EnemyCombatController>()?.ConfigureBoss(); alive.Add(b); }

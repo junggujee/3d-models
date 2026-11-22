@@ -34,6 +34,7 @@ namespace MoominAction
         public bool Busy => !stats.IsAlive || skillExecutor.IsExecuting || IsStaggered || IsDodging || Time.time < busyUntil;
 
         [Tooltip("쓰러뜨리면 플레이어가 얻는 경험치")] public int expReward = 40;
+        [Header("Wave")] [Tooltip("이 웨이브부터 등장")] public int minWave = 1; [Tooltip("한 웨이브에 최대 몇 마리(0 = 제한 없음)")] public int maxPerWave = 0;
         DefenseController defense; public Transform Target => target;
         CharacterStats stats; Transform target; Vector3 knock, dodgeDir, baseScale; float vy, staggerUntil, dodgeEnd, nextDodge, nextGuard, busyUntil, deadT = -1, nextRepath, nextWarp; bool navigating;
         TelegraphIndicator tele;
@@ -82,9 +83,12 @@ namespace MoominAction
         void OnSkillStarted(SkillDefinition s)
         {
             if (s.windup <= 0f) return; HideTelegraph(); Play("Windup", 0.1f);
+            Color tc = !s.canBeGuarded ? new Color(0.65f, 0.2f, 1f, 0.45f) : !s.canBeClashed ? new Color(0.2f, 0.55f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f);   // 보라 = 방어 불가 · 파랑 = 합 불가 · 빨강 = 일반
+            if (s.isAreaAttack && s.areaShape == AreaShape.Line) { tele = TelegraphIndicator.ShowLine(transform, s.areaRadius / transform.localScale.z, s.areaWidth / transform.localScale.x, s.windup, tc); return; }
             bool aoe = s.isAreaAttack || s.angle >= 360f; float r = (aoe ? s.Reach : Mathf.Max(1f, s.range * 0.6f)) / transform.localScale.x;
-            Vector3 off = aoe ? Vector3.zero : Vector3.forward * (s.range * 0.5f / transform.localScale.z);
-            tele = TelegraphIndicator.Show(transform, off, r, s.windup, !s.canBeGuarded ? new Color(0.65f, 0.2f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f));
+            float travel = s.lunge * s.lungeTime * 0.7f;   // 돌진하며 내려찍는 기술(점프)은 착지할 자리에 예고
+            Vector3 off = aoe ? Vector3.forward * (travel / transform.localScale.z) : Vector3.forward * (s.range * 0.5f / transform.localScale.z);
+            tele = TelegraphIndicator.Show(transform, off, r, s.windup, tc);
         }
         void HideTelegraph() { if (tele) tele.Hide(); tele = null; }
 
@@ -123,7 +127,12 @@ namespace MoominAction
                 else if (skillExecutor.IsExecuting && s != null)
                 {
                     if (skillExecutor.Phase == SkillPhase.Windup) { Face(4f); float w = Mathf.Clamp01(skillExecutor.PhaseTime / Mathf.Max(0.01f, s.windup)); if (!Animated) visual.localScale = Vector3.Lerp(baseScale, new Vector3(baseScale.x * 1.18f, baseScale.y * 0.78f, baseScale.z * 1.18f), w); }
-                    else if (skillExecutor.Phase == SkillPhase.Attacking) { extra += transform.forward * s.lunge * Mathf.Max(0f, 1f - skillExecutor.PhaseTime / 0.3f); Face(2f); }
+                    else if (skillExecutor.Phase == SkillPhase.Attacking)
+                    {
+                        float lt = skillExecutor.PhaseTime - s.lungeDelay;   // 돌진 구간(점프 공격은 공중에 뜬 동안)
+                        if (lt >= 0f && lt < s.lungeTime) extra += transform.forward * s.lunge * (1f - 0.6f * lt / Mathf.Max(0.01f, s.lungeTime));
+                        Face(s.areaShape == AreaShape.Line && s.isAreaAttack ? 0.5f : 2f);   // 빔은 쏘는 동안 거의 안 돌아감
+                    }
                     else if (!Animated) visual.localScale = Vector3.Lerp(visual.localScale, baseScale, 8f * Time.deltaTime);
                 }
                 else if (stats.Guarding) { Face(8f); if (!Animated) visual.localScale = Vector3.Lerp(visual.localScale, new Vector3(baseScale.x * 1.1f, baseScale.y * 0.85f, baseScale.z * 1.1f), 10f * Time.deltaTime); if (Time.time >= busyUntil) { stats.Guarding = false; Play("Locomotion", 0.15f); } }
