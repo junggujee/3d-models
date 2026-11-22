@@ -410,7 +410,7 @@ FILES = {"City_Terrain": groups["Terrain"], "City_Castle": groups["Castle"], "Ci
 def subtree(o): out = [o]; [out.extend(subtree(c)) for c in o.children]; return out
 for fname, root in FILES.items():
     objs = subtree(root); root_parent = root.parent; root.parent = None
-    for o in OPT.objects: o.select_set(o in objs)
+    for o in OPT.objects: o.select_set(o in objs, view_layer=OPT.view_layers[0])
     with bpy.context.temp_override(scene=OPT, view_layer=OPT.view_layers[0], selected_objects=objs):
         bpy.ops.export_scene.fbx(filepath=os.path.join(OUT_CITY, fname + ".fbx"), use_selection=True, object_types={"MESH", "EMPTY"}, apply_scale_options="FBX_SCALE_ALL", path_mode="RELATIVE",
                                  axis_forward="-Z", axis_up="Y", mesh_smooth_type="FACE")
