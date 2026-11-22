@@ -193,7 +193,7 @@ namespace MoominAction.EditorTools
                 var w = (GameObject)PrefabUtility.InstantiatePrefab(whaleModel); w.name = "Goraegorae"; w.transform.localScale = Vector3.one * 2f;
                 var wAnim = w.GetComponentInChildren<Animator>(); if (wAnim == null) wAnim = w.AddComponent<Animator>();
                 wAnim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "Goraegorae.controller"); wAnim.applyRootMotion = false;
-                var wcol = w.AddComponent<CapsuleCollider>(); wcol.direction = 2; wcol.center = new Vector3(0, 0.55f, -0.15f); wcol.radius = 0.55f; wcol.height = 2.3f;   // 몸이 앞뒤로 길어서 Z 방향 캡슐(로컬, ×2 배율)
+                var wcol = w.AddComponent<CapsuleCollider>(); wcol.direction = 2; wcol.center = new Vector3(0, 0.5f, -0.08f); wcol.radius = 0.45f; wcol.height = 3.1f;   // 주둥이 끝 ~ 꼬리 3.1m, Z 방향 캡슐(로컬, ×2 배율)
                 var wa = w.AddComponent<UnityEngine.AI.NavMeshAgent>(); wa.radius = 0.6f; wa.height = 1.1f; wa.speed = 1.8f; wa.angularSpeed = 0f; wa.stoppingDistance = 2.5f;
                 var ws = w.AddComponent<CharacterStats>(); ws.displayName = "고래고래"; ws.epithet = "지상 최대의 끼룩이"; ws.team = Team.Enemy; ws.attribute = SkillAttribute.Blue;
                 ws.maxHealth = ws.currentHealth = 220f; ws.invulnerableTime = 0.1f; ws.maxStagger = 180f; ws.staggerDuration = 2.5f;

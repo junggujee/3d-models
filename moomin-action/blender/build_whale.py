@@ -1,6 +1,7 @@
 """지상괴물형 적: 고래고래(지상 최대의 끼룩이). 모델 + 뼈대 + 애니메이션 → exports/ 와 unity/Assets/Models/.
-특징: 통통한 둥근 고래 몸(위 벨벳 파랑 · 아래·턱 흰색, 등 가운데 솔기), 양옆 둥근 지느러미로 땅을 짚고 기어 다님, 작은 등지느러미,
-      굵은 꼬리 + 꼬리 지느러미, 까만 점 눈 · 넓은 미소 · 분홍 혀 · 분홍 볼, 정수리 숨구멍에서 솟는 물방울(끼룩이), 벌어지는 아래턱(고래빔).
+특징(사용자 스케치 기준): 길쭉한 몸 + 볼록한 이마에서 앞으로 튀어나온 주둥이(끝에 분홍 입), 위 벨벳 파랑 · 배 흰색 · 등 솔기,
+      앞쪽 위 등지느러미, 아래로 내려 땅을 짚는 가슴지느러미, 길게 가늘어지는 꼬리 + 갈라진 꼬리 지느러미,
+      주둥이 뿌리 옆 까만 점 눈 · 분홍 볼 · 주둥이를 따라 웃는 입선, 숨구멍 물방울(끼룩이), 벌어지는 아래턱(고래빔).
 애니메이션(30fps): Idle Walk Run Windup Attack1(고래박치기, 타격 11) Attack2(지느러미 치기, 11) Attack3(꼬리 휘두르기 한 바퀴, 14)
                   Jump(점프 내려찍기, 착지 24) Beam(몸을 세우고 입을 벌려 고래빔, 20) BeamHold(빔 유지, 맥동 20) Spout(물기둥, 16)
                   Guard Dodge Hit Death
@@ -21,63 +22,64 @@ SPOUT = mat("Whale_Spout", (0.7, 0.88, 1.0), rough=0.2, emit=(0.5, 0.75, 1.0), e
 SEAM = mat("Whale_Seam", (0.045, 0.11, 0.36), rough=0.9)
 MATS = [BLUE, WHITE, DARK, PINK, MOUTH, SPOUT, SEAM]; I_BLUE, I_WHITE, I_DARK, I_PINK, I_MOUTH, I_SPOUT, I_SEAM = range(7)
 
-# ── 몸 치수(three.js 좌표: y 위, z 앞)
-BC, BR = (0.0, 0.92, 0.1), (1.05, 0.88, 1.45)          # 몸 타원
-def body_pt(phi, th, off=0.0):
-    """몸 표면의 점과 법선(Blender). phi = 옆 각도(0 = 정면), th = 위아래 각도."""
+# ── 몸 치수(three.js 좌표: y 위, z 앞) — 길쭉한 몸 + 볼록한 이마 + 앞으로 튀어나온 주둥이(스케치 기준)
+BC, BR = (0.0, 0.85, 0.0), (0.78, 0.72, 1.55)          # 몸통 타원(앞뒤로 김)
+HC, HR = (0.0, 0.9, 1.05), (0.66, 0.62, 0.72)          # 이마(멜론): 몸 앞쪽 위로 볼록
+SC, SR = (0.0, 0.6, 1.95), (0.21, 0.16, 0.62)           # 위 주둥이
+JC, JR = (0.0, 0.46, 1.88), (0.18, 0.1, 0.58)           # 아래턱(벌어짐)
+def surf(C, R, phi, th, off=0.0):
+    """타원 C,R 표면의 점과 법선(Blender). phi = 옆 각도(0 = 정면), th = 위아래 각도."""
     d = Vector((math.cos(th) * math.sin(phi), math.sin(th), math.cos(th) * math.cos(phi)))
-    p = Vector(BC) + Vector((d.x * BR[0], d.y * BR[1], d.z * BR[2])); n = Vector((d.x / BR[0], d.y / BR[1], d.z / BR[2])).normalized()
+    p = Vector(C) + Vector((d.x * R[0], d.y * R[1], d.z * R[2])); n = Vector((d.x / R[0], d.y / R[1], d.z / R[2])).normalized()
     return T(*(p + n * off)), Vector((n.x, -n.z, n.y)).normalized()
 def frame(n): r = Vector((0, 0, 1)).cross(n).normalized(); return r, n.cross(r)
 
 BONES = [
     ("root", None, T(0, 0, 0), T(0, 0.3, 0)), ("body", "root", T(0, 0.55, -0.3), T(0, 1.4, -0.3)),
-    ("jaw", "body", T(0, 0.55, 0.7), T(0, 0.45, 1.5)),
-    ("flipper.L", "body", T(0.85, 0.55, 0.55), T(1.4, 0.3, 0.6)), ("flipper.R", "body", T(-0.85, 0.55, 0.55), T(-1.4, 0.3, 0.6)),
-    ("tail", "body", T(0, 0.85, -1.25), T(0, 0.95, -1.9)), ("fluke", "tail", T(0, 0.95, -1.9), T(0, 1.05, -2.35)),
-    ("spout", "body", T(0, 1.75, 0.35), T(0, 2.1, 0.35)),
+    ("jaw", "body", T(0, 0.48, 1.35), T(0, 0.42, 2.5)),
+    ("flipper.L", "body", T(0.62, 0.45, 0.75), T(0.85, 0.0, 0.8)), ("flipper.R", "body", T(-0.62, 0.45, 0.75), T(-0.85, 0.0, 0.8)),
+    ("tail", "body", T(0, 0.85, -1.35), T(0, 1.05, -2.6)), ("fluke", "tail", T(0, 1.05, -2.6), T(0, 1.15, -3.2)),
+    ("spout", "body", T(0, 1.5, 0.95), T(0, 1.85, 0.95)),
 ]
 arm = make_armature("WhaleRig", BONES)
 parts = []
 def add(name, bm, bone): parts.append(to_object(name, bm, MATS, bone))
+def two_tone(bm, line_y):
+    """면 높이로 파랑/흰 배 나누기 + 등 가운데 솔기."""
+    for f in bm.faces:
+        c = f.calc_center_median(); x, y = c.x / K, c.z / K
+        f.material_index = I_WHITE if y < line_y else (I_SEAM if abs(x) < 0.022 and y > 1.25 else I_BLUE)
+    return bm
 
-# 몸: 아래·앞 턱은 흰색(앞으로 갈수록 경계가 올라감), 등 가운데 솔기
-bm = ellipsoid(BC, BR, seg=112, rings=72, fuzz=0.005, seed=3)
-# 아래턱 자리(앞 아래)는 비워 둠 → 아래턱 조각이 그 자리를 막고, 벌리면 입 안이 보임
-cut = [f for f in bm.faces if (lambda c: -c.y / K > 0.72 and c.z / K < 0.6)(f.calc_center_median())]
-bmesh.ops.delete(bm, geom=cut, context="FACES")
-for f in bm.faces:
-    c = f.calc_center_median(); x, z, y = c.x / K, -c.y / K, c.z / K      # Blender → three
-    front = max(0.0, min(1.0, (z - 0.55) / 0.95)); line = 0.52 + 0.42 * front * front
-    f.material_index = I_WHITE if y < line else (I_SEAM if abs(x) < 0.025 and y > 1.2 else I_BLUE)
-add("body", bm, "body")
-# 아래턱(흰 턱 앞부분 위에 얹힘): 입을 벌리면 안쪽 입(짙은 붉은색)이 보임
-add("jaw", ellipsoid((0, 0.52, 0.95), (0.78, 0.3, 0.62), fuzz=0.004, seed=4, mat_idx=I_WHITE), "jaw")
-add("mouthInside", ellipsoid((0, 0.6, 0.92), (0.6, 0.17, 0.5), mat_idx=I_MOUTH), "body")   # 몸 안쪽에 숨어 있다가 턱을 벌리면 보임
-# 지느러미: 몸 옆에서 바닥을 짚는 둥근 노
+add("body", two_tone(ellipsoid(BC, BR, seg=96, rings=60, fuzz=0.005, seed=3), 0.38), "body")
+add("melon", two_tone(ellipsoid(HC, HR, seg=72, rings=48, fuzz=0.005, seed=4), 0.42), "body")
+add("snout", ellipsoid(SC, SR, seg=48, rings=28, fuzz=0.003, seed=5, mat_idx=I_BLUE), "body")
+add("jaw", two_tone(ellipsoid(JC, JR, seg=48, rings=24, fuzz=0.003, seed=6), 0.43), "jaw")
+add("mouthInside", ellipsoid((0, 0.52, 1.9), (0.16, 0.07, 0.52), mat_idx=I_MOUTH), "body")       # 주둥이 사이에 숨어 있다가 턱을 벌리면 보임
+add("lip", ellipsoid((0, 0.45, 2.36), (0.12, 0.06, 0.12), fuzz=0.002, seed=7, mat_idx=I_PINK), "jaw")   # 주둥이 끝 분홍 입(스케치의 분홍 부분)
+# 가슴지느러미: 몸 아래로 내려 땅을 짚음 · 등지느러미: 몸 앞쪽 위 · 꼬리: 길게 가늘어짐 + 갈라진 꼬리 지느러미
 for s, side in ((1, "L"), (-1, "R")):
-    add(f"flipper.{side}", ellipsoid((1.08 * s, 0.42, 0.62), (0.42, 0.12, 0.3), rot=(0.15, 0.25 * s, -0.35 * s), fuzz=0.004, seed=5 + s, seg=32, rings=18), f"flipper.{side}")
-# 등지느러미(작고 둥글게 뒤로 누움)
-add("dorsal", ellipsoid((0, 1.78, -0.35), (0.07, 0.26, 0.24), rot=(-0.5, 0, 0), fuzz=0.003, seed=8, seg=24, rings=16), "body")
-# 꼬리: 굵게 시작해 가늘어지는 관 + 양쪽으로 펼친 꼬리 지느러미
-pts = [T(0, 0.85 + 0.2 * t * t, -1.2 - 0.8 * t) for t in [i / 8 for i in range(9)]]
-b2, _ = tube(pts, lambda t: (0.5 - 0.3 * t) * K, sides=20, mat_idx=I_BLUE); add("tail", b2, "tail")
+    add(f"flipper.{side}", ellipsoid((0.66 * s, 0.22, 0.85), (0.14, 0.36, 0.26), rot=(0.25, 0, 0.3 * s), fuzz=0.004, seed=8 + s, seg=32, rings=18), f"flipper.{side}")
+add("dorsal", ellipsoid((0, 1.6, 0.35), (0.08, 0.34, 0.36), rot=(-0.45, 0, 0), fuzz=0.003, seed=11, seg=28, rings=18), "body")
+pts = [T(0, 0.84 + 0.2 * t * t, -0.7 - 2.05 * t) for t in [i / 12 for i in range(13)]]   # 몸 안쪽 깊은 곳에서 시작 → 이음매 없음
+b2, _ = tube(pts, lambda t: (0.6 - 0.48 * t ** 0.8) * K, sides=24, mat_idx=I_BLUE); add("tail", b2, "tail")
 for s in (1, -1):
-    add("fluke", ellipsoid((0.32 * s, 1.08, -2.12), (0.42, 0.07, 0.2), rot=(0.2, 0.35 * s, 0.2 * s), fuzz=0.003, seed=9 + s, seg=28, rings=14), "fluke")
-# 얼굴: 까만 점 눈, 넓은 미소 + 분홍 혀, 분홍 볼
+    add("fluke", ellipsoid((0.34 * s, 1.18, -2.95), (0.5, 0.07, 0.22), rot=(0.25, 0.55 * s, 0.25 * s), fuzz=0.003, seed=12 + s, seg=28, rings=14), "fluke")
+# 얼굴: 주둥이 뿌리 옆의 까만 점 눈 · 분홍 볼 · 주둥이 옆을 따라 살짝 웃는 입선
 for s in (1, -1):
-    pe, ne = body_pt(0.42 * s, 0.12, 0.004); add("eye", oriented_disc(pe, ne, 0.085 * K, 0.095 * K, 0.03 * K, I_DARK), "body")
-    pe2 = pe + frame(ne)[1] * 0.03 * K + frame(ne)[0] * (-0.022 * s) * K; add("eyeHi", oriented_disc(pe2 + ne * 0.02 * K, ne, 0.022 * K, 0.022 * K, 0.012 * K, I_WHITE), "body")
-    pc, nc = body_pt(0.62 * s, -0.04, 0.004); add("cheek", oriented_disc(pc, nc, 0.12 * K, 0.07 * K, 0.015 * K, I_PINK), "body")
-smile = []
-for i in range(25):
-    u = -1 + 2 * i / 24; p, n = body_pt(0.5 * u, -0.08 - 0.07 * (1 - u * u) + 0.02 * math.cos(u * 6), 0.012); smile.append(p)
-b2, _ = tube(smile, lambda t: 0.014 * K, sides=6, mat_idx=I_DARK); add("smile", b2, "body")
-pt, nt = body_pt(0, -0.2, 0.006); add("tongue", oriented_disc(pt, nt, 0.13 * K, 0.07 * K, 0.02 * K, I_PINK), "body")
+    pe, ne = surf(HC, HR, 0.78 * s, 0.0, 0.004); add("eye", oriented_disc(pe, ne, 0.07 * K, 0.08 * K, 0.03 * K, I_DARK), "body")
+    r_, u_ = frame(ne); add("eyeHi", oriented_disc(pe + u_ * 0.025 * K + r_ * (-0.02 * s) * K + ne * 0.02 * K, ne, 0.02 * K, 0.02 * K, 0.012 * K, I_WHITE), "body")
+    pc, nc = surf(HC, HR, 0.62 * s, -0.32, 0.004); add("cheek", oriented_disc(pc, nc, 0.11 * K, 0.065 * K, 0.015 * K, I_PINK), "body")
+    line = []
+    for k in range(17):
+        z = 1.42 + 0.95 * k / 16; dz = (z - SC[2]) / SR[2]; y = 0.5 + 0.06 * (1 - k / 16) ** 2      # 뒤끝이 살짝 올라가는 미소
+        x = SR[0] * math.sqrt(max(0.02, 1 - dz * dz - ((y - SC[1]) / SR[1]) ** 2)) + 0.012
+        line.append(T(x * s, y, z))
+    b2, _ = tube(line, lambda t: 0.012 * K, sides=6, mat_idx=I_DARK); add("smile", b2, "body")
 # 숨구멍 + 솟는 물방울(끼룩이)
-ph, nh = body_pt(0, 1.15, 0.002); add("blowhole", oriented_disc(ph, nh, 0.09 * K, 0.04 * K, 0.015 * K, I_DARK), "body")
-for i, (dx, h, r) in enumerate(((0, 0.28, 0.1), (0.12, 0.2, 0.07), (-0.12, 0.2, 0.07), (0.05, 0.42, 0.06), (-0.06, 0.38, 0.055))):
-    add("drop", ellipsoid((dx, 1.79 + h, 0.33), (r, r * 1.25, r), mat_idx=I_SPOUT, seg=16, rings=10), "spout")
+ph, nh = surf(HC, HR, 0, 1.2, 0.002); add("blowhole", oriented_disc(ph, nh, 0.08 * K, 0.035 * K, 0.015 * K, I_DARK), "body")
+for dx, h, r in ((0, 0.28, 0.1), (0.12, 0.2, 0.07), (-0.12, 0.2, 0.07), (0.05, 0.42, 0.06), (-0.06, 0.38, 0.055)):
+    add("drop", ellipsoid((dx, 1.5 + h, 0.95), (r, r * 1.25, r), mat_idx=I_SPOUT, seg=16, rings=10), "spout")
 
 whale = join(parts, "Goraegorae"); bind(whale, arm)
 
@@ -155,10 +157,10 @@ A["BeamHold"] = anim("BeamHold", 24, beam_hold); A["Spout"] = anim("Spout", 36, 
 A["Guard"] = anim("Guard", 12, guard); A["Dodge"] = anim("Dodge", 14, dodge, False); A["Hit"] = anim("Hit", 18, hit, False); A["Death"] = anim("Death", 40, death, False)
 
 if "--preview" in sys.argv:
-    os.makedirs(PRE, exist_ok=True); c = T(0, 0.9, -0.2)
-    preview(os.path.join(PRE, "whale_front.png"), T(1.2, 1.6, 5.6), c, arm_ob=arm, action=A["Idle"], frame=1)
-    preview(os.path.join(PRE, "whale_three_quarter.png"), T(4.4, 2.6, 3.6), c, arm_ob=arm, action=A["Idle"], frame=1)
-    preview(os.path.join(PRE, "whale_beam.png"), T(4.6, 1.8, 3.2), c, arm_ob=arm, action=A["Beam"], frame=22)
+    os.makedirs(PRE, exist_ok=True); c = T(0, 0.85, -0.3)
+    preview(os.path.join(PRE, "whale_front.png"), T(1.6, 1.4, 6.2), c, arm_ob=arm, action=A["Idle"], frame=1)
+    preview(os.path.join(PRE, "whale_three_quarter.png"), T(6.6, 2.0, 1.2), c, arm_ob=arm, action=A["Idle"], frame=1)
+    preview(os.path.join(PRE, "whale_beam.png"), T(5.6, 1.6, 4.2), c, arm_ob=arm, action=A["Beam"], frame=22)
     preview(os.path.join(PRE, "whale_jump.png"), T(7.5, 2.4, 5.0), T(0, 1.8, -0.4), arm_ob=arm, action=A["Jump"], frame=17)
 
 glb, fbx = export_all("Goraegorae", OUT, [arm, whale])
