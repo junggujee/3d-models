@@ -107,6 +107,7 @@ namespace MoominAction
                 deadT += Time.deltaTime; float hold = Animated ? 1.6f : 0f; float k = Mathf.Max(0, 1 - Mathf.Max(0, deadT - hold) * 2.5f);
                 visual.localScale = baseScale * k; if (deadT > hold + 0.4f) Destroy(gameObject); return;
             }
+            if (stats.InClash) { if (agent && agent.enabled && agent.isOnNavMesh) agent.isStopped = true; UpdateAnimator(); return; }   // 합 연출 중: ClashManager 가 움직임
             knock = Vector3.Lerp(knock, Vector3.zero, 8f * Time.deltaTime);
             if (stats.Invulnerable && !IsDodging) stats.Invulnerable = false;
             Vector3 extra = knock; bool moveNav = false; var s = skillExecutor.CurrentSkill;

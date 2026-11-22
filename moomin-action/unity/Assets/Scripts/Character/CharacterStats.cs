@@ -36,6 +36,8 @@ namespace MoominAction
         [NonSerialized] public bool Invulnerable;          // 회피 무적
         [NonSerialized] public bool Guarding; [NonSerialized] public float GuardStartTime;
         [NonSerialized] public bool inCombat = true;
+        /// <summary>합 연출 중: 이동·입력·AI 정지(ClashManager 가 직접 움직임).</summary>
+        [NonSerialized] public bool InClash;
         public bool IsAlive => currentHealth > 0; public bool IsDead => !IsAlive;
         public float HealthRatio => maxHealth > 0 ? currentHealth / maxHealth : 0f;
         public bool IsParryWindow => Guarding && Time.time - GuardStartTime <= parryWindow;

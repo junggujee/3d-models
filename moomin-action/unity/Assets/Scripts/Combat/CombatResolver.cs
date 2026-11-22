@@ -27,7 +27,7 @@ namespace MoominAction
 
         public void Tick(AttackContext attack, SkillDefinition skill)
         {
-            if (attack.cancelled || !stats.IsAlive) return;
+            if (attack.cancelled || !stats.IsAlive || (executor != null && executor.Held)) return;
             foreach (var target in FindTargets(skill))
             {
                 if (attack.cancelled) return;
@@ -38,7 +38,7 @@ namespace MoominAction
                 if (skill.clashEnabled && theirs != null && theirs.HitboxOpen && !theirs.clashed && !attack.clashed && theirs.skill.clashEnabled && other.resolver.IsTargeting(stats, theirs.skill))
                 {
                     ClashManager.Instance.Resolve(attack, theirs);
-                    if (attack.cancelled) return; continue;
+                    return;   // 이 공격은 합으로 넘어감(결과는 ClashManager 가 연출 뒤 적용)
                 }
                 ApplyHit(attack, target);
             }

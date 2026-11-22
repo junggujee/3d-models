@@ -6,7 +6,7 @@ namespace MoominAction
     public static class GameSettings
     {
         public static float MasterVolume = 0.8f, MouseSensitivity = 1f;
-        public static bool InvertY, ShowHud = true, VSync = true, Fullscreen = true, ShowDamageHints = true;
+        public static bool InvertY, ShowHud = true, VSync = true, Fullscreen = true, ShowDamageHints = true, CameraShake = true;
         public static int Quality = -1;
         const string Key = "moomin.settings";
         [System.Serializable] class Data { public float vol = 0.8f, sens = 1f; public bool inv, hud = true, vsync = true, full = true; public int q = -1; }

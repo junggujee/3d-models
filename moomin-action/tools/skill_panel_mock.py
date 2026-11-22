@@ -125,7 +125,7 @@ def text(img, xy, s, size, color, font=FONT_B, anchor="la", italic=False, outlin
     l, t, r, b = f.getbbox(s); w, h = r - l + 30, b - t + 20; tmp = Image.new("RGBA", (w, h))
     ImageDraw.Draw(tmp).text((10 - l, 10 - t), s, font=f, fill=tuple(int(c * 255) for c in color[:3]) + (255,), stroke_width=stroke, stroke_fill=outline)
     tmp = tmp.transform(tmp.size, Image.AFFINE, (1, .22, -h * .22 * .5, 0, 1, 0), Image.BICUBIC)
-    x, y = xy; x = x - w + 10 if anchor[0] == "r" else x - 10; img.alpha_composite(tmp, (int(x), int(y - 10)))
+    x, y = xy; x = x - w + 10 if anchor[0] == "r" else x - w / 2 if anchor[0] == "m" else x - 10; img.alpha_composite(tmp, (int(x), int(y - 10)))
 
 def rich(img, x, y, parts, size):
     """(글자, 색) 조각을 이어 붙여 쓰기. 색이 이름이면 그 상태이상 아이콘을 글자 앞에."""
@@ -177,19 +177,26 @@ def main():
     W, Hh = 1920, 1080
     bg = Image.open(os.path.join(ROOT, "previews", "map_town.png")).convert("RGB").resize((W, Hh), Image.LANCZOS).filter(ImageFilter.GaussianBlur(10))
     bg = Image.blend(bg, Image.new("RGB", (W, Hh), (0, 0, 0)), .55).convert("RGBA")
-    bg.alpha_composite(Image.new("RGBA", (W, Hh), (0, 0, 0, int(.45 * 255))))
+    bg.alpha_composite(Image.new("RGBA", (W, Hh), (0, 0, 0, int(.28 * 255))))
     slash = tinted(SLASH, (.72, .05, .07, .9), (640, 640)); bg.alpha_composite(slash, (0, 0)); bg.alpha_composite(slash.rotate(180), (W - 640, Hh - 640))
-    scale = .74
+    scale = .62
     player = dict(name="연속 베기", attr="Red", motif="Flurry", seed=11, base=10, coinPower=3, coins=3, attrLine="빨강 속성 · 보라에 약함",
                   status=[("출혈", "Bleed"), (" 앞 2/1 · 뒤 1/1  ", CREAM), ("자신 ", CREAM), ("힘", "PowerUp"), (" 1/2", CREAM)])
     enemy = dict(name="베개 내려찍기", attr="Blue", motif="Smash", seed=4, base=10, coinPower=4, coins=2, attrLine="파랑 속성 · 초록에 약함",
                  status=[("침잠", "Sinking"), (" 앞 2/2 · 뒤 1/1", CREAM)])
-    ps = dict(mods=[("PowerUp", "+1×2", True), ("PowerDown", "0", False), ("Paralysis", "0", False)], results=[(1, 14, ("+1", "PowerUp")), (1, 13, None), (2, 10, None)], label="위력 3/3")
-    es = dict(mods=[("PowerUp", "0", False), ("PowerDown", "-2×1", True), ("Paralysis", "1", True)], results=[(1, 10, ("마비", "Paralysis"))], label="위력 1/2")
-    for sk, st, x in ((player, ps, W / 2 - 640), (enemy, es, W / 2 + 60)):
-        img, (ox, oy) = panel(sk, st, scale); bottom = Hh / 2 + 110; bg.alpha_composite(img, (int(x - ox), int(bottom - img.height + (560 - 80 - 460) * scale)))
-    text(bg, (W / 2, Hh / 2 + 150), "13   VS   10", 40, (.95, .82, .5), anchor="mm", stroke=2, outline=(0, 0, 0, 230))
-    text(bg, (W / 2, Hh / 2 + 200), "합 승리 — 공격 유지", 34, (1, .86, .45), anchor="mm", stroke=2, outline=(0, 0, 0, 230))
+    ps = dict(mods=[("PowerUp", "+1×2", True), ("PowerDown", "0", False), ("Paralysis", "0", False)], results=[(1, 14, ("+1", "PowerUp")), (1, 13, None), (2, 10, None)], label="최종 위력")
+    es = dict(mods=[("PowerUp", "0", False), ("PowerDown", "-2×1", True), ("Paralysis", "1", True)], results=[(1, 10, ("마비", "Paralysis"))], label="중단")
+    for sk, st, x, fade in ((player, ps, W / 2 - 560, 1.0), (enemy, es, W / 2 + 90, .45)):   # 진 쪽 패널은 흐리게
+        img, (ox, oy) = panel(sk, st, scale); bottom = Hh / 2 - 70
+        if fade < 1: img.putalpha(img.getchannel("A").point(lambda v: int(v * fade)))
+        bg.alpha_composite(img, (int(x - ox), int(bottom - img.height + (560 - 80 - 460) * scale)))
+    text(bg, (W / 2, Hh / 2 - 40), "13   VS   10", 44, (.95, .82, .5), anchor="mm", stroke=2, outline=(0, 0, 0, 230))
+    # 합 승리 배너(아래쪽 1/3): 빛 번짐 + 가로 빛줄기 + 큰 글자 + 설명
+    cy = Hh / 2 + 250
+    bg.alpha_composite(glow((760, 220), (1, .84, .35), .55), (int(W / 2 - 380), int(cy - 110)))
+    bg.alpha_composite(Image.new("RGBA", (900, 4), (255, 215, 90, 216)), (int(W / 2 - 450), int(cy + 6)))
+    text(bg, (W / 2, cy - 64), "합 승리", 84, (1, .9, .6), anchor="ma", italic=True, stroke=3, outline=(90, 60, 10, 255))
+    text(bg, (W / 2, cy + 62), "공격 유지 — 그대로 명중", 26, CREAM, anchor="mm", stroke=2, outline=(0, 0, 0, 230))
     out = os.path.join(ROOT, "previews", "skill_panel_v3_mock.png"); bg.convert("RGB").save(out); print("✔", out)
 
 if __name__ == "__main__":

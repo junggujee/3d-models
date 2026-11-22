@@ -7,6 +7,9 @@ namespace MoominAction
     {
         public Transform target; public float distance = 5.2f, height = 1.5f, minPitch = -10f, maxPitch = 60f, smooth = 14f, lockOnPitch = 14f;
         float yaw, pitch = 18f; LockOnSystem lockOn;
+        static float shakeAmp, shakeT, shakeDur;
+        /// <summary>화면 흔들림(합 충돌·승리). 실제 시간 기준이라 히트스톱 중에도 흔들림.</summary>
+        public static void Shake(float amplitude, float seconds) { if (amplitude >= shakeAmp * (shakeDur > 0 ? shakeT / shakeDur : 0f)) { shakeAmp = amplitude; shakeT = shakeDur = seconds; } }
         void Start() { if (target) { yaw = target.eulerAngles.y; lockOn = target.GetComponent<LockOnSystem>(); } UIState.Reset(); Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
         void LateUpdate()
         {
@@ -25,6 +28,7 @@ namespace MoominAction
             Vector3 pos = pivot + rot * Vector3.back * d;
             float k = Time.timeScale > 0 ? 1f - Mathf.Exp(-smooth * Time.unscaledDeltaTime) : 0f;
             transform.position = Vector3.Lerp(transform.position, pos, k); transform.rotation = rot;
+            if (shakeT > 0f && GameSettings.CameraShake) { shakeT -= Time.unscaledDeltaTime; transform.position += UnityEngine.Random.insideUnitSphere * shakeAmp * Mathf.Clamp01(shakeT / Mathf.Max(0.01f, shakeDur)); }
         }
     }
 }

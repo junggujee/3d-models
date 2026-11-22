@@ -27,7 +27,7 @@ namespace MoominAction
             Vector3 f = cam ? Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized : Vector3.forward, r = cam ? Vector3.ProjectOnPlane(cam.right, Vector3.up).normalized : Vector3.right;
             return f * mv.y + r * mv.x;
         }
-        bool Locked => cm != null && (cm.IsStaggered || !health.IsAlive);
+        bool Locked => health.InClash || (cm != null && (cm.IsStaggered || !health.IsAlive));
 
         void Update()
         {

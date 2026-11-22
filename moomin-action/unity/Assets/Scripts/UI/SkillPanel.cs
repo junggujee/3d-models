@@ -18,6 +18,9 @@ namespace MoominAction.UI
         public bool FollowOwner = true; public float FixedScale = 0.55f;
         /// <summary>이 시각까지는 스킬이 끝났어도 그대로 보여 줌(클래시 연출).</summary>
         public float HoldUntil = -1f;
+        /// <summary>투명도 배율(합에서 진 쪽을 흐리게).</summary>
+        public float AlphaMul = 1f;
+        public void Punch(float amount) { punch = Mathf.Max(punch, amount); }
         RectTransform root; CanvasGroup group;
         Image frame, hexRing, hexGlow, banner, bannerInk, art, artFrame, totalGlow, statusIcon, sideFrame;
         Text plus, skillName, baseText, totalLabel, total, status, attrLine, sideTitle; Text[] statNum = new Text[3]; Image[] statIcon = new Image[3];
@@ -75,7 +78,7 @@ namespace MoominAction.UI
         }
 
         public void Bind(SkillExecutor ex) { Owner = ex; shown = null; }
-        public void Release() { Owner = null; shown = null; HoldUntil = -1f; root.gameObject.SetActive(false); }
+        public void Release() { Owner = null; shown = null; HoldUntil = -1f; AlphaMul = 1f; root.gameObject.SetActive(false); }
         public void Hide() { root.gameObject.SetActive(false); }
         /// <summary>고정 위치(플레이어용).</summary>
         public void Pin(Vector2 anchor, Vector2 pos) { FollowOwner = false; root.anchorMin = root.anchorMax = anchor; root.pivot = new Vector2(0, 0); root.anchoredPosition = pos; }
@@ -110,7 +113,7 @@ namespace MoominAction.UI
             UpdateModifierRow();
             string t = res.Count == 0 ? "?" : sum.ToString(); if (total.text != t) { if (res.Count > 0) punch = 0.1f; total.text = t; }
             totalLabel.text = !Owner.IsExecuting ? (Owner.LastCompleted ? "최종 위력" : "중단") : Owner.Phase == SkillPhase.Windup ? "공격 예고" : $"위력 {res.Count}/{s.coinCount}";
-            group.alpha = Owner.IsExecuting || held ? 1f : Mathf.Clamp01((1.6f - since) / 0.5f);
+            group.alpha = (Owner.IsExecuting || held ? 1f : Mathf.Clamp01((1.6f - since) / 0.5f)) * AlphaMul;
             return true;
         }
 

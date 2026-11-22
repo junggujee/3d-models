@@ -22,7 +22,7 @@ namespace MoominAction.UI
         Gauge targetStagger; Text targetStaggerLabel; readonly Image[] tIcons = new Image[StatusInfo.All.Length]; readonly Text[] tIconNums = new Text[StatusInfo.All.Length]; readonly float[] tFlash = new float[StatusInfo.All.Length]; float staggerFlash;
         System.Action<AttackContext, CharacterStats, int, bool> onTremor; System.Action<StatusEffectManager, StatusType, int> onStatus;
         ClashStage stage;
-        System.Action<ClashOutcome> onClash; System.Action<AttackContext> onEnemyCoin; System.Action<AttackContext, CharacterStats, int> onHit;
+        System.Action<ClashOutcome> onClash, onClashEnd; System.Action<ClashOutcome, int, int> onExchange; System.Action<AttackContext> onEnemyCoin; System.Action<AttackContext, CharacterStats, int> onHit;
 
         public void Build(UIRoot ui, Transform hudRoot, Transform core)
         {
@@ -90,6 +90,8 @@ namespace MoominAction.UI
             stats.Evaded += () => Popup("회피", UITheme.Cream);
             stats.SanityChanged += (a, b, why) => { if (why == "패링" || why.Contains("앞면")) Popup(why + "  " + (b > a ? "+" : "") + (b - a), UITheme.GoldBright); };
             onClash = o => { if (!o.parry && o.playerAttack != null) { stage.Show(o); clash = null; } else { clash = o; clashT = 0f; } };   // 합 = 가운데 연출, 패링 = 작은 패널 ClashManager.Clashed += onClash;
+            onExchange = (o, i, r) => stage.Exchange(o, i, r); ClashManager.ClashExchange += onExchange;
+            onClashEnd = o => stage.End(o); ClashManager.ClashEnded += onClashEnd;
             onHit = (a, target, dmg) => { if (a.owner == ex && a.affinity != 0) Popup(a.affinity > 0 ? $"약점!  ×{SkillAttributes.AdvantageDamage:0.00}" : $"저항  ×{SkillAttributes.DisadvantageDamage:0.0}", a.affinity > 0 ? new Color(.5f, 1f, .5f) : new Color(1f, .5f, .5f)); };
             CombatResolver.DamageDealt += onHit;
             // 진동 폭발 연출: 팝업 + 경직 게이지 번쩍임
@@ -110,7 +112,7 @@ namespace MoominAction.UI
         }
 
         /// <summary>정적 이벤트·적 구독 해제(씬 재시작 시 파괴된 UI 를 건드리지 않도록).</summary>
-        public void Dispose() { stage?.Dispose(); if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
+        public void Dispose() { stage?.Dispose(); if (onExchange != null) ClashManager.ClashExchange -= onExchange; if (onClashEnd != null) ClashManager.ClashEnded -= onClashEnd; if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
         void Popup(string t, Color c) { popup.text = t; popup.color = c; popupT = 1.2f; }
 
         public void Update(float dt)

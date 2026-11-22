@@ -25,6 +25,8 @@ namespace MoominAction
         public AttackContext CurrentAttack { get; private set; }
         public SkillPhase Phase { get; private set; }
         public bool IsExecuting => isExecuting;
+        /// <summary>합 연출 중 스킬 진행 정지(시간·히트박스·다음 코인 모두 멈춤).</summary>
+        public bool Held;
         public bool CanCancel => !isExecuting || Phase == SkillPhase.Recovery;   // 회복 구간은 회피·다음 공격으로 취소 가능
         public int CurrentCoin => currentCoin;
         public float PhaseTime => t - stageStart;
@@ -73,7 +75,7 @@ namespace MoominAction
 
         void Update()
         {
-            if (!isExecuting || UIState.Paused) return;
+            if (!isExecuting || UIState.Paused || Held) return;
             t += Time.deltaTime; var s = CurrentSkill;
             if (Phase == SkillPhase.Windup) { if (t >= s.windup) { Phase = SkillPhase.Attacking; BeginStage(); } return; }
             if (Phase == SkillPhase.Attacking)
@@ -82,7 +84,7 @@ namespace MoominAction
                 if (!coinDoneThisStage && local >= s.hitTime + (useAnimationEvents ? eventGrace : 0f)) OnCoinAttack();     // 이벤트 대체(타이머)
                 if (!isExecuting) return;                                                                                  // 클래시 패배로 중단됐을 수 있음
                 if (CurrentAttack != null && CurrentAttack.HitboxOpen) resolver.Tick(CurrentAttack, s);                     // 히트박스가 열린 동안 계속 판정
-                if (!isExecuting) return;
+                if (!isExecuting || Held) return;                                                                          // 합이 시작됐으면 여기서 멈춤
                 if (coinDoneThisStage && local >= Mathf.Max(s.attackInterval, s.hitTime + s.activeWindow))
                 {
                     if (currentCoin < s.coinCount) BeginStage();
@@ -97,7 +99,7 @@ namespace MoominAction
         /// <summary>타격 프레임: 코인 판정 → 위력 계산 → AttackContext 생성 → CombatResolver 로 충돌 검사.</summary>
         public void OnCoinAttack()
         {
-            if (!isExecuting || Phase != SkillPhase.Attacking || coinDoneThisStage || currentCoin >= CurrentSkill.coinCount) return;
+            if (Held || !isExecuting || Phase != SkillPhase.Attacking || coinDoneThisStage || currentCoin >= CurrentSkill.coinCount) return;
             if (t - stageStart < CurrentSkill.hitTime - eventGrace) return;   // 이전 클립의 늦은 이벤트 무시
             var s = CurrentSkill; var r = coinSystem.Toss(stats, currentCoin);
             var ctx = new AttackContext(0, r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
@@ -114,7 +116,7 @@ namespace MoominAction
         public void OpenHitbox() { hitboxHeld = true; if (CurrentAttack != null && !CurrentAttack.cancelled) CurrentAttack.activeUntil = Time.time + CurrentSkill.activeWindow * 3f; }
         public void CloseHitbox() { hitboxHeld = false; if (CurrentAttack != null) CurrentAttack.activeUntil = Mathf.Min(CurrentAttack.activeUntil, Time.time); }
         /// <summary>마지막 공격 뒤 이벤트. 코인이 남아 있으면 무시(각 공격 클립 끝에 있어도 안전).</summary>
-        public void OnSkillFinished() { if (isExecuting && currentCoin >= CurrentSkill.coinCount && Phase != SkillPhase.Windup) Finish(true); }
+        public void OnSkillFinished() { if (!Held && isExecuting && currentCoin >= CurrentSkill.coinCount && Phase != SkillPhase.Windup) Finish(true); }
 
         void ApplyAllHeadsEffect(SkillDefinition s)
         {

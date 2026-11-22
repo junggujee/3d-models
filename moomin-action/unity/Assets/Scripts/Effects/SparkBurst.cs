@@ -5,7 +5,7 @@ namespace MoominAction
     /// <summary>불꽃 파티클(프리팹 없이 코드로 생성). 기본은 노랑→주황→빨강, tint 를 주면 그 색으로(앞면 = 금색 섬광).</summary>
     public static class SparkBurst
     {
-        public static readonly Color Gold = new Color(1f, 0.86f, 0.35f), Crimson = new Color(0.95f, 0.15f, 0.15f), Violet = new Color(0.6f, 0.35f, 1f);
+        public static readonly Color Gold = new Color(1f, 0.86f, 0.35f), Crimson = new Color(0.95f, 0.15f, 0.15f), Violet = new Color(0.6f, 0.35f, 1f), Yellow = new Color(1f, 0.95f, 0.42f);
         static Material mat;
         public static void Spawn(Vector3 pos, Vector3 dir, int count = 28, float speed = 5f, Color? tint = null)
         {

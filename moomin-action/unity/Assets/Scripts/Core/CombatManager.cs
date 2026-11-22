@@ -46,7 +46,7 @@ namespace MoominAction
         {
             State = !stats.IsAlive ? CombatState.Dead : IsStaggered ? CombatState.Stagger : pc != null && pc.Rolling ? CombatState.Dodge
                   : executor.IsExecuting ? (executor.Phase == SkillPhase.Recovery ? CombatState.Recovery : CombatState.Attack) : stats.Guarding ? CombatState.Guard : moving ? CombatState.Move : CombatState.Idle;
-            if (UIState.Paused || !stats.IsAlive || IsStaggered || (pc != null && pc.Rolling)) { if (stats.Guarding && !IsStaggered) stats.Guarding = false; return; }
+            if (UIState.Paused || !stats.IsAlive || stats.InClash || IsStaggered || (pc != null && pc.Rolling)) { if (stats.Guarding && !IsStaggered) stats.Guarding = false; return; }
 
             // 방어(우클릭 유지): 공격 중이 아닐 때
             bool guardHeld = InputAdapter.GuardHeld();
