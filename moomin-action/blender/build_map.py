@@ -217,7 +217,7 @@ write_report()
 # bpy.ops.object.join 은 물체 2만 개에서 제곱으로 느려져서, 정점·면·UV·재질 번호를 numpy 로 모아 새 메시를 직접 만든다.
 GAME = bpy.data.scenes.new("Game"); S = args.scale; DUP = {}
 Tm = np.array(Matrix.Diagonal((S, S, S, 1)) @ Matrix.Translation((-CENTER[0], -CENTER[1], -GROUND_Z)))
-def merge(objs, name, with_mats=True, double_sided=False, coll=None):
+def merge(objs, name, with_mats=True, double_sided=False, coll=None, seen=None):
     cos, lvs, lts, uvs, fms = [], [], [], [], []; voff = 0
     for o in objs:
         me = o.data; nv, nl, npy = len(me.vertices), len(me.loops), len(me.polygons)
@@ -235,7 +235,7 @@ def merge(objs, name, with_mats=True, double_sided=False, coll=None):
     # 겹친 면 제거: 원본에 같은 부품이 같은 자리에 두 벌씩 놓인 곳이 있어(그룹#115·#117 등) 같은 위치의 면이 두 장 →
     # 렌더러에서는 서로 그림자를 드리워 검게, Unity 에서는 깜빡이는 줄무늬(z-fighting)로 보임. 꼭짓점 위치(5mm 단위)가 같은 면은 하나만 남김.
     ls = np.concatenate([[0], np.cumsum(lt)[:-1]]); q = np.round(co / 0.005).astype(np.int64)
-    seen = set(); keep = np.ones(len(lt), bool)
+    seen = set() if seen is None else seen; keep = np.ones(len(lt), bool)   # seen 을 넘기면 여러 구역에 걸쳐 같은 면을 기억(같은 자리에 두 벌 놓인 산 등)
     for i in range(len(lt)):
         key = tuple(sorted(map(tuple, q[lv[ls[i]:ls[i] + lt[i]]].tolist())))
         if key in seen: keep[i] = False
@@ -353,9 +353,30 @@ def decimate(ob, kind, value):
     else: m.decimate_type = "COLLAPSE"; m.ratio = value
     with bpy.context.temp_override(scene=OPT, view_layer=OPT.view_layers[0], object=ob, active_object=ob, selected_objects=[ob]):
         bpy.ops.object.modifier_apply(modifier=m.name)
-def weld(ob, dist=0.001):
-    """같은 위치(1mm)의 꼭짓점을 하나로: 보이는 모습은 같고(UV·재질은 면 모서리마다 그대로) 꼭짓점이 줄어 파일이 작고 LOD 가 깔끔해짐."""
-    bm = bmesh.new(); bm.from_mesh(ob.data); n0 = len(bm.verts); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=dist); bm.to_mesh(ob.data); bm.free(); ob.data.update()
+def weld(ob, dist=0.001, two_sided=False):
+    """같은 위치(1mm)의 꼭짓점을 하나로: 보이는 모습은 같고(UV·재질은 면 모서리마다 그대로) 꼭짓점이 줄어 파일이 작고 LOD 가 깔끔해짐.
+    먼저 삼각형으로 나눔(원본 SketchUp 다각형은 합치면 같은 꼭짓점이 두 번 들어가 잘못 나뉘며 구멍이 남. Unity 도 어차피 삼각형).
+    합친 뒤: 찌그러진 삼각형 · 같은 꼭짓점의 겹친 면(서로 그림자로 검게 보임)은 하나만. two_sided(나무 양면)면 앞뒷면은 서로 다른 면으로 봄."""
+    bm = bmesh.new(); bm.from_mesh(ob.data); n0 = len(bm.verts)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="EAR_CLIP")
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=dist)
+    seen, dup = set(), []
+    for f in bm.faces:
+        ids = [v.index for v in f.verts]
+        if len(set(ids)) < 3 or f.calc_area() < 1e-9: dup.append(f); continue
+        if two_sided: m = ids.index(min(ids)); k = tuple(ids[m:] + ids[:m])     # 감김 방향 유지(앞·뒷면 구분)
+        else: k = tuple(sorted(ids))
+        if k in seen: dup.append(f)
+        else: seen.add(k)
+    if dup: bmesh.ops.delete(bm, geom=dup, context="FACES_ONLY")
+    STATS.setdefault("_dupfaces", 0); STATS["_dupfaces"] += len(dup)
+    if not two_sided:
+        # 원본(SketchUp)은 면마다 앞뒷면 방향이 제각각 → 가파른 비탈·벽 일부가 안쪽을 봄 → Unity(뒷면 안 그림)에서 구멍.
+        # 꼭짓점을 이은 지금은 연결된 면끼리 방향을 '바깥쪽'으로 일관되게 다시 계산할 수 있음.
+        bad0 = sum(1 for e in bm.edges if len(e.link_faces) == 2 and not e.is_contiguous)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+        STATS.setdefault("_winding", [0, 0]); STATS["_winding"][0] += bad0; STATS["_winding"][1] += sum(1 for e in bm.edges if len(e.link_faces) == 2 and not e.is_contiguous)
+    bm.to_mesh(ob.data); bm.free(); ob.data.update()
     STATS.setdefault("_weld", [0, 0]); STATS["_weld"][0] += n0; STATS["_weld"][1] += len(ob.data.vertices)
 def copy_obj(src, name, parent):
     ob = bpy.data.objects.new(name, src.data.copy()); OPT.collection.objects.link(ob); ob.parent = parent; return ob
@@ -381,13 +402,14 @@ def chunks(objs, cat):
         out.setdefault(key, []).append(o)
     return out
 CAT_OF = {"mountain": "Terrain", "hill": "Terrain", "ground": "Terrain", "castle": "Castle", "build": "Town", "foliage": "Foliage"}
+SEEN_RENDER, SEEN_COL = set(), set()   # 구역을 넘어 겹친 면 제거(하나로 합친 맵과 같은 결과)
 for cat in ("Terrain", "Castle", "Town", "Foliage"):
     objs = [o for o in meshes if CAT_OF.get(cats.get(o.name)) == cat]; f0 = f1 = f2 = 0; n = 0
     for key, part in sorted(chunks(objs, cat).items()):
         name = f"{cat}_{key}"; parent = empty(name, groups[cat])
-        lod0 = merge(part, name + ("" if key == "Ground" else "_LOD0"), double_sided=(cat == "Foliage"), coll=OPT.collection); lod0.parent = parent
+        lod0 = merge(part, name + ("" if key == "Ground" else "_LOD0"), double_sided=(cat == "Foliage"), coll=OPT.collection, seen=SEEN_RENDER); lod0.parent = parent
         if len(lod0.data.polygons) == 0: continue
-        box_uv(lod0); weld(lod0); n += 1; f0 += len(lod0.data.polygons)
+        box_uv(lod0); weld(lod0, two_sided=(cat == "Foliage")); n += 1; f0 += len(lod0.data.polygons)
         if key == "Ground": continue                                     # 평평한 바닥은 LOD 없음
         r1, r2 = RULES[cat]
         l1 = r1(lod0, name + "_LOD1", parent); f1 += len(l1.data.polygons)
@@ -395,7 +417,9 @@ for cat in ("Terrain", "Castle", "Town", "Foliage"):
     STATS[cat] = (n, f0, f1, f2); log("최적화", cat, f"구역 {n}개 · LOD0 {f0:,} · LOD1 {f1:,} · LOD2 {f2:,} 면")
 nc = 0
 for key, part in sorted(chunks([o for o in rest if diag(o) >= 30], "Collision").items()):
-    c = merge(part, f"Collision_{key}", with_mats=False, coll=OPT.collection); c.parent = groups["Collision"]; nc += len(c.data.polygons)
+    c = merge(part, f"Collision_{key}", with_mats=False, coll=OPT.collection, seen=SEEN_COL); c.parent = groups["Collision"]
+    if len(c.data.polygons): weld(c)   # 충돌도 꼭짓점 합치기 + 면 방향 맞추기(Unity 레이캐스트는 뒷면을 못 맞힘 → 바닥 감지 실패 방지)
+    nc += len(c.data.polygons)
 STATS["Collision"] = (len(groups["Collision"].children), nc, 0, 0); log("최적화 충돌", STATS["Collision"])
 sp2 = empty("PlayerSpawn", world, sp.location)
 
@@ -419,11 +443,12 @@ ctx = dict(scene=GAME, view_layer=GAME.view_layers[0])
 with bpy.context.temp_override(**ctx):
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_EXP, "City.glb"), export_format="GLB", use_active_scene=True)
 with open(os.path.join(ROOT, "docs", "map_optimization.md"), "w") as f:
-    f.write("# 맵 최적화 결과 (자동 생성: blender/build_map.py)\n\n| 분류 | 구역 | LOD0 면 | LOD1 면 | LOD2 면 |\n|---|---|---|---|---|\n")
+    f.write("# 맵 최적화 결과 (자동 생성: blender/build_map.py)\n\n| 분류 | 구역 | LOD0 삼각형 | LOD1 | LOD2 |\n|---|---|---|---|---|\n")
     for k, v in STATS.items():
         if k.startswith("_"): continue
         n_, a, b_, c_ = v; f.write(f"| {k} | {n_} | {a:,} | {b_:,} | {c_:,} |\n")
-    if "_weld" in STATS: f.write(f"\n꼭짓점 합치기(1mm, LOD0): {STATS['_weld'][0]:,} → {STATS['_weld'][1]:,}\n")
+    if "_weld" in STATS: f.write(f"\n꼭짓점 합치기(1mm, LOD0): {STATS['_weld'][0]:,} → {STATS['_weld'][1]:,} · 합친 뒤 겹친 면 제거 {STATS.get('_dupfaces', 0):,}\n")
+    if "_winding" in STATS: f.write(f"\n면 방향 맞추기(바깥쪽으로 일관되게): 이웃과 어긋난 모서리 {STATS['_winding'][0]:,} → {STATS['_winding'][1]:,}\n")
 co = np.empty(len(city.data.vertices) * 3, np.float32); city.data.vertices.foreach_get("co", co); co = co.reshape(-1, 3); lo, hi = co.min(0), co.max(0)
 log("내보냄", f"크기 {hi[0]-lo[0]:.0f} x {hi[1]-lo[1]:.0f} x {hi[2]-lo[2]:.0f} m")
 
