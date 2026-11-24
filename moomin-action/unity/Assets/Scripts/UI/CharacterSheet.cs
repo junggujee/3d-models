@@ -116,7 +116,7 @@ namespace MoominAction.UI
             dName = StyleHeading(Txt(sheet, "", 34, Ink, TextAnchor.MiddleLeft)); if (dName.TryGetComponent<Shadow>(out var dsh)) Object.Destroy(dsh); Place(dName.rectTransform, 1490, 110, 300, 50);
             dType = Label("", 20, InkSoft, 1490, 160, 300, 30); dStars = Label("", 24, Gold, 1490, 190, 300, 32);
             dKeyLabel = Label("", 19, InkSoft, 1490, 236, 300, 26); dKey = Label("", 54, Ink, 1490, 258, 300, 70); dKey.font = UITheme.DisplayFont;
-            dFx = Label("", 20, Good, 1230, 372, 550, 84, TextAnchor.UpperLeft); dDesc = Label("", 20, InkSoft, 1230, 460, 550, 96, TextAnchor.UpperLeft); dDesc.fontStyle = FontStyle.Italic;
+            dFx = Label("", 17, Good, 1230, 366, 550, 100, TextAnchor.UpperLeft); dDesc = Label("", 19, InkSoft, 1230, 470, 550, 86, TextAnchor.UpperLeft); dDesc.fontStyle = FontStyle.Italic;
             dAction = Img(sheet, "Action", UITheme.Art("Sheet", "Button", new Vector4(12, 12, 12, 12)), Color.white, true, true); Place(dAction.rectTransform, 1630, 562, 156, 44);
             dActionTxt = Label("", 21, Ink, 0, 0, 156, 44, TextAnchor.MiddleCenter, dAction.transform); OnClick(dAction.gameObject, DoAction);
             dHint = Label("", 15, InkSoft, 1230, 558, 390, 50, TextAnchor.MiddleLeft);
@@ -326,7 +326,9 @@ namespace MoominAction.UI
             else if (d.stamina > 0) { dKeyLabel.text = "스태미나 회복"; dKey.text = "+" + d.stamina; }
             else if (d.Equippable) { var f = EquipmentMath.Describe(d.stats); dKeyLabel.text = "대표 효과"; dKey.text = f.Count > 0 ? f[0].Split(' ')[f[0].Split(' ').Length - 1] : "—"; }
             else { dKeyLabel.text = "가치"; dKey.text = d.value + " G"; }
-            var fx = EquipmentMath.Describe(d.stats); dFx.text = string.Join("\n", fx);
+            var fx = EquipmentMath.Describe(d.stats);
+            if (d.type == ItemType.Weapon) { var kit = WeaponKits.Get(d.kit); fx.Insert(0, $"방어 코인 {kit.guardBase}+{kit.guardCoin}"); if (!string.IsNullOrEmpty(kit.passiveName)) fx.Add($"<color=#8A5A1E>{kit.passiveName}</color> — {kit.passiveText}"); }
+            dFx.text = string.Join("\n", fx);
             dDesc.text = string.IsNullOrEmpty(d.description) ? "" : "“" + d.description + "”";
             bool equipped = d.Equippable && inv.IsEquipped(d.id);
             if (CurSlot() >= 0)

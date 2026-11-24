@@ -25,7 +25,7 @@ namespace MoominAction
         /// <summary>코인이 판정된 순간 호출(첫 검사). 이후 히트박스가 열려 있는 동안 Tick 으로 계속 검사.</summary>
         public void ResolveAttack(AttackContext attack, SkillDefinition skill)
         {
-            if (skill.vfx != SkillVfx.None) SkillVfxPlayer.Play(skill, transform, attack.isHeads);   // 빔·충격파·물기둥(코인마다 한 번)
+            if (skill.vfx != SkillVfx.None && (!skill.vfxLastCoinOnly || attack.coinIndex >= skill.coinCount - 1)) SkillVfxPlayer.Play(skill, transform, attack.isHeads);   // 빔·충격파·물기둥(코인마다 한 번)
             if (skill.isProjectile) { Projectile.Launch(this, attack, AimTarget(), LaunchPoint); return; }   // 원거리: 맞히는 건 투사체가(ApplyHit)
             Tick(attack, skill);
             if (!attack.isHit && !attack.clashed && sparkOrigin) SparkBurst.Spawn(sparkOrigin.position, transform.forward, 8, 3f, attack.isHeads ? SparkBurst.Gold : (Color?)null);   // 헛스윙

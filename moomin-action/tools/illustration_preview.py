@@ -19,7 +19,25 @@ def capsule(X, Y, a, b, r):
     h = np.clip((pax * bax + pay * bay) / max(1e-9, bax * bax + bay * bay), 0, 1)
     return np.hypot(pax - bax * h, pay - bay * h) - r
 
-def figure(X, Y, pose, ox, s):
+def prop_dist(X, Y, prop, fw, bw, wa, s):
+    """무기 모양 SDF — C# SkillIllustration.PropDist 와 같은 도형(0 검 · 1 베개 방패 · 2 회전 쌍검)."""
+    dx, dy = math.cos(wa), math.sin(wa); nx, ny = -dy, dx
+    if prop == 1:
+        c = (fw[0] + dx * .05 * s, fw[1] + dy * .05 * s)
+        a = np.hypot(X - (c[0] + nx * .055 * s), Y - (c[1] + ny * .055 * s)) - .07 * s; b = np.hypot(X - (c[0] - nx * .055 * s), Y - (c[1] - ny * .055 * s)) - .07 * s
+        return np.minimum(a, b)
+    if prop == 2:
+        d = np.full_like(X, 9.0)
+        for h, sg in ((fw, 1), (bw, -1)):
+            c = (h[0] + dx * .04 * s, h[1] + dy * .04 * s)
+            for k in (-1, 1):
+                m1 = (c[0] + nx * .09 * k * s + dx * .03 * sg * k * s, c[1] + ny * .09 * k * s + dy * .03 * sg * k * s); t1 = (c[0] + nx * .17 * k * s + dx * .09 * sg * k * s, c[1] + ny * .17 * k * s + dy * .09 * sg * k * s)
+                d = np.minimum(d, capsule(X, Y, c, m1, .011 * s)); d = np.minimum(d, capsule(X, Y, m1, t1, .006 * s))
+            d = np.minimum(d, np.hypot(X - c[0], Y - c[1]) - .016 * s)
+        return d
+    wt = (fw[0] + dx * 0.34 * s, fw[1] + dy * 0.34 * s); return capsule(X, Y, fw, wt, 0.008 * s)
+
+def figure(X, Y, pose, ox, s, prop=0):
     """실루엣 SDF. 좌표: x 0..ASP, y 0(아래)..1(위). pose = (몸 기울기, 앞팔 각도, 뒷팔 각도, 앞다리, 뒷다리, 무기 각도)"""
     lean, fa, ba, fl, bl, wa = [math.radians(v) for v in pose]
     hip = (ox, 0.30 * s + 0.05); up = (math.sin(lean), math.cos(lean))
@@ -34,7 +52,7 @@ def figure(X, Y, pose, ox, s):
     # 망토(뒤로 펄럭이는 삼각형 근사: 굵어지는 캡슐 2개)
     cape = (chest[0] - 0.18 * s, chest[1] - 0.12 * s); d = np.minimum(d, capsule(X, Y, chest, cape, 0.045 * s))
     wt = (fw[0] + math.cos(wa) * 0.34 * s, fw[1] + math.sin(wa) * 0.34 * s)
-    return d, capsule(X, Y, fw, wt, 0.008 * s), wt
+    return d, prop_dist(X, Y, prop, fw, bw, wa, s), wt
 
 def ell(X, Y, c, rx, ry, rot=0.0):
     """회전한 타원 SDF(근사)."""
@@ -91,7 +109,7 @@ def gear(X, Y, c, r):
     dx, dy = X - c[0], Y - c[1]; rr = np.hypot(dx, dy); th = np.arctan2(dy, dx)
     R_ = np.where(np.cos(8 * th) > 0.3, r, r * .74); return np.maximum(rr - R_, -(rr - r * .3))
 
-def render(motif, seed, accent, subject="human"):
+def render(motif, seed, accent, subject="human", prop=0):
     rng = np.random.default_rng(seed); R = lambda a, b: a + rng.random() * (b - a)
     xs = (np.arange(W) + .5) / W * ASP; ys = (np.arange(H) + .5) / H; X, Y = np.meshgrid(xs, ys[::-1])
     # 바탕: 어두운 종이 + 먹 얼룩(낮은 주파수 노이즈) + 거친 입자
@@ -193,7 +211,7 @@ def render(motif, seed, accent, subject="human"):
     elif C_ is not None:
         d, P = cube(X, Y, C_[0], C_[1], C_[2], C_[3], C_[4], subject); wd = np.full_like(X, 1.0)
         if subject == "block" and G_ is None and subject != "seal": d = np.minimum(d, gear(X, Y, P(.24, 0), .085 * C_[1]))   # 옆에 붙은 톱니
-    else: d, wd, tip = figure(X, Y, pose, fx, 1.0)
+    else: d, wd, tip = figure(X, Y, pose, fx, 1.0, prop)
     rim = np.clip(1 - np.abs(d) * H * 0.35, 0, 1) * np.clip(glow, 0, 1)
     lum = np.where(d < 0, 0.02 + 0.15 * rim, lum); lum = np.maximum(lum, rim * 0.8)
     lum = np.where(wd < 0, 0.9, lum)   # 무기(밝은 칼날)

@@ -136,7 +136,8 @@ namespace MoominAction.UI
                 if (d.type == ItemType.Weapon) { keyLabel.text = "공격력 배율"; keyValue.text = "×" + d.damageMultiplier.ToString("0.00"); }
                 else { keyLabel.text = "대표 효과"; keyValue.text = fx.Count > 0 ? fx[0].Substring(fx[0].LastIndexOf(' ') + 1) : "—"; }
                 stars.text = Stars(d.grade);
-                var l = new List<string>(fx); if (inv != null && inv.IsEquipped(d.id)) l.Add("<color=#3B7A2E>지금 장착 중</color>"); l.Add($"가치 {d.value} 금화");
+                var l = new List<string>(fx);
+                if (d.type == ItemType.Weapon) { var kit = WeaponKits.Get(d.kit); l.Insert(0, $"방어 코인 {kit.guardBase}+{kit.guardCoin} · 보통 {kit.guardReduction * 100:0}% / 완벽 {kit.perfectReduction * 100:0}%"); if (!string.IsNullOrEmpty(kit.passiveName)) l.Add($"<color=#8A5A1E>{kit.passiveName}</color>: {kit.passiveText}"); } if (inv != null && inv.IsEquipped(d.id)) l.Add("<color=#3B7A2E>지금 장착 중</color>"); l.Add($"가치 {d.value} 금화");
                 lines.text = string.Join("\n", l); desc.text = string.IsNullOrEmpty(d.description) ? "" : "“" + d.description + "”";
             }
             else

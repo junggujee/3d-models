@@ -99,6 +99,7 @@ namespace MoominAction
         [Header("무기 고유")] [Tooltip("코인마다 타격 시점(비우면 hitTime) — 회절원참격의 마지막 내려찍기처럼 클립마다 다를 때")] public float[] hitTimes;
         [Tooltip("파괴불가 코인(빨간 코인): 합에서 져도 스킬이 끊기지 않고 남은 코인을 이어서 씀")] public bool unbreakableCoins;
         [Tooltip("회전 쌍검 결투 고조가 최대일 때만 사용(쓰면 고조 0)")] public bool requiresDuelHeat;
+        [Tooltip("특수 연출(vfx)을 마지막 코인에서만")] public bool vfxLastCoinOnly;
         [TextArea] public string description;
 
         public StatusAmount StatusOn(StatusType t, bool heads) => t switch

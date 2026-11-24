@@ -10,10 +10,25 @@ namespace MoominAction
     public class ShieldBarrier : MonoBehaviour
     {
         public const float PerWin = 0.08f, Cap = 0.25f, Duration = 8f;
-        CharacterStats stats;
+        CharacterStats stats; SpriteRenderer aura; static Sprite soft;
         void Awake() { stats = GetComponent<CharacterStats>(); }
         void OnEnable() { ClashManager.ClashEnded += OnClash; }
-        void OnDisable() { ClashManager.ClashEnded -= OnClash; if (stats != null) stats.ClearBarrier(); }
+        void OnDisable() { ClashManager.ClashEnded -= OnClash; if (stats != null) stats.ClearBarrier(); if (aura != null) aura.enabled = false; }
+        /// <summary>보호막이 있는 동안 몸 둘레에 하얀 솜털 빛(카메라를 향함, 남은 양만큼 진하게·살랑).</summary>
+        void LateUpdate()
+        {
+            if (stats == null) return; float k = stats.maxHealth > 0 ? Mathf.Clamp01(stats.barrier / (stats.maxHealth * Cap)) : 0f;
+            if (aura == null)
+            {
+                if (k <= 0f) return;
+                if (soft == null) { int n = 64; var tex = new Texture2D(n, n, TextureFormat.RGBA32, false); var c = new Color[n * n]; for (int j = 0; j < n; j++) for (int i = 0; i < n; i++) { float d = new Vector2(i - 31.5f, j - 31.5f).magnitude / 32f; float a = Mathf.Clamp01(1f - d); a = a * a * (0.6f + 0.4f * Mathf.SmoothStep(0.55f, 0.85f, d)); c[j * n + i] = new Color(1f, 0.99f, 0.95f, a); } tex.SetPixels(c); tex.Apply(); soft = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(.5f, .5f), 32f); }
+                var go = new GameObject("BarrierAura"); go.transform.SetParent(transform, false); aura = go.AddComponent<SpriteRenderer>(); aura.sprite = soft; aura.sortingOrder = 5;
+            }
+            aura.enabled = k > 0f; if (k <= 0f) return;
+            var cam = Camera.main; aura.transform.position = transform.position + Vector3.up * 0.75f + (cam != null ? (cam.transform.position - transform.position).normalized * 0.2f : Vector3.zero);
+            if (cam != null) aura.transform.rotation = Quaternion.LookRotation(aura.transform.position - cam.transform.position);
+            aura.transform.localScale = Vector3.one * (1.15f + 0.04f * Mathf.Sin(Time.time * 3f)); aura.color = new Color(1, 1, 1, 0.25f + 0.35f * k);
+        }
         void OnClash(ClashOutcome o)
         {
             if (stats == null || o == null || o.parry) return;
@@ -51,6 +66,16 @@ namespace MoominAction
             if (stats != null) stats.Damaged -= OnDamaged; if (Player == this) Player = null; Set(0);
         }
         void OnDamaged(float d, Vector3 p, Vector3 k) => lastAction = Time.time;
+        void Start() { if (ex != null) { ex.SkillStarted += OnSkill; ex.CoinAttacked += OnCoin; } }
+        void OnDestroy() { if (ex != null) { ex.SkillStarted -= OnSkill; ex.CoinAttacked -= OnCoin; } }
+        /// <summary>궁극 - 회절원참격 연출: 시작에 붉은 해방 불꽃 + 흔들림, 갈아 버리는 코인마다 앞쪽에 불꽃·작은 흔들림(마지막 내려찍기는 충격파 — vfxLastCoinOnly).</summary>
+        void OnSkill(SkillDefinition s) { if (!enabled || s == null || !s.requiresDuelHeat) return; SparkBurst.Spawn(transform.position + Vector3.up, Vector3.up, 60, 8f, new Color(1f, 0.25f, 0.2f)); ThirdPersonCamera.Shake(0.1f, 0.3f); }
+        void OnCoin(AttackContext a)
+        {
+            if (!enabled || a == null || a.skill == null || !a.skill.requiresDuelHeat || a.coinIndex >= a.skill.coinCount - 1) return;
+            Vector3 p = transform.position + transform.forward * 0.9f + Vector3.up * 0.7f;
+            SparkBurst.Spawn(p, transform.forward + Vector3.up * 0.3f, 34, 7f, a.isHeads ? new Color(1f, 0.35f, 0.25f) : new Color(1f, 0.85f, 0.6f)); ThirdPersonCamera.Shake(0.05f, 0.12f);
+        }
         void OnHit(AttackContext a, CharacterStats target, int dmg) { if (a == null || a.owner != ex || a.id == lastAttackId) return; lastAttackId = a.id; Add(1); }
         void OnClash(ClashOutcome o)
         {

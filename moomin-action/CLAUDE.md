@@ -116,3 +116,9 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 규칙 `Core/LevelMath.cs`(순수 C#, status_tests): 3레벨 차이마다 코인 위력 ±1(최대 ±3, 앞면 코인 위력에만) · 적 레벨 = 웨이브 ± 1 + levelOffset + 보스 3(체력 +6%/공격 +0.5 per Lv) · 경험치 레벨 차이 ±10%(50~150%) · 10레벨마다 칭호.
 - `CharacterStats.level`(플레이어 = Experience.Refresh, 적 = GameManager.SpawnWave → `EnemyCombatController.SetLevel`, 펫 = ApplyLevel). 보정은 `SkillExecutor.OnCoinAttack` → `LevelOpponent()` → `AttackContext.levelBonus`.
 - 연출 `Effects/LevelUpFx.cs`(금빛 기둥·고리) + `UI/LevelUpPopup.cs`(Experience.LevelJumped). 빛의 계승자 글꼴엔 "−"(U+2212)가 없으니 화면 글자는 ASCII "-".
+
+## 무기 3종 (상세: docs/WEAPONS.md)
+- `Combat/WeaponKit.cs`(spark · shield · dual: 평타 3·Q·E·R·방어 코인·방어 자세·고유 효과) ← `ItemDef.kit` ← `Inventory.ApplyWeapon` → `CombatManager.ApplyKit`(KitChanged → HUD 스킬 칸). 스파크 검은 인스펙터/에셋 스킬을 그대로.
+- 방어 코인(`DefenseController.StartGuard` 에서 한 번, `ResolveGuard`: 방어 위력 ≥ 공격 위력 → 완벽 방어) · 파괴불가 코인(`unbreakableCoins`, ClashManager.ApplyResult 에서 끊지 않음) · 코인별 타격 시점 `hitTimes` · `vfxLastCoinOnly`.
+- 고유 효과 `Weapons/WeaponPassives.cs`: ShieldBarrier(CharacterStats.barrier) · DuelHeat(bonusMultiplier, requiresDuelHeat 스킬 게이트) · WeaponSpin(Grip_*→Rotor_* 축 회전).
+- 모델 `blender/build_weapons.py`(민미 공간, Moomin.blend 를 열어 만듦 — build_moomin.py 다음에), 클립 `blender/moomin_weapon_anims.py`(HIT 표 = MoominSetup.WeaponHitFrames = SkillLibrary hitTime). 클립 이름은 정확 일치로 찾음(`Clip`/`ClipOf` — "Guard" 가 "ShieldGuard" 에 걸리지 않게).

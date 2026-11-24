@@ -73,7 +73,7 @@ namespace MoominAction.UI
                 if (v > .15f && v < .6f) { float gx = i % 6 - 3f, gy = j % 6 - 3f; v += Mathf.Sqrt(gx * gx + gy * gy) < v * 6f * 0.75f ? .15f : -.08f; }
                 lum[idx] = v;
             }
-            if (wp.HasValue) WhaleFigure(wp.Value); else if (cp.HasValue) CubeFigure(cp.Value); else Figure(pose, fx);
+            if (wp.HasValue) WhaleFigure(wp.Value); else if (cp.HasValue) CubeFigure(cp.Value); else Figure(pose, fx, s.skillId.StartsWith("SHIELD") ? 1 : s.skillId.StartsWith("DUAL") ? 2 : 0);
             // 색 입히기
             var c = SkillAttributes.ColorOf(s.attribute); var px = new Color[W * H];
             for (int k = 0; k < px.Length; k++)
@@ -336,7 +336,36 @@ namespace MoominAction.UI
         }
 
         /// <summary>인물 실루엣(캡슐 SDF): 검은 몸 + 빛 쪽 가장자리 하이라이트 + 밝은 칼날. pose = 몸 기울기, 앞팔, 뒷팔, 앞다리, 뒷다리, 무기 각도(도).</summary>
-        static void Figure(float[] pose, float ox)
+        /// <summary>무기 모양(밝은 실루엣)까지의 거리: 0 검(앞손에서 무기 각도로 뻗은 날) · 1 베개 방패(앞손의 땅콩 모양) · 2 회전 쌍검(양손 끝 바람개비 두 날).</summary>
+        static float PropDist(float x, float y, int prop, Vector2 front, Vector2 back, float wa)
+        {
+            var dir = new Vector2(Mathf.Cos(wa), Mathf.Sin(wa));
+            if (prop == 1)
+            {
+                var c = front + dir * .05f; var n = new Vector2(-dir.y, dir.x);
+                float a = Mathf.Sqrt((x - (c.x + n.x * .055f)) * (x - (c.x + n.x * .055f)) + (y - (c.y + n.y * .055f)) * (y - (c.y + n.y * .055f))) - .07f;
+                float b = Mathf.Sqrt((x - (c.x - n.x * .055f)) * (x - (c.x - n.x * .055f)) + (y - (c.y - n.y * .055f)) * (y - (c.y - n.y * .055f))) - .07f;
+                return Mathf.Min(a, b);
+            }
+            if (prop == 2)
+            {
+                float d = 9f;
+                foreach (var (h, sg) in new[] { (front, 1f), (back, -1f) })
+                {
+                    var c = h + dir * .04f; var n = new Vector2(-dir.y, dir.x);
+                    for (int k = -1; k <= 1; k += 2)
+                    {
+                        var m1 = c + n * (.09f * k) + dir * (.03f * sg * k); var t1 = c + n * (.17f * k) + dir * (.09f * sg * k);   // 휘어 감긴 초승달 날
+                        d = Mathf.Min(d, Seg(x, y, c.x, c.y, m1.x, m1.y, out _) - .011f); d = Mathf.Min(d, Seg(x, y, m1.x, m1.y, t1.x, t1.y, out _) - .006f);
+                    }
+                    d = Mathf.Min(d, Mathf.Sqrt((x - c.x) * (x - c.x) + (y - c.y) * (y - c.y)) - .016f);
+                }
+                return d;
+            }
+            var tip = front + dir * .34f; return Seg(x, y, front.x, front.y, tip.x, tip.y, out _) - .008f;
+        }
+
+        static void Figure(float[] pose, float ox, int prop = 0)
         {
             float lean = pose[0] * Mathf.Deg2Rad, fa = pose[1] * Mathf.Deg2Rad, ba = pose[2] * Mathf.Deg2Rad, fl = pose[3] * Mathf.Deg2Rad, bl = pose[4] * Mathf.Deg2Rad, wa = pose[5] * Mathf.Deg2Rad;
             var hip = new Vector2(ox, 0.35f); var up = new Vector2(Mathf.Sin(lean), Mathf.Cos(lean)); var chest = hip + up * 0.22f; var head = chest + up * 0.09f;
@@ -350,7 +379,7 @@ namespace MoominAction.UI
                 foreach (var c in caps) d = Mathf.Min(d, Seg(x, y, c.a.x, c.a.y, c.b.x, c.b.y, out _) - c.r);
                 float rim = Mathf.Clamp01(1 - Mathf.Abs(d) * H * 0.35f) * Mathf.Clamp01(glow[idx]);
                 if (d < 0) lum[idx] = 0.02f + 0.15f * rim; lum[idx] = Mathf.Max(lum[idx], rim * 0.8f);
-                if (Seg(x, y, f[1].x, f[1].y, tip.x, tip.y, out _) - .008f < 0) lum[idx] = 0.9f;
+                if (PropDist(x, y, prop, f[1], b[1], wa) < 0) lum[idx] = prop == 1 ? 0.82f : 0.9f;
             });
         }
     }

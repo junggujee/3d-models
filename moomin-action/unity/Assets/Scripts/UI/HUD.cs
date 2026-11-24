@@ -64,6 +64,7 @@ namespace MoominAction.UI
             SaveSystem.Saved += OnSaved;
             pet = new PetHUD(); pet.Build(core.transform, hudRoot.transform); PetSeal.Notice += OnPetNotice;
             quests = new QuestTracker(); quests.Build(core.transform, inv); Quests.Announce += OnQuestAnnounce;
+            var pex = ui.player.GetComponent<SkillExecutor>(); if (pex != null) pex.SkillStarted += sk => { if (sk != null && sk.requiresDuelHeat) Banner(sk.skillName, new Color(1f, .55f, .5f), 2.2f, "결투 고조 해방"); };   // 궁극 컷인
         }
 
         void OnPicked(ItemDef d, int n) { if (d == null) Toast_Item(null, "금화  +" + n); else Toast_Item(d, d.name + (n > 1 ? "  ×" + n : "")); }

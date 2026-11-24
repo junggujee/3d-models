@@ -157,7 +157,8 @@ namespace MoominAction
             Energy("SHIELD_Q", 0, 2); Energy("SHIELD_E", 0, 2); Energy("SHIELD_R", 60, 0); Energy("DUAL_Q", 0, 2); Energy("DUAL_E", 0, 2);
             St("SHIELD_E", StatusType.Tremor, 2, 1); St("SHIELD_3", StatusType.Tremor, 1, 1); St("DUAL_R", StatusType.Bleed, 2, 1, 1, 1); St("DUAL_E", StatusType.Bleed, 1, 1);
             if (map.TryGetValue("SHIELD_E", out var she)) she.vfx = SkillVfx.Shockwave;
-            if (map.TryGetValue("SHIELD_R", out var shr2)) { shr2.vfx = SkillVfx.Shockwave; shr2.lunge = 3f; }   // 강화 스킬: 에너지 60 소비, 진동 폭발
+            if (map.TryGetValue("SHIELD_R", out var shr2)) { shr2.vfx = SkillVfx.Shockwave; shr2.vfxLastCoinOnly = true; shr2.lunge = 3f; }
+            if (map.TryGetValue("DUAL_R", out var dur2)) { dur2.vfx = SkillVfx.Shockwave; dur2.vfxLastCoinOnly = true; }   // 마지막 내려찍기에서 충격파   // 강화 스킬: 에너지 60 소비, 진동 폭발
             Energy("BOSS_BREAK", 40, 0, burst: true); Energy("HUMAN_RUSH", 0, 0, burst: true);
             Look("BOSS_LUNGE", SkillAttribute.Red, SkillMotif.Rush); Look("BOSS_FLURRY", SkillAttribute.Orange, SkillMotif.Flurry); Look("BOSS_BREAK", SkillAttribute.Black, SkillMotif.Smash);
         }
