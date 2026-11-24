@@ -146,6 +146,77 @@ def blade_set(side, hand):
 grip_r, rotor_r = blade_set("R", T(-0.62, 0.58, 0.14))
 grip_l, rotor_l = blade_set("L", T(0.62, 0.72, 0.13))
 
+# ══════════ ③ 레이저 블레이더(사용자 패키지 spin-saber-3d 의 회전 쌍검 광선검을 옮김 — 블루 테마, 푸른 광선 칼날)
+#   가운데 고리 손잡이 + 위·아래 대칭 장갑 하우징 + 양쪽 원통 광선 칼날. 원본 좌표(칼날 축 y · 앞 z · 폭 x, 고리 중심 원점) × LS
+#   민미 기본 자세: 오른손이 고리 안 봉을 쥐고, 칼날 축은 앞으로 60° 기운 채 몸 오른쪽 옆면(회전축 = 바깥 -X)에서 바퀴처럼 돎
+#   Grip_R_Laser(봉 · 고정) · Rotor_R_Laser(고리·톱니·하우징·칼날 — 돎)
+ARMOR = M("Laser_Armor", (0.12, 0.32, 0.8), rough=0.3, metal=0.6); LTRIM = M("Laser_Trim", (0.06, 0.09, 0.17), rough=0.35, metal=0.8)
+PANEL = M("Laser_Panel", (0.72, 0.78, 0.86), rough=0.3, metal=0.3); CHROME = M("Laser_Chrome", (0.85, 0.87, 0.9), rough=0.08, metal=1.0)
+RUBBER = M("Laser_Rubber", (0.06, 0.07, 0.08), rough=0.85); LGLOW = M("Laser_Glow", (0.3, 0.8, 1.0), rough=0.4, emit=(0.25, 0.75, 1.0), emit_strength=4.0)
+CORE = M("Laser_Core", (0.75, 0.93, 1.0), rough=0.2, emit=(0.45, 0.85, 1.0), emit_strength=8.0)
+LMATS = [ARMOR, LTRIM, PANEL, CHROME, RUBBER, LGLOW, CORE]; I_AR, I_TR, I_PA, I_CH, I_RU, I_GL, I_CO = range(7)
+LS = 0.35; LHAND = T(-0.62, 0.58, 0.14)
+a60 = math.radians(60); EY = Vector((0, -math.sin(a60), math.cos(a60))); EZ = Vector((-1, 0, 0)); EX = EY.cross(EZ)
+def LP(x, y, z): return LHAND + (EX * x + EY * y + EZ * z) * LS
+def lmesh(bm_, fn, mi):
+    for v in bm_.verts: v.co = fn(v.co)
+    for f in bm_.faces: f.material_index = mi; f.smooth = True
+    return bm_
+def ltorus(R, r, mi, maj=64, mn=12):
+    bm_ = bmesh.new(); bmesh.ops.create_circle(bm_, cap_ends=False, radius=1.0, segments=maj); pts = [Vector((math.cos(2 * math.pi * k / maj) * R, math.sin(2 * math.pi * k / maj) * R, 0)) for k in range(maj + 1)]
+    bm_.free(); tb, _ = tube([LP(*p) for p in pts], lambda t: r * LS, sides=mn, mat_idx=mi); return tb
+def lbox(c, size, rotz, mi):
+    bm_ = bmesh.new(); bmesh.ops.create_cube(bm_, size=1.0)
+    Rz = Matrix.Rotation(rotz, 3, "Z")
+    return lmesh(bm_, lambda co: LP(*(Rz @ Vector((co.x * size[0], co.y * size[1], co.z * size[2])) + Vector(c))), mi)
+def lprism(outline, z0, z1, mi, rot180=False):
+    bm_ = bmesh.new(); n = len(outline)
+    lo = [bm_.verts.new((x, y, z0)) for x, y in outline]; hi = [bm_.verts.new((x, y, z1)) for x, y in outline]
+    bm_.faces.new(lo[::-1]); bm_.faces.new(hi)
+    for i in range(n): bm_.faces.new((lo[i], lo[(i + 1) % n], hi[(i + 1) % n], hi[i]))
+    bmesh.ops.triangulate(bm_, faces=[f for f in bm_.faces if len(f.verts) > 4])
+    f = (lambda co: LP(-co.x, -co.y, co.z)) if rot180 else (lambda co: LP(co.x, co.y, co.z))
+    for v in bm_.verts: v.co = f(v.co)
+    for fc in bm_.faces: fc.material_index = mi; fc.smooth = False
+    return bm_
+def lcyl(y0, y1, r0, r1, mi, flip=False, seg=24):
+    pts = [LP(0, (-1 if flip else 1) * (y0 + (y1 - y0) * t), 0) for t in (0, 0.5, 1)]
+    tb, _ = tube(pts, lambda t: (r0 + (r1 - r0) * t) * LS, sides=seg, mat_idx=mi); return tb
+# 손잡이 봉(고정)
+gb = bmesh.new(); add_bm(gb, lcyl(-0.16, 0.16, 0.034, 0.034, I_RU))
+for y in (-0.08, 0, 0.08):
+    tb, _ = tube([LP(math.cos(2 * math.pi * k / 24) * 0.036, y, math.sin(2 * math.pi * k / 24) * 0.036) for k in range(25)], lambda t: 0.006 * LS, sides=6, mat_idx=I_GL); add_bm(gb, tb)
+lgrip = obj("Grip_R_Laser", gb, LMATS, origin=LHAND + Vector((0.06, 0, 0)))
+# 회전부
+rb = bmesh.new(); R0 = 0.17
+add_bm(rb, ltorus(R0, 0.034, I_AR)); add_bm(rb, ltorus(R0 + 0.03, 0.012, I_TR)); add_bm(rb, ltorus(R0 - 0.03, 0.008, I_GL))
+for i in range(28):
+    a = 2 * math.pi * i / 28
+    if abs(math.sin(a)) > 0.9: continue
+    add_bm(rb, lbox((math.cos(a) * (R0 + 0.05), math.sin(a) * (R0 + 0.05), 0), (0.03, 0.035, 0.05), a, I_TR))
+HOUSING = [(-0.16, 0.15), (0.16, 0.15), (0.21, 0.27), (0.15, 0.37), (0.12, 0.5), (0.065, 0.6), (-0.065, 0.6), (-0.12, 0.5), (-0.15, 0.37), (-0.21, 0.27)]
+PANELS = [(-0.09, 0.22), (0.09, 0.22), (0.12, 0.29), (0.07, 0.4), (0.045, 0.52), (-0.045, 0.52), (-0.07, 0.4), (-0.12, 0.29)]
+for flip in (False, True):
+    add_bm(rb, lprism(HOUSING, -0.054, 0.054, I_AR, flip))
+    for sd in (1, -1): add_bm(rb, lprism(PANELS, sd * 0.056 - 0.006, sd * 0.056 + 0.006, I_PA, flip))
+    sy = -1 if flip else 1
+    for sd in (1, -1):
+        gem = bmesh.new(); bmesh.ops.create_icosphere(gem, subdivisions=0, radius=1.0)
+        add_bm(rb, lmesh(gem, lambda co, sd=sd: LP(co.x * 0.028 * sy, (0.36 + co.y * 0.049) * sy, sd * 0.07 + co.z * 0.012), I_GL))
+        for x in (-0.075, 0.075): add_bm(rb, lbox((x * sy, 0.29 * sy, sd * 0.07), (0.014, 0.11, 0.01), -math.copysign(0.35, x) * 1, I_GL))
+    for sx in (-1, 1):
+        add_bm(rb, lbox((sx * 0.21 * sy, 0.33 * sy, 0), (0.14, 0.035, 0.06), sx * 0.55, I_TR))
+        add_bm(rb, lbox((sx * 0.215 * sy, 0.315 * sy, 0), (0.1, 0.008, 0.064), sx * 0.55, I_GL))
+    add_bm(rb, lcyl(0.6, 0.69, 0.05, 0.04, I_CH, flip))
+    tb, _ = tube([LP(math.cos(2 * math.pi * k / 24) * 0.042, 0.69 * sy, math.sin(2 * math.pi * k / 24) * 0.042) for k in range(25)], lambda t: 0.009 * LS, sides=6, mat_idx=I_GL); add_bm(rb, tb)
+    # 광선 칼날(원본 BL 1.0 → 1.15 로 조금 길게: 더 넓은 범위) + 둥근 끝
+    add_bm(rb, lcyl(0.69, 1.84, 0.036, 0.033, I_CO, flip, 20))
+    tip = ellipsoid((0, 0, 0), (0.033 * LS / K, 0.033 * LS / K, 0.033 * LS / K), seg=16, rings=10, mat_idx=I_CO)
+    for v in tip.verts: v.co += LP(0, 1.84 * sy, 0)
+    add_bm(rb, tip)
+rb.normal_update()
+lrotor = obj("Rotor_R_Laser", rb, LMATS, origin=LHAND.copy())
+
 # ── 내보내기
 os.makedirs(WD, exist_ok=True)
 def export(objs, name):
@@ -154,19 +225,19 @@ def export(objs, name):
     bpy.context.view_layer.objects.active = objs[0]
     bpy.ops.export_scene.fbx(filepath=os.path.join(WD, name + ".fbx"), use_selection=True, object_types={"MESH"}, apply_scale_options="FBX_SCALE_ALL", axis_forward="-Z", axis_up="Y", bake_anim=False)
     print("✔", name, sum(len(o.data.vertices) for o in objs))
-export([shield], "PillowShield"); export([grip_r, rotor_r], "SpinBlade_R"); export([grip_l, rotor_l], "SpinBlade_L")
+export([shield], "PillowShield"); export([grip_r, rotor_r], "SpinBlade_R"); export([grip_l, rotor_l], "SpinBlade_L"); export([lgrip, lrotor], "LaserBlader")
 
 # ── 렌더: 아이콘 + 무기 동작 미리보기(뼈를 따라가게 armature 결합)
-for o, bone in ((shield, "arm.L"), (grip_r, "hand.R"), (rotor_r, "hand.R"), (grip_l, "arm.L"), (rotor_l, "arm.L")):
+for o, bone in ((shield, "arm.L"), (grip_r, "hand.R"), (rotor_r, "hand.R"), (grip_l, "arm.L"), (rotor_l, "arm.L"), (lgrip, "hand.R"), (lrotor, "hand.R")):
     vg = o.vertex_groups.new(name=bone); vg.add(list(range(len(o.data.vertices))), 1.0, "REPLACE")
     m = o.modifiers.new("Armature", "ARMATURE"); m.object = rig
 sc.render.engine = "CYCLES"; sc.cycles.samples = 28; sc.cycles.use_denoising = True; sc.view_settings.view_transform = "AgX"
 w = bpy.data.worlds.new("W"); w.use_nodes = True; w.node_tree.nodes["Background"].inputs[0].default_value = (0.75, 0.82, 0.92, 1); sc.world = w
 sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN")); sun.data.energy = 3.4; sun.rotation_euler = (0.8, 0.15, 0.7); sc.collection.objects.link(sun)
 cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam")); sc.collection.objects.link(cam); sc.camera = cam
-SH = [shield]; DU = [grip_r, rotor_r, grip_l, rotor_l]
+SH = [shield]; DU = [grip_r, rotor_r, grip_l, rotor_l]; LA = [lgrip, lrotor]
 def shoot(path, loc, target, size, transparent, show, action=None, frame=1, lens=50):
-    for o in SH + DU + [moomin]: o.hide_render = o not in show
+    for o in SH + DU + LA + [moomin]: o.hide_render = o not in show
     rig.data.pose_position = "POSE" if action else "REST"
     rig.animation_data_create(); rig.animation_data.action = bpy.data.actions.get(action) if action else None; sc.frame_set(frame)
     cam.location = loc; cam.data.lens = lens; cam.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
@@ -177,6 +248,7 @@ def center(objs):
 os.makedirs(ICONS, exist_ok=True); os.makedirs(PRE, exist_ok=True)
 c, s_ = center(SH); shoot(os.path.join(ICONS, "pillow_shield.png"), c + Vector((0.35, -1.0, 0.35)).normalized() * s_ * 1.9, c, 256, True, SH)
 c, s_ = center([grip_r, rotor_r]); shoot(os.path.join(ICONS, "spin_blades.png"), c + Vector((0.9, -0.8, 0.5)).normalized() * s_ * 1.8, c, 256, True, [grip_r, rotor_r])
+c, s_ = center(LA); shoot(os.path.join(ICONS, "laser_blader.png"), c + Vector((-1.0, -0.25, 0.15)).normalized() * s_ * 1.35, c, 256, True, LA)
 if "--preview" in sys.argv or True:
     tgt = Vector((0, -0.05, 0.62))
     for nm, act, fr, loc in (("shield_idle", None, 1, (1.3, -3.0, 1.2)), ("shield_guard", "ShieldGuard", 6, (1.2, -3.0, 1.2)), ("shield_bash", "ShieldBash", 10, (2.6, -2.2, 1.1)),
@@ -185,4 +257,8 @@ if "--preview" in sys.argv or True:
     for nm, act, fr, loc in (("dual_idle", None, 1, (1.3, -3.0, 1.2)), ("dual_guard", "DualGuard", 6, (1.2, -3.0, 1.2)), ("dual_slash", "DualSlash1", 10, (2.4, -2.4, 1.2)),
                              ("dual_whirl", "DualWhirl", 8, (2.2, -2.6, 1.3)), ("dual_grind", "DualGrind", 10, (2.6, -2.0, 1.1)), ("dual_finale", "DualFinale", 20, (2.6, -2.6, 1.7))):
         shoot(os.path.join(PRE, f"weapon_{nm}.png"), Vector(loc), tgt + (Vector((0, 0, 0.45)) if "finale" in nm else Vector()), 420, False, DU + [moomin], act, fr)
+    for nm, act, fr, loc in (("laser_idle", None, 1, (-2.2, -2.4, 1.2)), ("laser_guard", "LaserGuard", 6, (-1.6, -2.8, 1.2)), ("laser_slash", "LaserSlash1", 10, (-2.4, -2.4, 1.3)),
+                             ("laser_whirl", "LaserWhirl", 8, (-2.2, -2.6, 1.4)), ("laser_grind", "LaserGrind", 10, (-2.6, -2.0, 1.2)), ("laser_finale", "LaserFinale", 20, (-2.6, -2.6, 1.8))):
+        if act is None or bpy.data.actions.get(act) is not None:
+            shoot(os.path.join(PRE, f"weapon_{nm}.png"), Vector(loc), tgt + (Vector((0, 0, 0.45)) if "finale" in nm else Vector((0, 0, 0.1))), 420, False, LA + [moomin], act, fr, lens=42)
 print("✔ renders")

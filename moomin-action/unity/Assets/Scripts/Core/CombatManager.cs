@@ -49,7 +49,7 @@ namespace MoominAction
             if (defense != null) { defense.guardBasePower = k.guardBase; defense.guardCoinPower = k.guardCoin; defense.guardReduction = k.guardReduction; defense.perfectReduction = k.perfectReduction; }
             guardAnim = string.IsNullOrEmpty(k.guardAnim) ? "Guard" : k.guardAnim;
             if (animator != null && !animator.HasState(0, Animator.StringToHash(guardAnim))) guardAnim = "Guard";
-            SetPassive<ShieldBarrier>(k.passive == WeaponPassive.ShieldBarrier); SetPassive<DuelHeat>(k.passive == WeaponPassive.DuelHeat); SetPassive<WeaponSpin>(k.passive == WeaponPassive.DuelHeat);
+            SetPassive<ShieldBarrier>(k.passive == WeaponPassive.ShieldBarrier); SetPassive<DuelHeat>(k.passive == WeaponPassive.DuelHeat); SetPassive<WeaponSpin>(k.passive == WeaponPassive.DuelHeat); SetPassive<SaberTrail>(k.id == WeaponKits.Laser);
             foreach (var t in GetComponentsInChildren<Transform>(true)) if (t.name == "StarSparkSword") t.gameObject.SetActive(k.showSword);
             KitChanged?.Invoke(k);
         }

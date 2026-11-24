@@ -73,6 +73,15 @@ namespace MoominAction
             Add(S("DUAL_R", "궁극 - 회절원참격", 16, 6, 6, 1.3f, 3f, 0, 0.34f, 0.30f, 0.7f, new[] { "DualGrind", "DualGrind", "DualGrind", "DualGrind", "DualGrind", "DualFinale" }, 2.6f, 140, 10f, lunge: 1f,
                   desc: "결투 고조 최대에서만. 회전하는 두 날로 상대를 다섯 번 갈아 버리고, 뛰어올라 내려찍는다. 파괴불가 코인 — 합에서 져도 끊기지 않는다."));
             if (map.TryGetValue("DUAL_R", out var dur)) { dur.hitTimes = new[] { 0.30f, 0.30f, 0.30f, 0.30f, 0.30f, 0.83f }; dur.unbreakableCoins = true; dur.requiresDuelHeat = true; }
+            // ── 무기: 레이저 블레이더(회전 쌍검 상위 — 양손 · 넓은 범위). 클립 타격 프레임: Laser* 10(0.30초) · LaserFinale 26(0.83초)
+            Add(S("LASER_1", "광선 내려베기", 9, 4, 1, 1.05f, 0f, 0, 0.75f, 0.30f, 0.25f, new[] { "LaserSlash1" }, 2.9f, 160, 5f, desc: "돌아가는 광선검을 머리 위에서 크게 내려벤다."));
+            Add(S("LASER_2", "광선 휩쓸기", 9, 4, 1, 1.05f, 0f, 0, 0.75f, 0.30f, 0.25f, new[] { "LaserSlash2" }, 2.9f, 200, 5f, desc: "광선검을 옆으로 크게 휘둘러 넓게 쓸어 낸다."));
+            Add(S("LASER_3", "십자 광참", 10, 4, 2, 1.05f, 0f, 0, 0.45f, 0.30f, 0.35f, new[] { "LaserSlash2", "LaserCross" }, 3.1f, 200, 7f, desc: "휩쓸고 뛰어올라 내려찍어 십자 광선을 남긴다."));
+            Add(S("LASER_Q", "광선 돌진", 12, 5, 2, 1.1f, 6f, 0, 0.5f, 0.30f, 0.35f, new[] { "LaserDash", "LaserDash" }, 3.0f, 100, 7f, lunge: 6f, desc: "도는 광선을 앞세우고 두 번 꿰뚫어 나간다."));
+            Add(S("LASER_E", "광륜 난무", 10, 4, 4, 0.95f, 9f, 0, 0.4f, 0.30f, 0.45f, new[] { "LaserWhirl", "LaserWhirl", "LaserWhirl", "LaserWhirl" }, 4.5f, 360, 6f, desc: "몸째로 돌며 빛의 고리를 네 번 그린다(회전 난무보다 1.5배 넓다)."));
+            Add(S("LASER_R", "궁극 - 광륜 회절참", 18, 6, 6, 1.4f, 3f, 0, 0.34f, 0.30f, 0.7f, new[] { "LaserGrind", "LaserGrind", "LaserGrind", "LaserGrind", "LaserGrind", "LaserFinale" }, 3.2f, 180, 11f, lunge: 1f,
+                  desc: "결투 고조 최대에서만. 광선검을 최고 속도로 돌려 다섯 번 갈아 버리고, 뛰어올라 빛의 고리째 내려찍는다. 파괴불가 코인."));
+            if (map.TryGetValue("LASER_R", out var lsr)) { lsr.hitTimes = new[] { 0.30f, 0.30f, 0.30f, 0.30f, 0.30f, 0.83f }; lsr.unbreakableCoins = true; lsr.requiresDuelHeat = true; }
             // ── 인간형 적: 잠꾸러기 곰(애니메이션 있음 — hitTime 을 클립 타격 프레임에 맞춤: Attack1/2 0.35초, Attack3 0.43초)
             Add(S("HUMAN_JAB", "솜주먹 연타", 6, 3, 3, 0.6f, 2.5f, 0, 0.4f, 0.35f, 0.7f, new[] { "Attack1", "Attack2", "Attack1" }, 1.7f, 90, 3f, windup: 0.45f, lunge: 2f));
             Add(S("HUMAN_SLAM", "베개 내려찍기", 10, 4, 2, 0.8f, 5f, 0, 0.6f, 0.43f, 1.0f, new[] { "Attack3" }, 2.0f, 140, 7f, windup: 0.85f, lunge: 1.5f));
@@ -116,7 +125,9 @@ namespace MoominAction
             St("SKILL_001", StatusType.PowerUp, 1, 2); St("SKILL_002", StatusType.PowerDown, 2, 2); St("BASIC_3", StatusType.PowerUp, 1, 1);
             St("HUMAN_JAB", StatusType.Paralysis, 1, 1); St("ENEMY_BUMP", StatusType.PowerDown, 1, 2); St("BOSS_FLURRY", StatusType.PowerDown, 2, 2); St("BOSS_BREAK", StatusType.Paralysis, 1, 2);
             // 광역(공통 코인): 공격자 중심 반경 안 모든 적
-            Area("SHIELD_E", 3.5f); Area("DUAL_E", 3.0f);
+            Area("SHIELD_E", 3.5f); Area("DUAL_E", 3.0f); Area("LASER_E", 4.5f);
+            Look("LASER_1", SkillAttribute.Blue, SkillMotif.Slash); Look("LASER_2", SkillAttribute.Blue, SkillMotif.Slash); Look("LASER_3", SkillAttribute.Blue, SkillMotif.Smash);
+            Look("LASER_Q", SkillAttribute.Blue, SkillMotif.Thrust); Look("LASER_E", SkillAttribute.Purple, SkillMotif.Flurry); Look("LASER_R", SkillAttribute.Blue, SkillMotif.Flurry);
             Look("SHIELD_1", SkillAttribute.Yellow, SkillMotif.Rush); Look("SHIELD_2", SkillAttribute.Yellow, SkillMotif.Slash); Look("SHIELD_3", SkillAttribute.Orange, SkillMotif.Smash);
             Look("SHIELD_Q", SkillAttribute.Yellow, SkillMotif.Rush); Look("SHIELD_E", SkillAttribute.Orange, SkillMotif.Smash); Look("SHIELD_R", SkillAttribute.Orange, SkillMotif.Leap);
             Look("DUAL_1", SkillAttribute.Blue, SkillMotif.Slash); Look("DUAL_2", SkillAttribute.Blue, SkillMotif.Slash); Look("DUAL_3", SkillAttribute.Purple, SkillMotif.Flurry);
@@ -158,7 +169,10 @@ namespace MoominAction
             St("SHIELD_E", StatusType.Tremor, 2, 1); St("SHIELD_3", StatusType.Tremor, 1, 1); St("DUAL_R", StatusType.Bleed, 2, 1, 1, 1); St("DUAL_E", StatusType.Bleed, 1, 1);
             if (map.TryGetValue("SHIELD_E", out var she)) she.vfx = SkillVfx.Shockwave;
             if (map.TryGetValue("SHIELD_R", out var shr2)) { shr2.vfx = SkillVfx.Shockwave; shr2.vfxLastCoinOnly = true; shr2.lunge = 3f; }
-            if (map.TryGetValue("DUAL_R", out var dur2)) { dur2.vfx = SkillVfx.Shockwave; dur2.vfxLastCoinOnly = true; }   // 마지막 내려찍기에서 충격파   // 강화 스킬: 에너지 60 소비, 진동 폭발
+            if (map.TryGetValue("DUAL_R", out var dur2)) { dur2.vfx = SkillVfx.Shockwave; dur2.vfxLastCoinOnly = true; }
+            if (map.TryGetValue("LASER_R", out var lsr2)) { lsr2.vfx = SkillVfx.Shockwave; lsr2.vfxLastCoinOnly = true; }
+            if (map.TryGetValue("LASER_3", out var ls3)) { ls3.vfx = SkillVfx.Shockwave; ls3.vfxLastCoinOnly = true; }
+            Energy("LASER_Q", 0, 2); Energy("LASER_E", 0, 2); St("LASER_E", StatusType.Burn, 1, 1); St("LASER_R", StatusType.Burn, 2, 1, 1, 1);   // 마지막 내려찍기에서 충격파   // 강화 스킬: 에너지 60 소비, 진동 폭발
             Energy("BOSS_BREAK", 40, 0, burst: true); Energy("HUMAN_RUSH", 0, 0, burst: true);
             Look("BOSS_LUNGE", SkillAttribute.Red, SkillMotif.Rush); Look("BOSS_FLURRY", SkillAttribute.Orange, SkillMotif.Flurry); Look("BOSS_BREAK", SkillAttribute.Black, SkillMotif.Smash);
         }

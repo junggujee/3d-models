@@ -50,6 +50,9 @@ namespace MoominAction
             Add(new ItemDef { id = "spin_blades", name = "회전 쌍검", type = ItemType.Weapon, grade = "S", icon = IconKind.Sword, color = new Color(0.6f, 0.75f, 1f), damageMultiplier = 1.2f, hue = -1f, maxStack = 1, value = 420, kit = "dual",
                               stats = new EquipStats { damageReduction = 0.06f }, model = "Weapons/SpinBlade_R@hand.R|Weapons/SpinBlade_L@arm.L",
                               description = "손잡이 끝에서 두 날이 바람개비처럼 도는 쌍검. 공격·방어 모두 높고, 싸울수록 결투 고조로 더 빨리 돈다." });
+            Add(new ItemDef { id = "laser_blader", name = "레이저 블레이더", type = ItemType.Weapon, grade = "S", icon = IconKind.Sword, color = new Color(0.35f, 0.75f, 1f), damageMultiplier = 1.3f, hue = -1f, maxStack = 1, value = 680, kit = "laser",
+                              stats = new EquipStats { damageReduction = 0.08f, finalPower = 1 }, model = "Weapons/LaserBlader@hand.R",
+                              description = "가운데 고리를 양손으로 쥐고 돌리는 푸른 광선검. 회전 쌍검보다 넓게 베고, 지나간 자리에 푸른 광선 잔상과 빛 가루가 남는다." });
             Add(new ItemDef { id = "sword_ember", name = "불씨 스파크 검", type = ItemType.Weapon, grade = "S", icon = IconKind.Sword, color = new Color(1f, 0.45f, 0.1f), damageMultiplier = 1.5f, hue = 0.05f, maxStack = 1, value = 520, description = "꺼지지 않는 불씨가 깃든 검. 공격력 +50%." });
             // ── 방어구·장신구(머리·가슴·다리·발) · 마법 아티팩트 — slot·grade·stats 만 정하면 장비 화면·능력치에 바로 들어감
             Add(new ItemDef { id = "headband_blue", name = "파란 머리띠", type = ItemType.Armor, slot = EquipSlot.Head, grade = "B", icon = IconKind.Headband, color = new Color(0.62f, 0.82f, 0.95f), maxStack = 1, value = 80,

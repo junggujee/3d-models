@@ -113,6 +113,7 @@ namespace MoominAction
             rotors.Clear(); Transform gR = null, gL = null, rR = null, rL = null;
             foreach (var t in GetComponentsInChildren<Transform>())
             {
+                if (!t.gameObject.activeInHierarchy) continue;
                 if (t.name.StartsWith("Grip_R")) gR = t; else if (t.name.StartsWith("Grip_L")) gL = t; else if (t.name.StartsWith("Rotor_R")) rR = t; else if (t.name.StartsWith("Rotor_L")) rL = t;
             }
             if (gR != null && rR != null) rotors.Add((gR, rR)); if (gL != null && rL != null) rotors.Add((gL, rL));
@@ -123,7 +124,7 @@ namespace MoominAction
             float sp = baseSpeed + perStack * (heat != null ? heat.Stacks : 0);
             if (ex != null && ex.IsExecuting) sp *= 1.6f; if (stats != null && stats.Guarding) sp *= 2f;
             float dt = Time.timeScale > 0 ? Time.deltaTime : Time.unscaledDeltaTime * 0.3f;   // 메뉴(멈춤) 중엔 캐릭터 시트에서 천천히
-            foreach (var (g, r) in rotors) { if (g == null || r == null) continue; var axis = r.position - g.position; if (axis.sqrMagnitude < 1e-6f) axis = g.forward; r.Rotate(axis.normalized, sp * dt, Space.World); }
+            foreach (var (g, r) in rotors) { if (g == null || r == null) continue; var axis = r.position - g.position; if (axis.sqrMagnitude < 1e-6f) axis = g.forward; r.Rotate(axis.normalized, sp * dt * (r.name.Contains("Laser") ? 1.5f : 1f), Space.World); }   // 레이저 블레이더는 1.5배
         }
     }
 }

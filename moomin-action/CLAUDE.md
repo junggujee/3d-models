@@ -122,3 +122,4 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 방어 코인(`DefenseController.StartGuard` 에서 한 번, `ResolveGuard`: 방어 위력 ≥ 공격 위력 → 완벽 방어) · 파괴불가 코인(`unbreakableCoins`, ClashManager.ApplyResult 에서 끊지 않음) · 코인별 타격 시점 `hitTimes` · `vfxLastCoinOnly`.
 - 고유 효과 `Weapons/WeaponPassives.cs`: ShieldBarrier(CharacterStats.barrier) · DuelHeat(bonusMultiplier, requiresDuelHeat 스킬 게이트) · WeaponSpin(Grip_*→Rotor_* 축 회전).
 - 모델 `blender/build_weapons.py`(민미 공간, Moomin.blend 를 열어 만듦 — build_moomin.py 다음에), 클립 `blender/moomin_weapon_anims.py`(HIT 표 = MoominSetup.WeaponHitFrames = SkillLibrary hitTime). 클립 이름은 정확 일치로 찾음(`Clip`/`ClipOf` — "Guard" 가 "ShieldGuard" 에 걸리지 않게).
+- 레이저 블레이더(kit laser, 회전 쌍검 상위): `build_weapons.py` ③(사용자 spin-saber-3d 를 옮김, Grip_R_Laser/Rotor_R_Laser, 몸 오른쪽 옆면에서 바퀴처럼 돎) · 양손 클립 Laser*(`two()`) · `Weapons/SaberTrail.cs`(TrailRenderer 4 + 빛 가루) · 발광 재질은 이름(Glow·Core·Edge)으로 `EquipmentVisuals.GlowMaterials`.

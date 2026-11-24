@@ -73,7 +73,7 @@ namespace MoominAction.UI
                 if (v > .15f && v < .6f) { float gx = i % 6 - 3f, gy = j % 6 - 3f; v += Mathf.Sqrt(gx * gx + gy * gy) < v * 6f * 0.75f ? .15f : -.08f; }
                 lum[idx] = v;
             }
-            if (wp.HasValue) WhaleFigure(wp.Value); else if (cp.HasValue) CubeFigure(cp.Value); else Figure(pose, fx, s.skillId.StartsWith("SHIELD") ? 1 : s.skillId.StartsWith("DUAL") ? 2 : 0);
+            if (wp.HasValue) WhaleFigure(wp.Value); else if (cp.HasValue) CubeFigure(cp.Value); else Figure(pose, fx, s.skillId.StartsWith("SHIELD") ? 1 : s.skillId.StartsWith("DUAL") ? 2 : s.skillId.StartsWith("LASER") ? 3 : 0);
             // 색 입히기
             var c = SkillAttributes.ColorOf(s.attribute); var px = new Color[W * H];
             for (int k = 0; k < px.Length; k++)
@@ -361,6 +361,12 @@ namespace MoominAction.UI
                     d = Mathf.Min(d, Mathf.Sqrt((x - c.x) * (x - c.x) + (y - c.y) * (y - c.y)) - .016f);
                 }
                 return d;
+            }
+            if (prop == 3)   // 레이저 블레이더: 손의 고리를 가운데로 양쪽으로 뻗은 긴 광선
+            {
+                var a = front + dir * .5f; var b = front - dir * .38f;
+                float d = Seg(x, y, b.x, b.y, a.x, a.y, out _) - .009f; float rr = Mathf.Sqrt((x - front.x) * (x - front.x) + (y - front.y) * (y - front.y));
+                return Mathf.Min(d, Mathf.Abs(rr - .03f) - .007f);
             }
             var tip = front + dir * .34f; return Seg(x, y, front.x, front.y, tip.x, tip.y, out _) - .008f;
         }

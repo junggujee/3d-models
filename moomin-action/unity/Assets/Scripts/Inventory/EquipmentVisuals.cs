@@ -35,6 +35,23 @@ namespace MoominAction
             }
         }
 
+        /// <summary>이름에 Glow · Core · Edge 가 든 재질은 스스로 빛나게(FBX 발광값이 안 넘어와도) — 광선검 칼날, 쌍검 날끝, LED.</summary>
+        static void GlowMaterials(GameObject go)
+        {
+            foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+            {
+                var ms = r.materials;
+                for (int i = 0; i < ms.Length; i++)
+                {
+                    var m = ms[i]; if (m == null) continue; string n = m.name;
+                    if (!(n.Contains("Glow") || n.Contains("Core") || n.Contains("Edge"))) continue;
+                    Color c = m.HasProperty("_Color") ? m.color : Color.white; float k = n.Contains("Core") ? 3.2f : 2.2f;
+                    m.EnableKeyword("_EMISSION"); if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", c * k); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+                }
+                r.materials = ms;
+            }
+        }
+
         GameObject Attach(ItemDef d, string path, string boneName)
         {
             var prefab = Resources.Load<GameObject>(path); if (prefab == null) { Debug.LogWarning($"[장비] 모델 없음: Resources/{path}"); return null; }
@@ -49,6 +66,7 @@ namespace MoominAction
             var go = Instantiate(prefab); go.name = "Equip_" + d.id + "_" + prefab.name;
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = gameObject.layer;   // 장비 화면 카메라(플레이어 레이어)에 같이 보이게
             foreach (var c in go.GetComponentsInChildren<Collider>(true)) Destroy(c);
+            GlowMaterials(go);
             if (bone == null) { Debug.LogWarning($"[장비] 뼈 '{boneName}' 를 찾지 못해 몸에 그대로 붙임"); go.transform.SetParent(transform, false); return go; }
             // 장비 메시(자식)의 '장비 루트 → 메시' 변환 H. 원하는 것: 메시 월드 = 뼈 월드 × bindpose  ⇒  장비 루트(뼈 기준) = bindpose × H⁻¹
             var mf = go.GetComponentInChildren<MeshFilter>(); Matrix4x4 H = mf != null ? go.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix : Matrix4x4.identity;

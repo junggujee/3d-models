@@ -18,7 +18,7 @@ namespace MoominAction
 
     public static class WeaponKits
     {
-        public const string Spark = "spark", Shield = "shield", Dual = "dual";
+        public const string Spark = "spark", Shield = "shield", Dual = "dual", Laser = "laser";
         static readonly Dictionary<string, WeaponKit> map = new()
         {
             [Spark] = new WeaponKit { id = Spark, name = "스파크 검", title = "검", basics = new[] { "BASIC_1", "BASIC_2", "BASIC_3" }, skill1 = "SKILL_001", skill2 = "SKILL_002", ultimate = "SKILL_003",
@@ -29,6 +29,9 @@ namespace MoominAction
             [Dual] = new WeaponKit { id = Dual, name = "회전 쌍검", title = "쌍검", basics = new[] { "DUAL_1", "DUAL_2", "DUAL_3" }, skill1 = "DUAL_Q", skill2 = "DUAL_E", ultimate = "DUAL_R",
                 guardBase = 12, guardCoin = 4, guardReduction = 0.6f, perfectReduction = 0.85f, guardAnim = "DualGuard", passive = WeaponPassive.DuelHeat,
                 passiveName = "결투 고조", passiveText = "명중·합 승리·완벽 방어마다 1스택(최대 10). 스택마다 쌍검이 빨리 돌고 피해 +2%. 최대에서 궁극 - 회절원참격." },
+            [Laser] = new WeaponKit { id = Laser, name = "레이저 블레이더", title = "광선검", basics = new[] { "LASER_1", "LASER_2", "LASER_3" }, skill1 = "LASER_Q", skill2 = "LASER_E", ultimate = "LASER_R",
+                guardBase = 13, guardCoin = 5, guardReduction = 0.62f, perfectReduction = 0.88f, guardAnim = "LaserGuard", passive = WeaponPassive.DuelHeat,
+                passiveName = "결투 고조 · 광선 잔상", passiveText = "회전 쌍검의 상위 무기. 양손으로 고리를 쥐고 돌리는 광선검이라 범위가 넓다. 결투 고조가 쌓일수록 더 빨리 돌고, 푸른 광선이 잔상과 빛 파티클을 남긴다." },
         };
         public static WeaponKit Get(string id) => id != null && map.TryGetValue(id, out var k) ? k : map[Spark];
         public static IEnumerable<WeaponKit> All => map.Values;

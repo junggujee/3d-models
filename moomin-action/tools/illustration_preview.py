@@ -35,6 +35,9 @@ def prop_dist(X, Y, prop, fw, bw, wa, s):
                 d = np.minimum(d, capsule(X, Y, c, m1, .011 * s)); d = np.minimum(d, capsule(X, Y, m1, t1, .006 * s))
             d = np.minimum(d, np.hypot(X - c[0], Y - c[1]) - .016 * s)
         return d
+    if prop == 3:   # 레이저 블레이더: 고리 + 양쪽 긴 광선
+        a = (fw[0] + dx * .5 * s, fw[1] + dy * .5 * s); b = (fw[0] - dx * .38 * s, fw[1] - dy * .38 * s)
+        return np.minimum(capsule(X, Y, b, a, .009 * s), np.abs(np.hypot(X - fw[0], Y - fw[1]) - .03 * s) - .007 * s)
     wt = (fw[0] + dx * 0.34 * s, fw[1] + dy * 0.34 * s); return capsule(X, Y, fw, wt, 0.008 * s)
 
 def figure(X, Y, pose, ox, s, prop=0):

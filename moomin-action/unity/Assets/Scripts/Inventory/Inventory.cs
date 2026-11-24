@@ -44,7 +44,7 @@ namespace MoominAction
 
         void NewGame()
         {
-            gold = 120; Add("sword_spark", 1, silent: true); Add("sword_frost", 1, silent: true); Add("pillow_shield", 1, silent: true); Add("spin_blades", 1, silent: true); Add("potion_red", 3, silent: true); Add("potion_blue", 2, silent: true); Add("bread", 2, silent: true); Add("key_old", 1, silent: true);
+            gold = 120; Add("sword_spark", 1, silent: true); Add("sword_frost", 1, silent: true); Add("pillow_shield", 1, silent: true); Add("spin_blades", 1, silent: true); Add("laser_blader", 1, silent: true); Add("potion_red", 3, silent: true); Add("potion_blue", 2, silent: true); Add("bread", 2, silent: true); Add("key_old", 1, silent: true);
             Add("headband_blue", 1, silent: true);   // 첫 장신구(장비 화면에서 머리에 장착)
             quick[0] = "potion_red"; quick[1] = "potion_blue"; quick[2] = "bread"; equippedWeapon = "sword_spark";
         }

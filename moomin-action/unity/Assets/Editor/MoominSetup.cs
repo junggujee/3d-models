@@ -27,7 +27,7 @@ namespace MoominAction.EditorTools
             var clips = imp.defaultClipAnimations;
             foreach (var c in clips)
             {
-                c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "ShieldGuard" or "DualGuard"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true;
+                c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "ShieldGuard" or "DualGuard" or "LaserGuard"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true;
                 // 공격 클립의 타격 프레임(Blender: Attack1/2 = 24프레임 중 11, Attack3 = 30프레임 중 14)에 명세 v2 6-2 의 애니메이션 이벤트 배치
                 float hit = c.name switch { "Attack1" => 10f / 23f, "Attack2" => 10f / 23f, "Attack3" => 13f / 29f, _ => -1f };
                 if (WeaponHitFrames.TryGetValue(c.name, out var wf)) hit = (wf.hit - 1f) / (wf.len - 1f);   // 베개 방패·회전 쌍검 클립(blender/moomin_weapon_anims.py 와 같은 프레임)
@@ -154,6 +154,7 @@ namespace MoominAction.EditorTools
         {
             ["ShieldBash"] = (10, 24), ["ShieldSwing"] = (10, 24), ["ShieldSlam"] = (15, 30), ["ShieldLeap"] = (22, 36),
             ["DualSlash1"] = (10, 24), ["DualSlash2"] = (10, 24), ["DualCross"] = (10, 30), ["DualDash"] = (10, 24), ["DualWhirl"] = (10, 24), ["DualGrind"] = (10, 20), ["DualFinale"] = (26, 40),
+            ["LaserSlash1"] = (10, 24), ["LaserSlash2"] = (10, 24), ["LaserCross"] = (10, 30), ["LaserDash"] = (10, 24), ["LaserWhirl"] = (10, 24), ["LaserGrind"] = (10, 20), ["LaserFinale"] = (26, 40),
         };
         /// <summary>민미 클립(이름이 정확히 같은 것 우선 — "Guard" 가 "ShieldGuard" 에 걸리지 않게).</summary>
         static AnimationClip Clip(string name)
@@ -191,7 +192,7 @@ namespace MoominAction.EditorTools
             ac.CreateBlendTreeInController("Locomotion", out BlendTree tree); tree.blendParameter = "Speed";
             tree.AddChild(Clip("Idle"), 0f); tree.AddChild(Clip("Walk"), 0.5f); tree.AddChild(Clip("Run"), 1f);
             var sm = ac.layers[0].stateMachine;
-            foreach (var n in new[] { "Roll", "Guard", "Attack1", "Attack2", "Attack3", "Hit", "Death", "ShieldGuard", "ShieldBash", "ShieldSwing", "ShieldSlam", "ShieldLeap", "DualGuard", "DualSlash1", "DualSlash2", "DualCross", "DualDash", "DualWhirl", "DualGrind", "DualFinale" }) { var s = sm.AddState(n); s.motion = Clip(n); if (n.StartsWith("Attack") || n == "Hit" || n == "Roll" || (WeaponHitFrames.ContainsKey(n))) { var t = s.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f; } }
+            foreach (var n in new[] { "Roll", "Guard", "Attack1", "Attack2", "Attack3", "Hit", "Death", "ShieldGuard", "ShieldBash", "ShieldSwing", "ShieldSlam", "ShieldLeap", "DualGuard", "DualSlash1", "DualSlash2", "DualCross", "DualDash", "DualWhirl", "DualGrind", "DualFinale", "LaserGuard", "LaserSlash1", "LaserSlash2", "LaserCross", "LaserDash", "LaserWhirl", "LaserGrind", "LaserFinale" }) { var s = sm.AddState(n); s.motion = Clip(n); if (n.StartsWith("Attack") || n == "Hit" || n == "Roll" || (WeaponHitFrames.ContainsKey(n))) { var t = s.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f; } }
             AssetDatabase.SaveAssets();
         }
 
