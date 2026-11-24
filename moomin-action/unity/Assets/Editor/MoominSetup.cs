@@ -82,7 +82,7 @@ namespace MoominAction.EditorTools
                 ji.clipAnimations = jclips; ji.SaveAndReimport();
             }
             // 대화창·장식·초상화 그림: 밉맵 없이 선명하게(판 그림은 3200px 이라 최대 크기 4096)
-            foreach (var folder in new[] { "Assets/Resources/UI/Dialogue", "Assets/Resources/UI/Ornament", "Assets/Resources/UI/Portraits" })
+            foreach (var folder in new[] { "Assets/Resources/UI/Dialogue", "Assets/Resources/UI/Ornament", "Assets/Resources/UI/Portraits", "Assets/Resources/UI/Sheet", "Assets/Resources/UI/Codex", "Assets/Resources/UI/Fx" })
             {
                 if (!AssetDatabase.IsValidFolder(folder)) continue;
                 foreach (var g in AssetDatabase.FindAssets("t:Texture2D", new[] { folder }))

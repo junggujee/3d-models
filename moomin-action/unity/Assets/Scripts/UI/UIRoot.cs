@@ -15,7 +15,7 @@ namespace MoominAction.UI
         public static UIRoot Instance { get; private set; }
         public CharacterStats player; Canvas canvas; HUD hud; Inventory inventory;
         public DialogueBox dialoguePage;
-        public WorldMapView worldMap; public PauseMenu pausePage; public SettingsMenu settingsPage; public InventoryMenu inventoryPage; public InfoPage controlsPage; public SaveSlotPage savePage, loadPage; public EquipmentMenu equipmentPage;
+        public WorldMapView worldMap; public PauseMenu pausePage; public SettingsMenu settingsPage; public CharacterSheet sheet; public CodexPage codexPage; public InfoPage controlsPage; public SaveSlotPage savePage, loadPage;
         readonly Stack<MenuPage> stack = new(); MenuPage Current => stack.Count > 0 ? stack.Peek() : null;
 
         void Awake()
@@ -30,11 +30,11 @@ namespace MoominAction.UI
             if (player == null) { Debug.LogError("[UIRoot] Player 태그 오브젝트(CharacterStats 포함)를 찾지 못했습니다."); enabled = false; return; }
             inventory = player.GetComponent<Inventory>(); if (inventory == null) inventory = player.gameObject.AddComponent<Inventory>();
             hud = new HUD(); hud.Build(this, canvas.transform);
-            pausePage = new PauseMenu(); settingsPage = new SettingsMenu(); inventoryPage = new InventoryMenu();
-            controlsPage = new InfoPage("조작법", new[] { "W A S D / Shift", "Space", "좌클릭", "우클릭", "Q / E / R", "Tab", "I  ·  1~4", "C", "F  ·  G", "M", "Esc" }, new[] { "이동 / 달리기", "회피 — 회피 코인으로 판정", "일반 공격 (코인 1~2개, 3연타)", "방어 — 피해 감소, 누른 직후는 패링", "연속 베기 · 불꽃 찌르기 · 별빛 난무", "타깃 고정 / 해제", "가방 · 퀵슬롯 사용", "장비(머리·가슴·다리·발·아티팩트)", "상호작용(대화 · 물범 길들이기 · 쓰다듬기) · 펫 기다려/따라와", "지도 펼치기 · 접기", "휴식 메뉴" });
+            pausePage = new PauseMenu(); settingsPage = new SettingsMenu(); sheet = new CharacterSheet(); codexPage = new CodexPage();
+            controlsPage = new InfoPage("조작법", new[] { "W A S D / Shift", "Space", "좌클릭", "우클릭", "Q / E / R", "Tab", "I  ·  C  ·  K", "1~4", "F  ·  G", "M", "Esc" }, new[] { "이동 / 달리기", "회피 — 회피 코인으로 판정", "일반 공격 (코인 1~2개, 3연타)", "방어 — 피해 감소, 누른 직후는 패링", "연속 베기 · 불꽃 찌르기 · 별빛 난무", "타깃 고정 / 해제", "캐릭터 시트(가방 · 장비 · 스킬) · 도감", "퀵슬롯 사용", "상호작용(대화 · 물범 길들이기 · 쓰다듬기) · 펫 기다려/따라와", "지도 펼치기 · 접기", "휴식 메뉴" });
             savePage = new SaveSlotPage(SaveSlotPage.Mode.Save, UITheme.InGame, false); loadPage = new SaveSlotPage(SaveSlotPage.Mode.Load, UITheme.InGame, true);
-            equipmentPage = new EquipmentMenu(); dialoguePage = new DialogueBox();
-            foreach (var pg in new MenuPage[] { pausePage, settingsPage, inventoryPage, controlsPage, savePage, loadPage, equipmentPage, dialoguePage }) pg.Build(this, canvas.transform);
+            dialoguePage = new DialogueBox();
+            foreach (var pg in new MenuPage[] { pausePage, settingsPage, sheet, codexPage, controlsPage, savePage, loadPage, dialoguePage }) pg.Build(this, canvas.transform);
             worldMap = new WorldMapView(); worldMap.Build(canvas.transform, player.transform);   // M: 지도 펼치기·접기
             inventory.Message += m => { };   // HUD 가 이미 구독
         }
@@ -61,18 +61,24 @@ namespace MoominAction.UI
             {
                 if (InputAdapter.MapPressed() && worldMap.Available) { worldMap.Open(); return; }
                 if (InputAdapter.PausePressed()) Open(pausePage);
-                else if (InputAdapter.InventoryPressed()) Open(inventoryPage);
-                else if (InputAdapter.EquipPressed()) Open(equipmentPage);
+                else if (InputAdapter.InventoryPressed()) OpenSheet(false);
+                else if (InputAdapter.EquipPressed()) OpenSheet(true);
+                else if (InputAdapter.CodexPressed()) OpenCodex();
                 else { int q = InputAdapter.QuickPressed(); if (q >= 0) inventory.UseQuick(q); }
             }
             else
             {
                 Current.Tick();
-                if (InputAdapter.CancelPressed() || (Current == inventoryPage && InputAdapter.InventoryPressed()) || (Current == equipmentPage && InputAdapter.EquipPressed())) Back();
-                else if (Current == inventoryPage && InputAdapter.EquipPressed()) Open(equipmentPage);
+                if (InputAdapter.CancelPressed()) { if (!Current.HandleCancel()) Back(); }
+                else if (Current == sheet && (InputAdapter.InventoryPressed() || InputAdapter.EquipPressed())) Back();
+                else if (Current == codexPage && InputAdapter.CodexPressed()) Back();
             }
         }
 
+        /// <summary>캐릭터 시트: I = 가방부터, C = 장비 칸부터.</summary>
+        public void OpenSheet(bool equipment) { sheet.Focus(equipment); Open(sheet); }
+        /// <summary>도감(가진 장비·스킬). 시트에서 열면 Esc 로 시트로 돌아감.</summary>
+        public void OpenCodex() { if (Current != codexPage) Open(codexPage); }
         public void Open(MenuPage page) { if (Current != null) Current.Close(); stack.Push(page); page.Open(); UIState.SetPaused(true); }
         public void Back()
         {

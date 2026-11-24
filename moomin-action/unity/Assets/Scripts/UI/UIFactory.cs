@@ -86,6 +86,7 @@ namespace MoominAction.UI
         public static void OnClick(GameObject go, Action a) => AddTrigger(go, EventTriggerType.PointerClick, _ => a());
         public static void OnClick(GameObject go, Action<PointerEventData> a) => AddTrigger(go, EventTriggerType.PointerClick, a);
         public static void OnDrag(GameObject go, Action<PointerEventData> a) => AddTrigger(go, EventTriggerType.Drag, a);
+        public static void OnScroll(GameObject go, Action<PointerEventData> a) => AddTrigger(go, EventTriggerType.Scroll, a);
         static void AddTrigger(GameObject go, EventTriggerType type, Action<PointerEventData> a)
         {
             var et = go.GetComponent<EventTrigger>(); if (et == null) et = go.AddComponent<EventTrigger>();   // Unity 의 '가짜 null' 때문에 ?? 를 쓰지 않음

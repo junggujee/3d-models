@@ -54,27 +54,10 @@ Add(new ItemDef { id = "headband_blue", name = "파란 머리띠", type = ItemTy
   - `blender/build_headband.py` → `Resources/Equipment/Headband_Blue.fbx`, `Resources/ItemIcons/headband_blue.png`
   - 미리보기: `previews/headband_sheet.png`
 
-## 장비 화면 (`UI/EquipmentMenu.cs`)
+## 장비 화면 → 캐릭터 시트로 합침 (11/24)
 
-- **여는 법:** C 키 / 휴식 메뉴 "장비" / 가방에서 C.
-- **배치:** 참고 화면의 구조를 우리 금박 테마로 옮겼다.
-  - 왼쪽 세로 칸: 무기·머리·가슴·다리·발. 칸마다 아이콘, 등급 글자, 칸 이름.
-  - 가운데: 실제 민미 3D 모습(`EquipmentPreview`). 멈춘 게임 속 플레이어를 플레이어 레이어만 비추는 카메라로 그려, 장비 모양까지 보인다. 끌어서 돌려 볼 수 있다. 아래에 이름, Lv, 전투력.
-  - 그 오른쪽: 마법 아티팩트 3칸(마름모) + 장비 묶음 1·2·3.
-  - 오른쪽: 능력치(공격력 내역, 코인 최종 위력, 무기 배율, 최대 체력, 받는 피해) → 고른 칸에 낄 수 있는 장비 → 자세한 설명.
-- **조작:**
-
-| 키 | 동작 |
-|---|---|
-| W/S | 칸 이동 |
-| A/D | 왼쪽 칸 ↔ 아티팩트 ↔ 목록 |
-| Enter | 장착 |
-| X | 해제 |
-| 1·2·3 | 장비 묶음 |
-| C·Esc | 닫기 |
-| 마우스 | 클릭 |
-
-- **미리보기:** `tools/equipment_mock.py` → `previews/equipment_mock.png`. 좌표는 C# 상수와 같다.
+예전의 장비 화면(`EquipmentMenu`)과 가방 화면(`InventoryMenu`)은 **캐릭터 시트**(`UI/CharacterSheet.cs`) 하나로 합쳤다. I는 가방부터, C는 장비 칸부터 연다.
+3D 모습(`UI/EquipmentPreview.cs`)은 그대로 쓴다. 장비를 끼우면 그 자리에서 몸에 보인다. 자세한 내용은 `docs/CHARACTER_SHEET.md`에 있다.
 
 ## 함께 고친 오류: 주석이 코드를 삼킴
 

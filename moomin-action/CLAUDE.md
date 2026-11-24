@@ -17,7 +17,7 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - **회피(Space, 예전 Q)**: `PlayerController` 가 처리. 스태미나 18 소모, 무적 0.05~0.40초(`Health.Invulnerable`), 입력 방향(없으면 바라보는 방향)으로 이동, 공격 후딜 취소. 애니메이션 `Roll`(20f, 몸이 한 바퀴 구름). Blender `build_moomin.py` 의 `roll()` — hips 뼈의 오일러 X 값을 그대로 키잉(월드 X축과 일치함을 assert 로 확인; `rot_world` 는 ±π 로 감겨서 한 바퀴 회전에 못 씀).
 - **스태미나**(`Stamina`): 회피·달리기(초당 9) 소모(공격은 이제 스태미나 대신 쿨타임·정신력), 0.7초 후 초당 32 회복.
 - **인벤토리**(`Inventory/`): `ItemDef`/`ItemDatabase`(새 아이템은 목록에 한 줄 추가), 30칸·스택·금화·장착 무기(공격력 배율·칼날 색)·퀵슬롯 4칸·사용/버리기/정렬, PlayerPrefs 저장. 적이 죽으면 `EnemyAI.DropLoot()` → `ItemPickup`(자석처럼 끌려와 자동 획득). 아이콘은 `ItemIcons` 가 코드로 그림(이미지 파일 없음).
-- **UI**(`UI/`, uGUI 를 코드로 생성, 프리팹 없음): `UITheme`(어두운 양피지 + 금박 이중 테두리, 대화 선택지식 » 막대), `UIFactory`, `HUD`, `PauseMenu`(휴식), `SettingsMenu`, `InventoryMenu`, `InfoPage`(조작법), `UIRoot`(입력 라우팅). `GameManager.Start` 가 `UIRoot` 를 자동 생성. 메뉴가 열리면 `UIState.Paused` 로 게임이 멈춤 — **게임플레이 스크립트는 Update 맨 앞에서 `UIState.Paused` 를 확인할 것.**
+- **UI**(`UI/`, uGUI 를 코드로 생성, 프리팹 없음): `UITheme`(어두운 양피지 + 금박 이중 테두리, 대화 선택지식 » 막대), `UIFactory`, `HUD`, `PauseMenu`(휴식), `SettingsMenu`, `CharacterSheet`(가방·장비·스킬), `CodexPage`(도감), `InfoPage`(조작법), `UIRoot`(입력 라우팅). `GameManager.Start` 가 `UIRoot` 를 자동 생성. 메뉴가 열리면 `UIState.Paused` 로 게임이 멈춤 — **게임플레이 스크립트는 Update 맨 앞에서 `UIState.Paused` 를 확인할 것.**
 - 한글 폰트: `Resources/Fonts/NanumMyeongjo.ttf`(OFL, 라이선스 같은 폴더) 우선, 없으면 OS 폰트(나눔명조 → 바탕 → 맑은 고딕 …). 타이틀 제목은 `UITheme.TitleFont`(나눔명조 ExtraBold).
 - Unity 6(또는 2023.1+) 권장(`FindFirstObjectByType`; 이전 버전은 `#if` 로 대체됨). 새/기존 Input System 모두 지원, UI 는 `com.unity.ugui`(기본 포함) 사용.
 
@@ -88,7 +88,7 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 피해 D = 공격력 × (최종 위력 ÷ 10) × M × R (`Core/EquipmentMath.Damage`, 순수 C# · status_tests). 최종 위력 = 기본 + (앞면 ? 코인 위력 : 0) + `CharacterStats.equipFinalPower`. 공격력 `CharacterStats.Attack` = attack(10) + levelAttack(Experience, 레벨당 0.5) + equipAttack.
 - 장비 = `Inventory.armor[4]`(머리·가슴·다리·발) · `artifacts[3]` · `equippedWeapon` · `presets[3]`. 새 장비는 ItemDatabase 한 줄(type Armor/Artifact, slot, grade, stats, model, attachBone). `Inventory.ApplyEquipment` 가 능력치·최대 체력(equipHealth 는 저장 시 뺌)·`EquipmentVisuals` 동기화.
 - 장비 3D 모양은 **민미 모델 공간(기본 자세)** 에서 만들어 내보내고, EquipmentVisuals 가 스킨 메시 bindpose 로 뼈에 붙임(blender/build_headband.py 참고). 아이콘은 Resources/ItemIcons/<id>.png 우선.
-- 장비 화면 `UI/EquipmentMenu.cs`(C 키) + `EquipmentPreview`(플레이어 레이어만 그리는 카메라 → RenderTexture). 배치를 바꾸면 `tools/equipment_mock.py` 도.
+- 장비 화면은 캐릭터 시트에 합침(아래 '캐릭터 시트' 절). 3D 모습 `UI/EquipmentPreview.cs`(플레이어 레이어만 그리는 카메라 → RenderTexture).
 - **한 줄에 `코드; // 설명 코드;` 쓰지 말 것** — 주석 뒤 코드가 사라짐(실제로 4군데 있었음). unity_audit 4b 가 잡음.
 
 ## 자원 · 펫 · 집 장비 (상세: docs/PET_RESOURCE.md)
@@ -105,3 +105,9 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 대화창 `UI/DialogueBox.cs`(MenuPage, `UIRoot.StartDialogue`). 그림 `tools/dialogue_art.py` → `Resources/UI/Dialogue`, 미리보기 `tools/dialogue_mock.py` — **배치 숫자(PW·PH·TBX… )를 바꾸면 세 곳 모두**.
 - 글꼴 역할: `UITheme.DisplayFont`(빛의 계승자 Bold — 제목·장·보스·큰 알림) · `HeadingFont`(가웨인 파일이 있으면 그것, 없으면 빛의 계승자 Regular — 이름·퀘스트 제목·머리글) · `SkillFont`(빛의 계승자 Regular + 빛) · `BodyFont`(나눔명조 — 대사·설명·숫자). 꾸밈은 `UIFactory.StyleDisplay/StyleHeading/StyleSkill/Divider`, 효과 `UI/TextFx.cs`(UIGradient·TextGlow). FontStyle.Bold 로 가짜 굵게 하지 말 것.
 - 주석이 객체 초기화 항목(`이름 = 값,`)을 삼키는 경우도 unity_audit 4b 가 잡음(SaveData.sanity 가 저장 안 되던 버그).
+
+## 캐릭터 시트 · 도감 · 기절 효과 (상세: docs/CHARACTER_SHEET.md)
+- `UI/CharacterSheet.cs`(I = 가방부터, C = 장비 칸부터 — `UIRoot.OpenSheet`): 밝은 종이 + 먹칠 + 양털 테두리. A 아치 틀 3D 민미(장비 즉시 반영, 바뀌면 톡 + 금빛) + 장비 칸 8 · B 막대·공격/방어 · D 자세히(+ 도감 버튼) · E 분류 5 + 10×3 · F 스킬 카드 가로 스크롤(일러스트 · 이름 먹띠 · 최종 위력) → 클릭 시 상세 창(`HandleCancel` 로 Esc 가 창만 닫음).
+- `UI/CodexPage.cs`(K): 가진 장비·스킬만. [ ] 탭, 분류 칩, 세로 카드(등급·속성 색 번짐), 오른쪽 큰 그림 + 대표 수치. 스킬 글자는 `UI/SkillInfo.cs`(종류는 키 칸으로: 좌클릭/Q·E/R).
+- 그림 `tools/sheet_art.py` → `Resources/UI/Sheet|Codex|Fx` — **판 그림에 칸 테두리·머리 먹줄이 들어 있으니 SEC/CSEC 좌표와 C# 상수를 같이**. 미리보기 `tools/sheet_mock.py`(previews/sheet_mock·sheet_skill_popup_mock·codex_mock·stun_fx_mock).
+- 경직이 깨지면 `World/StunFx.cs`(GameManager 가 `CharacterStats.AnyStaggerBroken` 에 Hook): 몸 위 주황 폭발 + "기절" 글자(카메라 쪽으로 당겨 가려지지 않게), 경직이 끝나면 사라짐.

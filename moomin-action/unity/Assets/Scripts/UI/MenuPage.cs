@@ -23,5 +23,7 @@ namespace MoominAction.UI
         public virtual void Open() { root.SetActive(true); }
         public virtual void Close() { root.SetActive(false); }
         public virtual void Tick() { }
+        /// <summary>Esc 를 페이지 안에서 처리했으면 true(예: 위에 뜬 상세 창만 닫기) — 아니면 주인이 페이지를 닫음.</summary>
+        public virtual bool HandleCancel() => false;
     }
 }

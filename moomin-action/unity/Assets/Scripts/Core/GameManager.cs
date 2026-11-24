@@ -41,7 +41,7 @@ namespace MoominAction
         void Start()
         {
             if (!player) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<CharacterStats>(); }
-            RunStats.Hook(); SaveSystem.ApplyPending(this);
+            RunStats.Hook(); StunFx.Hook(); SaveSystem.ApplyPending(this);
             var baker = GetComponent<NavMeshBaker>(); if (baker == null) baker = gameObject.AddComponent<NavMeshBaker>(); baker.Build();
             if (player) player.Died += () => IsOver = true;
             #if UNITY_2023_1_OR_NEWER
@@ -55,7 +55,7 @@ namespace MoominAction
             if (!TryGetComponent<InteractionRunner>(out _)) gameObject.AddComponent<InteractionRunner>();   // F 상호작용(펫·NPC) 정리
         }
         public void AddScore(int s) { Score += s; }
-        void OnDestroy() { RunStats.Unhook(); if (Instance == this) Instance = null; }
+        void OnDestroy() { RunStats.Unhook(); StunFx.Unhook(); if (Instance == this) Instance = null; }
 
         /// <summary>불러오기: 저장된 웨이브까지 끝낸 상태로(다음 웨이브는 잠시 뒤 시작).</summary>
         public void RestoreProgress(int wave, int score) { Wave = Mathf.Max(0, wave); Score = Mathf.Max(0, score); waveActive = false; nextWave = Time.time + wavePause; }

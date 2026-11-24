@@ -14,13 +14,13 @@ namespace MoominAction.UI
         {
             base.Build(ui, canvas);
             var dim = UIFactory.Box(canvas, "PauseRoot", UITheme.Dim); UIFactory.Stretch(dim.rectTransform); dim.raycastTarget = true; root = dim.gameObject;
-            var defs = new (string, Action)[] { ("계속하기", ui.CloseAll), ("가방", () => ui.Open(ui.inventoryPage)), ("장비", () => ui.Open(ui.equipmentPage)), ("기록 남기기", () => ui.Open(ui.savePage)), ("기록 불러오기", () => ui.Open(ui.loadPage)), ("설정", () => ui.Open(ui.settingsPage)), ("조작법", () => ui.Open(ui.controlsPage)), ("타이틀로", ui.ToTitle), ("게임 종료", ui.QuitGame) };
-            float step = 82f; var panel = UIFactory.Panel(root.transform, "Panel", new Vector2(820, 230 + defs.Length * step)); UIFactory.Header(panel.transform, "휴식", 820);
+            var defs = new (string, Action)[] { ("계속하기", ui.CloseAll), ("가방", () => ui.OpenSheet(false)), ("장비", () => ui.OpenSheet(true)), ("도감", ui.OpenCodex), ("기록 남기기", () => ui.Open(ui.savePage)), ("기록 불러오기", () => ui.Open(ui.loadPage)), ("설정", () => ui.Open(ui.settingsPage)), ("조작법", () => ui.Open(ui.controlsPage)), ("타이틀로", ui.ToTitle), ("게임 종료", ui.QuitGame) };
+            float step = 74f; var panel = UIFactory.Panel(root.transform, "Panel", new Vector2(820, 230 + defs.Length * step)); UIFactory.Header(panel.transform, "휴식", 820);
             entries = new Entry[defs.Length];
             for (int i = 0; i < defs.Length; i++)
             {
                 int idx = i; var row = UIFactory.Box(panel.transform, "Row" + i, new Color(0, 0, 0, 0)); row.raycastTarget = true;
-                UIFactory.Set(row.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -150 - i * step), new Vector2(700, 74));
+                UIFactory.Set(row.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -150 - i * step), new Vector2(700, 68));
                 var bar = UIFactory.Img(row.transform, "Bar", UITheme.Highlight, Color.white); UIFactory.Stretch(bar.rectTransform);
                 var chev = UIFactory.Txt(row.transform, "»", 44, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Bold, "Chevron"); UIFactory.Set(chev.rectTransform, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(34, 2), new Vector2(60, 70));
                 var txt = UIFactory.Txt(row.transform, defs[i].Item1, 36, UITheme.Cream, TextAnchor.MiddleLeft, FontStyle.Normal, "Label"); UIFactory.Set(txt.rectTransform, new Vector2(0, .5f), new Vector2(1, .5f), new Vector2(0, .5f), new Vector2(110, 0), new Vector2(-150, 70));
