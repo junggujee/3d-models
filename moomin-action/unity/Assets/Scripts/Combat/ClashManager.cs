@@ -15,6 +15,8 @@ namespace MoominAction
         /// <summary>맞부딪힌 두 공격(가운데 연출용, 패링이면 null).</summary>
         public AttackContext playerAttack, enemyAttack;
         public int playerCoinsLeft, enemyCoinsLeft; public readonly List<(int player, int enemy, int pc, int ec)> rounds = new();
+        /// <summary>진 쪽이 파괴불가 코인이라 스킬이 끊기지 않았음.</summary>
+        public bool loserUnbroken;
     }
 
     /// <summary>
@@ -101,7 +103,7 @@ namespace MoominAction
             var an = x.owner != null ? x.owner.animator : null; if (an == null) return;
             if (state == null) { var anims = x.skill.attackAnimations; if (anims == null || anims.Length == 0) return; state = anims[x.coinIndex % anims.Length]; }
             if (!an.HasState(0, Animator.StringToHash(state))) return;
-            an.CrossFadeInFixedTime(state, 0.04f, 0, state == "Guard" ? 0f : Mathf.Max(0f, x.skill.hitTime - lead));
+            an.CrossFadeInFixedTime(state, 0.04f, 0, state == "Guard" ? 0f : Mathf.Max(0f, x.skill.HitTime(x.coinIndex) - lead));
         }
 
         static bool Alive(AttackContext p, AttackContext e) => p.owner != null && e.owner != null && p.owner.stats.IsAlive && e.owner.stats.IsAlive;
@@ -185,14 +187,20 @@ namespace MoominAction
                 win.owner.stats.ChangeSanity(CharacterStats.ClashWin, "클래시 승리");
                 if (win.owner.energy != null) win.owner.energy.Gain(win.owner.energy.onClashWinGain, "클래시 승리");
                 lose.owner.stats.ChangeSanity(CharacterStats.ClashLose, "클래시 패배");
-                lose.cancelled = true; lose.owner.Interrupt(); if (lose.owner.TryGetComponent<ICombatant>(out var lc)) lc.Stagger(loserStagger, loserVulnerable);
+                lose.cancelled = true;
+                if (lose.skill != null && lose.skill.unbreakableCoins) { o.loserUnbroken = true; SparkBurst.Spawn(lose.owner.transform.position + Vector3.up, Vector3.up, 30, 5f, SparkBurst.Crimson); }   // 파괴불가 코인: 이 코인만 지고 스킬은 이어 감
+                else { lose.owner.Interrupt(); if (lose.owner.TryGetComponent<ICombatant>(out var lc)) lc.Stagger(loserStagger, loserVulnerable); }
                 if (lose.owner.stats.IsAlive) win.owner.resolver.ApplyHit(win, lose.owner.stats);   // 이긴 공격은 그대로 명중
                 if (!choreography) { SparkBurst.Spawn(mid, Vector3.up, 45, 7f, win == p ? SparkBurst.Gold : SparkBurst.Crimson); HitStop.Do(0.12f); }
             }
             else
             {
-                p.cancelled = e.cancelled = true; p.owner.Interrupt(); e.owner.Interrupt();
-                if (p.owner.TryGetComponent<ICombatant>(out var pc)) pc.Stagger(drawRecovery); if (e.owner.TryGetComponent<ICombatant>(out var ec)) ec.Stagger(drawRecovery);
+                p.cancelled = e.cancelled = true;
+                foreach (var x in new[] { p, e })
+                {
+                    if (x.skill != null && x.skill.unbreakableCoins) continue;   // 파괴불가 코인은 무승부에도 이어 감
+                    x.owner.Interrupt(); if (x.owner.TryGetComponent<ICombatant>(out var xc)) xc.Stagger(drawRecovery);
+                }
                 SparkBurst.Spawn(mid, Vector3.up, 30, 5f); HitStop.Do(0.08f);
             }
         }

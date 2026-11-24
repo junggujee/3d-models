@@ -12,6 +12,7 @@ namespace MoominAction
         public string id, name, description; public ItemType type; public IconKind icon; public Color color; public int maxStack = 99, value = 10;
         public float heal, stamina;                 // 소모품 효과
         public float damageMultiplier = 1f; public float hue = -1f;   // 무기: 공격력 배율, 칼날 색(-1 = 무지개)
+        [Tooltip("무기 묶음(WeaponKits: spark · shield · dual) — 스킬·방어·고유 효과")] public string kit = "";
         [Header("장비")] public EquipSlot slot = EquipSlot.None; [Tooltip("등급 S · A · B · C")] public string grade = ""; public EquipStats stats;
         [Tooltip("몸에 붙는 3D 모양(Resources 경로, 비우면 없음) · 붙는 뼈. 여러 부품이면 \"경로@뼈|경로@뼈\" (예: 로브 몸통@hips|두건@head)")] public string model; public string attachBone = "head";
         public bool Stackable => type != ItemType.Weapon && type != ItemType.Key && type != ItemType.Armor && type != ItemType.Artifact;
@@ -41,8 +42,14 @@ namespace MoominAction
             Add(new ItemDef { id = "shard_star", name = "별조각", type = ItemType.Material, icon = IconKind.Shard, color = new Color(1f, 0.9f, 0.4f), value = 40, description = "밤하늘에서 떨어진 작은 조각. 검을 담금질하는 데 쓰인다." });
             Add(new ItemDef { id = "feather_silver", name = "은빛 깃털", type = ItemType.Material, icon = IconKind.Feather, color = new Color(0.78f, 0.84f, 0.92f), value = 55, description = "달빛 아래서만 보이는 희귀한 깃털." });
             Add(new ItemDef { id = "key_old", name = "낡은 열쇠", type = ItemType.Key, icon = IconKind.Key, color = new Color(0.75f, 0.6f, 0.25f), maxStack = 1, value = 0, description = "어느 문을 여는 열쇠인지는 아무도 기억하지 못한다." });
-            Add(new ItemDef { id = "sword_spark", name = "스타 스파크 검", type = ItemType.Weapon, grade = "B", icon = IconKind.Sword, color = new Color(0.55f, 0.6f, 0.7f), damageMultiplier = 1f, hue = -1f, maxStack = 1, value = 100, description = "무지개빛 날이 흐르는 검. 휘두를 때마다 불꽃이 튄다." });
-            Add(new ItemDef { id = "sword_frost", name = "서리 스파크 검", type = ItemType.Weapon, grade = "A", icon = IconKind.Sword, color = new Color(0.4f, 0.85f, 1f), damageMultiplier = 1.25f, hue = 0.52f, maxStack = 1, value = 260, description = "차가운 푸른 불꽃이 어린 검. 공격력 +25%." });
+            Add(new ItemDef { id = "sword_spark", name = "스타 스파크 검", type = ItemType.Weapon, grade = "B", icon = IconKind.Sword, color = new Color(0.55f, 0.6f, 0.7f), damageMultiplier = 1f, hue = -1f, maxStack = 1, value = 100, kit = "spark", description = "무지개빛 날이 흐르는 검. 휘두를 때마다 불꽃이 튄다." });
+            Add(new ItemDef { id = "sword_frost", name = "서리 스파크 검", type = ItemType.Weapon, grade = "A", icon = IconKind.Sword, color = new Color(0.4f, 0.85f, 1f), damageMultiplier = 1.25f, hue = 0.52f, maxStack = 1, value = 260, kit = "spark", description = "차가운 푸른 불꽃이 어린 검. 공격력 +25%." });
+            Add(new ItemDef { id = "pillow_shield", name = "베개 방패", type = ItemType.Weapon, grade = "A", icon = IconKind.Peanut, color = new Color(0.95f, 0.92f, 0.84f), damageMultiplier = 0.95f, hue = -1f, maxStack = 1, value = 300, kit = "shield",
+                              stats = new EquipStats { health = 20 }, model = "Weapons/PillowShield@arm.L",
+                              description = "땅콩빵을 꿰매 만든 푹신한 방패. 방어 위력(14+5)이 높아 공격을 잘 막고, 합에서 이기면 포근한 보호막이 생긴다." });
+            Add(new ItemDef { id = "spin_blades", name = "회전 쌍검", type = ItemType.Weapon, grade = "S", icon = IconKind.Sword, color = new Color(0.6f, 0.75f, 1f), damageMultiplier = 1.2f, hue = -1f, maxStack = 1, value = 420, kit = "dual",
+                              stats = new EquipStats { damageReduction = 0.06f }, model = "Weapons/SpinBlade_R@hand.R|Weapons/SpinBlade_L@arm.L",
+                              description = "손잡이 끝에서 두 날이 바람개비처럼 도는 쌍검. 공격·방어 모두 높고, 싸울수록 결투 고조로 더 빨리 돈다." });
             Add(new ItemDef { id = "sword_ember", name = "불씨 스파크 검", type = ItemType.Weapon, grade = "S", icon = IconKind.Sword, color = new Color(1f, 0.45f, 0.1f), damageMultiplier = 1.5f, hue = 0.05f, maxStack = 1, value = 520, description = "꺼지지 않는 불씨가 깃든 검. 공격력 +50%." });
             // ── 방어구·장신구(머리·가슴·다리·발) · 마법 아티팩트 — slot·grade·stats 만 정하면 장비 화면·능력치에 바로 들어감
             Add(new ItemDef { id = "headband_blue", name = "파란 머리띠", type = ItemType.Armor, slot = EquipSlot.Head, grade = "B", icon = IconKind.Headband, color = new Color(0.62f, 0.82f, 0.95f), maxStack = 1, value = 80,

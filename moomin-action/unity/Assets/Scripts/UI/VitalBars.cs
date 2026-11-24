@@ -14,7 +14,7 @@ namespace MoominAction.UI
     {
         public static readonly Color HpColor = new Color(.36f, .86f, .22f), ChunkColor = new Color(.95f, .12f, .1f), ExpColor = new Color(1f, .8f, .2f);
         CharacterStats hp; Experience xp;
-        RectTransform hpFill, hpChunk, expFill, expGain; Image hpChunkImg, hpFillImg, expGainImg; Text hpLabel, hpPct, expLabel, lvText; RectTransform hpTag, hpRoot;
+        RectTransform hpFill, hpChunk, expFill, expGain, barrierFill; Image hpChunkImg, hpFillImg, expGainImg; Text hpLabel, hpPct, expLabel, lvText; RectTransform hpTag, hpRoot;
         readonly DamageChunk chunk = new(); float expShown, expGainT; int shownLevel;
 
         public void Build(Transform parent, CharacterStats stats, Experience exp)
@@ -22,6 +22,8 @@ namespace MoominAction.UI
             hp = stats; xp = exp; var tl = new Vector2(0, 1);
             // ── 체력
             hpRoot = Bar(parent, "HP", new Vector2(40, -22), new Vector2(600, 52), HpColor, out hpFill, out hpFillImg, out hpChunk, out hpChunkImg);
+            var bar = Box(hpFill.parent, "Barrier", new Color(1f, 0.99f, 0.95f, 0.55f)); barrierFill = bar.rectTransform; barrierFill.anchorMin = Vector2.zero; barrierFill.anchorMax = new Vector2(0, 1); barrierFill.offsetMin = barrierFill.offsetMax = Vector2.zero;   // 보호막(하얀 솜털 막)
+            var fluff = Img(bar.transform, "Fluff", UITheme.SoftCircle, new Color(1, 1, 1, .5f), false); Stretch(fluff.rectTransform, -4);
             hpLabel = Txt(hpRoot, "", 26, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold); Stretch(hpLabel.rectTransform); hpLabel.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, .9f);
             var tag = Img(hpRoot, "Tag", BarArt.Tag, Color.white, true); hpTag = tag.rectTransform; Set(hpTag, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(0, .5f), Vector2.zero, new Vector2(74, 30));
             hpPct = Txt(tag.transform, "", 21, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold); Stretch(hpPct.rectTransform); hpPct.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, .8f);
@@ -67,7 +69,8 @@ namespace MoominAction.UI
             var cc = Color.Lerp(ChunkColor, Color.white, chunk.Flash * .6f); cc.a = chunk.Alpha; hpChunkImg.color = cc;
             hpFillImg.color = Color.Lerp(HpColor, new Color(.95f, .3f, .2f), r < .25f ? (.5f + .5f * Mathf.Sin(Time.unscaledTime * 8f)) * .5f : 0f);   // 위험하면 붉게 깜빡
             long cur = (long)Mathf.Ceil(hp.currentHealth), max = (long)Mathf.Ceil(hp.maxHealth);
-            hpLabel.text = $"체력 {NumberFormat.Comma(cur)}/{NumberFormat.Comma(max)}";
+            hpLabel.text = $"체력 {NumberFormat.Comma(cur)}/{NumberFormat.Comma(max)}" + (hp.barrier > 0.5f ? $"  <color=#FFF6DA>+ 보호막 {Mathf.CeilToInt(hp.barrier)}</color>" : "");
+            barrierFill.anchorMax = new Vector2(Mathf.Clamp01(hp.maxHealth > 0 ? hp.barrier / hp.maxHealth : 0f), 1);
             bool hurt = cur < max; hpTag.gameObject.SetActive(hurt);
             if (hurt) { hpPct.text = Mathf.FloorToInt(r * 100f) + "%"; hpLabel.rectTransform.anchoredPosition = new Vector2(-44, 0); hpTag.anchoredPosition = new Vector2(hpLabel.preferredWidth * .5f - 44 + 10, 0); }
             else hpLabel.rectTransform.anchoredPosition = Vector2.zero;

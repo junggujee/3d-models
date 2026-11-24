@@ -11,7 +11,8 @@ namespace MoominAction.UI
     /// </summary>
     public class CombatHUD
     {
-        class SlotUI { public SkillDefinition skill; public Text name, cd, cost, affinity; public RectTransform cdFill; public Image frame; }
+        class SlotUI { public SkillDefinition skill; public Text name, cd, cost, affinity; public RectTransform cdFill; public Image frame; public readonly List<Image> pips = new(); }
+        System.Action<DefenseController, bool, int, int> onGuard; RectTransform heatRoot; Image heatFill; Text heatText;
         UIRoot ui; CharacterStats stats; SkillExecutor ex; CombatManager cm; LockOnSystem lockOn;
         RectTransform sanityPos, sanityNeg, canvasRect; Text sanityLabel; readonly List<SlotUI> slots = new(); EnemySkillPanels enemyPanels; SkillPanel playerPanel; Text playerStatus; RectTransform canvasForPanels;
         GameObject clashPanel; CanvasGroup clashGroup; Text clashTitle, clashRows, clashResult; ClashOutcome clash; float clashT;
@@ -45,12 +46,17 @@ namespace MoominAction.UI
                 var key = Txt(u.frame.transform, keys[i], i == 0 ? 18 : 28, UITheme.Gold, TextAnchor.UpperLeft, FontStyle.Bold); Set(key.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(8, -4), Vector2.zero);
                 u.name = StyleSkill(Txt(u.frame.transform, u.skill != null ? u.skill.skillName : "", 21, UITheme.Cream, TextAnchor.LowerCenter), new Color(1f, .85f, .5f)); u.name.GetComponent<TextGlow>().radius = 2.5f; Set(u.name.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(0, 8), new Vector2(-8, 0));
                 u.cost = Txt(u.frame.transform, u.skill == null ? "" : u.skill.energyCost > 0 ? "에너지 " + u.skill.energyCost : u.skill.sanityCost > 0 ? "정신 " + u.skill.sanityCost : "", 16, new Color(.6f, .7f, 1f), TextAnchor.UpperRight); Set(u.cost.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(-8, -6), Vector2.zero);
-                int n = u.skill != null ? u.skill.coinCount : 0;
-                for (int c = 0; c < n; c++) { var pip = Img(u.frame.transform, "Pip", CoinDisplay.Coin(CoinDisplay.Look.Heads), Color.white, false); Set(pip.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2((c - (n - 1) * .5f) * 18, 8), new Vector2(16, 16)); }
+                for (int c = 0; c < 6; c++) { var pip = Img(u.frame.transform, "Pip", CoinDisplay.Coin(CoinDisplay.Look.Heads), Color.white, false); Set(pip.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(16, 16)); u.pips.Add(pip); }
                 var ov = Box(u.frame.transform, "Cooldown", new Color(0, 0, 0, .7f)); u.cdFill = ov.rectTransform; Set(u.cdFill, Vector2.zero, new Vector2(1, 0), new Vector2(.5f, 0), Vector2.zero, Vector2.zero);
                 u.cd = Txt(u.frame.transform, "", 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold); Stretch(u.cd.rectTransform);
                 u.affinity = Txt(u.frame.transform, "", 18, Color.white, TextAnchor.LowerCenter, FontStyle.Bold); Set(u.affinity.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(.5f, 0), new Vector2(0, 4), new Vector2(0, 24)); slots.Add(u);   // 조준 대상과의 상성
             }
+            RefreshSlots();
+            // 결투 고조(회전 쌍검일 때만): 스킬 칸 위 붉은 막대 + 스택
+            heatRoot = NewRect("DuelHeat", core); Set(heatRoot, bc, bc, bc, new Vector2(0, 156), new Vector2(500, 30));
+            var hb = Img(heatRoot, "Frame", UITheme.Bar, Color.white, true); Set(hb.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(.5f, 0), Vector2.zero, new Vector2(0, 12));
+            var hin = NewRect("Inner", hb.transform); Stretch(hin, 3); heatFill = Box(hin, "Fill", new Color(.95f, .3f, .25f)); Stretch(heatFill.rectTransform); heatFill.rectTransform.anchorMax = new Vector2(0, 1);
+            heatText = StyleSkill(Txt(heatRoot, "", 18, Color.white, TextAnchor.LowerCenter), new Color(1f, .35f, .3f)); Set(heatText.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(.5f, 0), new Vector2(0, 14), new Vector2(0, 24));
             enemyPanels = new EnemySkillPanels(); enemyPanels.Build(hudRoot);   // 적 스킬 패널(머리 위)
             playerPanel = new SkillPanel(); playerPanel.Build(hudRoot); playerPanel.Pin(new Vector2(0, 0), new Vector2(30, 120)); playerPanel.FixedScale = 0.55f; playerPanel.Bind(ex);   // 내 스킬 패널(왼쪽 아래)
             canvasForPanels = canvasRect;
@@ -98,6 +104,14 @@ namespace MoominAction.UI
                 else if (lockOn != null && lockOn.Target != null && d.gameObject == lockOn.Target.gameObject) Popup(ok ? $"적 회피  {ep} ≥ {inc}" : $"적 회피 실패  {ep} < {inc}", ok ? new Color(1f, .6f, .5f) : UITheme.GoldBright);
             };
             DefenseController.AnyEvadeResolved += onEvade;
+            if (playerDef != null) playerDef.GuardStarted += (pw, heads) => Popup($"방어 코인 {(heads ? "앞면" : "뒷면")} · 위력 {pw}", heads ? UITheme.GoldBright : UITheme.Cream);
+            onGuard = (d, perfect, gp, ap) =>
+            {
+                if (d == playerDef) Popup(perfect ? $"완벽 방어!  {gp} ≥ {ap}" : $"방어  {gp} < {ap}", perfect ? new Color(.75f, .95f, 1f) : UITheme.Cream);
+                else if (lockOn != null && lockOn.Target != null && d.gameObject == lockOn.Target.gameObject && perfect) Popup($"적 완벽 방어  {gp} ≥ {ap}", new Color(1f, .6f, .5f));
+            };
+            DefenseController.AnyGuardResolved += onGuard;
+            if (cm != null) { cm.KitChanged += k => RefreshSlots(); cm.Refused += m => Popup(m, new Color(1f, .55f, .45f)); }
             stats.SanityChanged += (a, b, why) => { if (why == "패링" || why.Contains("앞면")) Popup(why + "  " + (b > a ? "+" : "") + (b - a), UITheme.GoldBright); };
             onClash = o => { if (!o.parry && o.playerAttack != null) { stage.Show(o); clash = null; } else { clash = o; clashT = 0f; } };   // 합 = 가운데 연출, 패링 = 작은 패널
             ClashManager.Clashed += onClash;
@@ -123,7 +137,19 @@ namespace MoominAction.UI
         }
 
         /// <summary>정적 이벤트·적 구독 해제(씬 재시작 시 파괴된 UI 를 건드리지 않도록).</summary>
-        public void Dispose() { if (onEvade != null) DefenseController.AnyEvadeResolved -= onEvade; stage?.Dispose(); if (onExchange != null) ClashManager.ClashExchange -= onExchange; if (onClashEnd != null) ClashManager.ClashEnded -= onClashEnd; if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
+        public void Dispose() { if (onGuard != null) DefenseController.AnyGuardResolved -= onGuard; if (onEvade != null) DefenseController.AnyEvadeResolved -= onEvade; stage?.Dispose(); if (onExchange != null) ClashManager.ClashExchange -= onExchange; if (onClashEnd != null) ClashManager.ClashEnded -= onClashEnd; if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
+        /// <summary>무기를 바꾸면 스킬 칸(이름·비용·코인 — 파괴불가면 빨간 코인)을 다시 씀.</summary>
+        void RefreshSlots()
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var u = slots[i]; u.skill = cm != null ? cm.SlotSkill(i) : null;
+                u.name.text = u.skill != null ? u.skill.skillName : ""; u.cost.text = u.skill == null ? "" : u.skill.energyCost > 0 ? "에너지 " + u.skill.energyCost : u.skill.sanityCost > 0 ? "정신 " + u.skill.sanityCost : u.skill.requiresDuelHeat ? "고조 MAX" : "";
+                int n = u.skill != null ? Mathf.Min(u.skill.coinCount, u.pips.Count) : 0; var look = u.skill != null && u.skill.unbreakableCoins ? CoinDisplay.Look.Unbreakable : CoinDisplay.Look.Heads;
+                for (int c = 0; c < u.pips.Count; c++) { bool on = c < n; u.pips[c].gameObject.SetActive(on); if (!on) continue; u.pips[c].sprite = CoinDisplay.Coin(look); u.pips[c].rectTransform.anchoredPosition = new Vector2((c - (n - 1) * .5f) * 16, 8); }
+            }
+        }
+
         /// <summary>조준 대상 레벨 표시: 내가 높으면 초록, 낮으면 빨강 + 레벨 차이로 바뀌는 내 코인 위력.</summary>
         string LevelTag(CharacterStats t)
         {
@@ -134,6 +160,13 @@ namespace MoominAction.UI
 
         public void Update(float dt)
         {
+            var heat = DuelHeat.Player; bool heatOn = heat != null && heat.enabled; heatRoot.gameObject.SetActive(heatOn);
+            if (heatOn)
+            {
+                heatFill.rectTransform.anchorMax = new Vector2(Mathf.MoveTowards(heatFill.rectTransform.anchorMax.x, heat.Ratio, dt * 2f), 1);
+                heatFill.color = heat.Full ? Color.Lerp(new Color(1f, .3f, .25f), new Color(1f, .85f, .5f), .5f + .5f * Mathf.Sin(Time.unscaledTime * 10f)) : new Color(.95f, .3f, .25f);
+                heatText.text = heat.Full ? "결투 고조 MAX  —  R  궁극 - 회절원참격" : $"결투 고조  {heat.Stacks}/{DuelHeat.MaxStacks}   피해 +{heat.Stacks * DuelHeat.PerStack * 100:0}%";
+            }
             float v = stats.currentSanity / 45f; sanityPos.anchorMax = new Vector2(.5f + Mathf.Max(0, v) * .5f, 1); sanityNeg.anchorMin = new Vector2(.5f + Mathf.Min(0, v) * .5f, 0);
             var st = stats.Sanity; sanityLabel.text = $"정신력 {(stats.currentSanity >= 0 ? "+" : "")}{stats.currentSanity}  ·  {CharacterStats.SanityLabel(st)}  ·  앞면 {Mathf.RoundToInt(stats.GetCoinProbability() * 100)}%";
             sanityLabel.color = st == SanityState.Focus ? UITheme.GoldBright : st == SanityState.Stable ? UITheme.Cream : st == SanityState.Unstable ? new Color(.6f, .7f, 1f) : new Color(.95f, .35f, .35f);
@@ -142,7 +175,7 @@ namespace MoominAction.UI
             {
                 if (u.skill == null) continue;
                 int aff = tAttr.HasValue ? SkillAttributes.Affinity(u.skill.attribute, tAttr.Value) : 0;
-                u.affinity.text = aff > 0 ? "▲ 유리" : aff < 0 ? "▼ 불리" : ""; u.affinity.color = aff > 0 ? new Color(.5f, 1f, .5f) : new Color(1f, .45f, .45f); float cd = ex.CooldownLeft(u.skill), k = u.skill.cooldown > 0 ? cd / u.skill.cooldown : 0f; bool lacking = stats.currentSanity < u.skill.sanityCost || !ex.HasEnergyFor(u.skill);
+                u.affinity.text = aff > 0 ? "▲ 유리" : aff < 0 ? "▼ 불리" : ""; u.affinity.color = aff > 0 ? new Color(.5f, 1f, .5f) : new Color(1f, .45f, .45f); float cd = ex.CooldownLeft(u.skill), k = u.skill.cooldown > 0 ? cd / u.skill.cooldown : 0f; bool lacking = stats.currentSanity < u.skill.sanityCost || !ex.HasEnergyFor(u.skill) || (u.skill.requiresDuelHeat && (DuelHeat.Player == null || !DuelHeat.Player.Full));
                 u.cdFill.anchorMax = new Vector2(1, lacking ? 1 : k); u.cd.text = cd > 0 ? Mathf.CeilToInt(cd).ToString() : ""; u.cost.color = lacking ? new Color(.95f, .4f, .4f) : u.skill.energyCost > 0 ? new Color(.55f, .9f, 1f) : new Color(.6f, .7f, 1f);
                 u.frame.color = ex.CurrentSkill == u.skill || (u == slots[0] && ex.CurrentSkill != null && ex.CurrentSkill.skillId.StartsWith("BASIC")) ? UITheme.GoldBright : Color.Lerp(Color.white, SkillAttributes.ColorOf(u.skill.attribute), 0.55f);
             }

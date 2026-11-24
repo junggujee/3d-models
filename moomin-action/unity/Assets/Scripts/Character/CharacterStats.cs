@@ -75,7 +75,9 @@ namespace MoominAction
             if (!IsAlive) return;
             if (Invulnerable) return;   // 연출 등 특수 무적(회피는 DefenseController 의 코인 비교로 처리)
             if (Time.time - lastHit < invulnerableTime) return;
-            lastHit = Time.time; currentHealth = Mathf.Max(0, currentHealth - damage);
+            lastHit = Time.time;
+            if (barrier > 0f) { float used = Mathf.Min(barrier, damage); barrier -= used; damage -= used; BarrierChanged?.Invoke(barrier); }   // 보호막이 먼저 막음(베개 방패)
+            currentHealth = Mathf.Max(0, currentHealth - damage);
             if (damage >= strongHitDamage) ChangeSanity(StrongHitTaken, "강한 공격 피격");
             Damaged?.Invoke(damage, hitPoint, knockback);
             if (!IsAlive) Died?.Invoke();
@@ -89,6 +91,16 @@ namespace MoominAction
             if (!IsAlive) Died?.Invoke();
         }
         public event Action<float, string> HealthLost;
+
+        // ── 보호막(베개 방패 '포근한 보호막' 등): 직접 피해를 먼저 막음. 상태이상 체력 손실은 막지 않음
+        [NonSerialized] public float barrier; [NonSerialized] public float barrierUntil;
+        public event Action<float> BarrierChanged;
+        /// <summary>보호막 더하기(최대 cap, duration 초 뒤 사라짐 — 다시 얻으면 시간 갱신).</summary>
+        public void AddBarrier(float amount, float cap, float duration)
+        {
+            if (!IsAlive || amount <= 0) return; barrier = Mathf.Min(cap, barrier + amount); barrierUntil = Time.time + duration; BarrierChanged?.Invoke(barrier);
+        }
+        public void ClearBarrier() { if (barrier <= 0) return; barrier = 0; BarrierChanged?.Invoke(0); }
         public void Heal(float amount) { if (!IsAlive || amount <= 0) return; float b = currentHealth; currentHealth = Mathf.Min(maxHealth, currentHealth + amount); if (currentHealth > b) Healed?.Invoke(currentHealth - b); }
 
         // ── 정신력
@@ -111,6 +123,7 @@ namespace MoominAction
         void Update()
         {
             if (!UIState.Paused && !IsStaggerBroken) StaggerGauge.Advance(Time.deltaTime);   // 게이지 회복(피해 아님)
+            if (barrier > 0f && Time.time >= barrierUntil) ClearBarrier();   // 보호막 시간 끝
             if (inCombat || currentSanity == 0 || UIState.Paused || sanityRecoverPerSecond <= 0) return;   // 전투가 끝나면 0을 향해 회복
             recoverAcc += sanityRecoverPerSecond * Time.deltaTime; if (recoverAcc < 1f) return;
             int step = Mathf.FloorToInt(recoverAcc); recoverAcc -= step; ChangeSanity(currentSanity > 0 ? -Mathf.Min(step, currentSanity) : Mathf.Min(step, -currentSanity), "전투 종료");

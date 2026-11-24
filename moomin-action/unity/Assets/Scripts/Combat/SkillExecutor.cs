@@ -18,6 +18,8 @@ namespace MoominAction
     {
         public CoinSystem coinSystem; public CharacterStats stats; public EnergyManager energy; public StatusEffectManager status; public Animator animator; public CombatResolver resolver;
         public bool useAnimationEvents = false; public float eventGrace = 0.15f; public float weaponMultiplier = 1f;
+        /// <summary>무기 고유 효과의 피해 배율(회전 쌍검 결투 고조 등). 1 = 없음.</summary>
+        [System.NonSerialized] public float bonusMultiplier = 1f;
 
         public SkillDefinition CurrentSkill { get; private set; }
         /// <summary>마지막으로 쓴 스킬(끝난 뒤에도 남음 — 스킬 패널이 결과를 잠시 보여 줄 때 사용).</summary>
@@ -31,7 +33,7 @@ namespace MoominAction
         public int CurrentCoin => currentCoin;
         public float PhaseTime => t - stageStart;
         /// <summary>첫 타격까지 남은 시간(예고 중이면 남은 예고 + hitTime, 아니면 0) — 펫이 맞받아칠 때 맞춤.</summary>
-        public float TimeToFirstHit => isExecuting && Phase == SkillPhase.Windup && CurrentSkill != null ? Mathf.Max(0, CurrentSkill.windup - t) + CurrentSkill.hitTime : 0f;
+        public float TimeToFirstHit => isExecuting && Phase == SkillPhase.Windup && CurrentSkill != null ? Mathf.Max(0, CurrentSkill.windup - t) + CurrentSkill.HitTime(0) : 0f;
         public readonly List<AttackContext> results = new();   // 이번 스킬의 공격별 결과(HUD)
 
         public event Action<SkillDefinition> SkillStarted; public event Action<AttackContext> CoinAttacked; public event Action<SkillDefinition, bool> SkillFinished; public event Action<SkillDefinition, string> SkillRefused;
@@ -83,11 +85,11 @@ namespace MoominAction
             if (Phase == SkillPhase.Attacking)
             {
                 float local = t - stageStart;
-                if (!coinDoneThisStage && local >= s.hitTime + (useAnimationEvents ? eventGrace : 0f)) OnCoinAttack();     // 이벤트 대체(타이머)
+                if (!coinDoneThisStage && local >= s.HitTime(currentCoin) + (useAnimationEvents ? eventGrace : 0f)) OnCoinAttack();     // 이벤트 대체(타이머)
                 if (!isExecuting) return;                                                                                  // 클래시 패배로 중단됐을 수 있음
                 if (CurrentAttack != null && CurrentAttack.HitboxOpen) resolver.Tick(CurrentAttack, s);                     // 히트박스가 열린 동안 계속 판정
                 if (!isExecuting || Held) return;                                                                          // 합이 시작됐으면 여기서 멈춤
-                if (coinDoneThisStage && local >= Mathf.Max(s.attackInterval, s.hitTime + s.activeWindow))
+                if (coinDoneThisStage && local >= Mathf.Max(s.attackInterval, s.HitTime(currentCoin - 1) + s.activeWindow))
                 {
                     if (currentCoin < s.coinCount) BeginStage();
                     else { Phase = SkillPhase.Recovery; recoveryEnd = t + s.recovery; }
@@ -102,7 +104,7 @@ namespace MoominAction
         public void OnCoinAttack()
         {
             if (Held || !isExecuting || Phase != SkillPhase.Attacking || coinDoneThisStage || currentCoin >= CurrentSkill.coinCount) return;
-            if (t - stageStart < CurrentSkill.hitTime - eventGrace) return;   // 이전 클립의 늦은 이벤트 무시
+            if (t - stageStart < CurrentSkill.HitTime(currentCoin) - eventGrace) return;   // 이전 클립의 늦은 이벤트 무시
             var s = CurrentSkill; var r = coinSystem.Toss(stats, currentCoin);
             var ctx = new AttackContext(0, r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
             // 코인 위력 보정(힘·위력 감소·마비)을 이 코인에 한 번 적용 → 최종 위력 = 기본 + (앞면 ? 보정된 코인 위력 : 0) + 장비 보너스(예: 파란 머리띠 +1)

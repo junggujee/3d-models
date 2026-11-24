@@ -130,10 +130,17 @@ namespace MoominAction
                     if (TryGetComponent<ICombatant>(out var me)) me.Stagger(1.0f, 1.5f); ClashManager.RaiseParry(target, stats);
                     var de = target.GetComponent<EnergyManager>(); if (de != null) de.Gain(de.onParryGain, "패링"); return;
                 }
-                r *= def != null ? def.GetDamageMultiplier() : target.guardDamageMultiplier; target.ChangeSanity(CharacterStats.GuardBlock, "방어");
+                if (def != null)
+                {
+                    bool perfect = def.ResolveGuard(attack.power, stats);   // 방어 코인 위력 ≥ 공격 위력 → 완벽 방어
+                    r *= def.GetDamageMultiplier(perfect);
+                    if (perfect) { SparkBurst.Spawn(hitPoint, -to.normalized + Vector3.up, 30, 5f, new Color(0.8f, 0.95f, 1f)); stats.AddStagger(DefenseController.PerfectGuardStagger); }
+                }
+                else r *= target.guardDamageMultiplier;
+                target.ChangeSanity(CharacterStats.GuardBlock, "방어");
             }
             int aff = SkillAttributes.Affinity(skill.attribute, SkillAttributes.DefenderAttribute(target)); attack.affinity = aff; r *= SkillAttributes.DamageMultiplier(aff);   // 속성 상성
-            float m = skill.damageMultiplier * (executor ? executor.weaponMultiplier : 1f) * stats.DamageDealtMultiplier;
+            float m = skill.damageMultiplier * (executor ? executor.weaponMultiplier * executor.bonusMultiplier : 1f) * stats.DamageDealtMultiplier;
             int dmg = EquipmentMath.Damage(attack.power, stats.Attack, m, r);   // 공격력 × (최종 위력 ÷ 10) × 배율 × 받는 쪽 보정
             bool wasInvulnerable = target.Invulnerable;
             target.TakeDamage(dmg, hitPoint, to.normalized * skill.knockback + Vector3.up * 1.5f);

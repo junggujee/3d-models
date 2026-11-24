@@ -96,6 +96,9 @@ namespace MoominAction
         [Header("Hit (단일 공격: 사거리·각도 안에서 한 명)")] public float range = 2f; public float angle = 120f; public float knockback = 4f; [Tooltip("공격마다 앞으로 미끄러지는 속도")] public float lunge = 0f;
         [Tooltip("돌진 시작(공격 시작부터 초)")] public float lungeDelay = 0f; [Tooltip("돌진 시간(초)")] public float lungeTime = 0.3f;
         public CoinEffect coinEffect = CoinEffect.None;
+        [Header("무기 고유")] [Tooltip("코인마다 타격 시점(비우면 hitTime) — 회절원참격의 마지막 내려찍기처럼 클립마다 다를 때")] public float[] hitTimes;
+        [Tooltip("파괴불가 코인(빨간 코인): 합에서 져도 스킬이 끊기지 않고 남은 코인을 이어서 씀")] public bool unbreakableCoins;
+        [Tooltip("회전 쌍검 결투 고조가 최대일 때만 사용(쓰면 고조 0)")] public bool requiresDuelHeat;
         [TextArea] public string description;
 
         public StatusAmount StatusOn(StatusType t, bool heads) => t switch
@@ -109,6 +112,8 @@ namespace MoominAction
         public bool HasAnyStatus { get { foreach (var t in StatusInfo.All) if (InflictsStatus(t)) return true; return false; } }
         /// <summary>공격이 닿는 거리(광역 = 반경, 단일 = range). AI 접근 거리에 사용.</summary>
         public float Reach => isAreaAttack ? areaRadius : range;
+        /// <summary>코인 i 의 타격 시점(공격 시작부터 초).</summary>
+        public float HitTime(int coin) => hitTimes != null && hitTimes.Length > 0 ? hitTimes[Mathf.Clamp(coin, 0, hitTimes.Length - 1)] : hitTime;
         /// <summary>근접 공격끼리의 합(히트박스가 겹칠 때) 대상인가. 투사체는 근접과 합하지 않음.</summary>
         public bool MeleeClashable => canBeClashed && !isProjectile;
         public int MinPower => basePower; public int MaxPower => basePower + coinPower;

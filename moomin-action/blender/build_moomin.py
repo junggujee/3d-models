@@ -175,6 +175,8 @@ ACTS["Roll"] = anim("Roll", 20, roll, loop=False)
 ACTS["Guard"] = anim("Guard", 12, guard)
 ACTS["Hit"] = anim("Hit", 18, hit, loop=False)
 ACTS["Death"] = anim("Death", 40, death, loop=False)
+import moomin_weapon_anims   # 베개 방패 · 회전 쌍검 클립(ShieldGuard·ShieldBash… · DualGuard·DualSlash1…)
+ACTS.update(moomin_weapon_anims.build(arm, new_action, key, finish_action, K))
 
 if "--preview" in sys.argv:
     os.makedirs(PRE, exist_ok=True)

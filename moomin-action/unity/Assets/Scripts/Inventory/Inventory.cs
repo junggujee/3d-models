@@ -44,7 +44,7 @@ namespace MoominAction
 
         void NewGame()
         {
-            gold = 120; Add("sword_spark", 1, silent: true); Add("sword_frost", 1, silent: true); Add("potion_red", 3, silent: true); Add("potion_blue", 2, silent: true); Add("bread", 2, silent: true); Add("key_old", 1, silent: true);
+            gold = 120; Add("sword_spark", 1, silent: true); Add("sword_frost", 1, silent: true); Add("pillow_shield", 1, silent: true); Add("spin_blades", 1, silent: true); Add("potion_red", 3, silent: true); Add("potion_blue", 2, silent: true); Add("bread", 2, silent: true); Add("key_old", 1, silent: true);
             Add("headband_blue", 1, silent: true);   // 첫 장신구(장비 화면에서 머리에 장착)
             quick[0] = "potion_red"; quick[1] = "potion_blue"; quick[2] = "bread"; equippedWeapon = "sword_spark";
         }
@@ -103,6 +103,7 @@ namespace MoominAction
             var d = ItemDatabase.Get(equippedWeapon); if (d == null) return;
             if (combat == null) combat = GetComponent<SkillExecutor>(); if (glow == null) glow = GetComponentInChildren<SwordGlow>();
             if (combat != null) combat.weaponMultiplier = d.damageMultiplier; if (glow != null) glow.hueOverride = d.hue;
+            if (TryGetComponent<CombatManager>(out var cm)) cm.ApplyKit(WeaponKits.Get(string.IsNullOrEmpty(d.kit) ? WeaponKits.Spark : d.kit));   // 무기마다 스킬·방어·고유 효과
         }
 
         public bool Drop(int index)
@@ -111,7 +112,7 @@ namespace MoominAction
             if (d.type == ItemType.Weapon && s.id == equippedWeapon) { Message?.Invoke("장착 중인 무기는 버릴 수 없다"); return false; }
             if (d.Equippable && IsEquipped(s.id)) { Message?.Invoke("장착 중인 장비는 버릴 수 없다"); return false; }
             if (d.type == ItemType.Key) { Message?.Invoke("중요한 물건이라 버릴 수 없다"); return false; }
-            ItemPickup.Spawn(s.id, 1, transform.position + transform.forward * 1.2f + Vector3.up * 0.5f, 0.8f); Remove(s.id, 1); Message?.Invoke(d.name + "을(를) 버렸다"); return true;
+            ItemPickup.Spawn(s.id, 1, transform.position + transform.forward * 1.2f + Vector3.up * 0.5f, 0.8f); Remove(s.id, 1); Message?.Invoke(PetSeal.Josa(d.name, "을", "를") + " 버렸다"); return true;
         }
 
         public void AssignQuick(int quickIndex, string id) { var d = ItemDatabase.Get(id); if (d == null || d.type != ItemType.Consumable) { Message?.Invoke("소모품만 퀵슬롯에 둘 수 있다"); return; } for (int i = 0; i < QuickCount; i++) if (quick[i] == id) quick[i] = null; quick[quickIndex] = id; Changed?.Invoke(); }

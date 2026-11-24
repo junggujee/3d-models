@@ -17,6 +17,14 @@ namespace MoominAction
         [Tooltip("켜면 정면(±70°)에서 온 공격만 가드")] public bool guardRequiresFacing = false;
         [Tooltip("가드 시작 직후(parryWindow 초) 막으면 패링: 피해 없음 + 공격자 경직(기존 기능)")] public bool parryEnabled = true;
         [Header("Evade")] public int evadeBasePower = 8; public int evadeCoinPower = 3;
+        [Header("Guard Coin (무기마다 — WeaponKit)")] [Tooltip("방어 기본 위력")] public int guardBasePower = 8; [Tooltip("방어 코인 위력(앞면이면 +)")] public int guardCoinPower = 3;
+        [Range(0f, 0.95f)] [Tooltip("완벽 방어(방어 위력 ≥ 공격 위력) 피해 감소율")] public float perfectReduction = 0.85f;
+        public const float PerfectGuardStagger = 12f;
+        public int GuardPower { get; private set; } public bool GuardHeads { get; private set; }
+        /// <summary>가드 시작(방어 코인): (위력, 앞면).</summary>
+        public event Action<int, bool> GuardStarted;
+        /// <summary>가드로 막음: (방어하는 쪽, 완벽, 방어 위력, 공격 위력).</summary>
+        public static event Action<DefenseController, bool, int, int> AnyGuardResolved;
 
         readonly EvadeState evade = new();
         public bool isGuarding => stats != null && stats.Guarding;
@@ -33,7 +41,21 @@ namespace MoominAction
         void Awake() { if (!stats) stats = GetComponent<CharacterStats>(); if (!coinSystem) coinSystem = GetComponent<CoinSystem>(); }
 
         // ── 가드
-        public void StartGuard() { if (stats == null || stats.Guarding) return; stats.Guarding = true; stats.GuardStartTime = Time.time; }
+        public void StartGuard()
+        {
+            if (stats == null || stats.Guarding) return; stats.Guarding = true; stats.GuardStartTime = Time.time;
+            var r = coinSystem != null ? coinSystem.Toss(stats, 0) : new CoinResult { heads = CoinMath.Toss(stats.currentSanity) };   // 방어 코인 한 번
+            GuardHeads = r.heads; GuardPower = coinSystem != null ? coinSystem.CalculatePower(guardBasePower, guardCoinPower, r.heads) : CoinMath.Power(guardBasePower, guardCoinPower, r.heads);
+            GuardStarted?.Invoke(GuardPower, GuardHeads);
+        }
+        /// <summary>가드로 공격을 받음 → 완벽 방어인가(이벤트도 알림).</summary>
+        public bool ResolveGuard(int attackPower, CharacterStats attacker)
+        {
+            bool ok = DefenseRules.IsPerfect(GuardPower, attackPower); AnyGuardResolved?.Invoke(this, ok, GuardPower, attackPower);
+            if (ok) stats.ChangeSanity(2, "완벽 방어");
+            return ok;
+        }
+        public float GetDamageMultiplier(bool perfect) => DefenseRules.GuardMultiplier(isGuarding, perfect ? Mathf.Max(perfectReduction, guardReduction) : Mathf.Clamp(guardReduction + (stats != null ? stats.equipGuard : 0f), 0f, 0.9f));
         public void StopGuard() { if (stats != null) stats.Guarding = false; }
         public float GetDamageMultiplier() => DefenseRules.GuardMultiplier(isGuarding, Mathf.Clamp(guardReduction + (stats != null ? stats.equipGuard : 0f), 0f, 0.9f));   // 장비(각티슈 방패 등) 가드 보너스
 

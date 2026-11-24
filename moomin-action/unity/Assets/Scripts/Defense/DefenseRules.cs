@@ -28,6 +28,12 @@ namespace MoominAction
         /// <summary>가드 피해 배율 = 1 - 감소율(0~0.9). 가드 중이 아니면 1.</summary>
         public static float GuardMultiplier(bool guarding, float reduction) => guarding ? 1f - (reduction < 0f ? 0f : reduction > 0.9f ? 0.9f : reduction) : 1f;
 
+        /// <summary>
+        /// 방어 코인(무기마다 다름): 가드를 시작할 때 한 번 던진 방어 위력 ≥ 공격 위력이면 완벽 방어(피해 × (1 − perfect)), 아니면 보통 가드(× (1 − reduction)).
+        /// </summary>
+        public static float GuardOutcome(int guardPower, int attackPower, float reduction, float perfect) => GuardMultiplier(true, guardPower >= attackPower ? perfect : reduction);
+        public static bool IsPerfect(int guardPower, int attackPower) => guardPower > 0 && guardPower >= attackPower;
+
         /// <summary>같은 캐릭터가 여러 번(콜라이더 여러 개) 잡혀도 한 번만, 처음 나온 순서대로.</summary>
         public static List<T> Unique<T>(IEnumerable<T> found) where T : class
         {

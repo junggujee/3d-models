@@ -54,6 +54,25 @@ namespace MoominAction
                   desc: "강화 스킬 — 에너지 60 소비. 주위를 다섯 번 베어 내며 쌓인 진동을 폭발시킨다. 다섯 번 모두 앞면이면 정신력 +10."));
             // 명세 테스트 스킬: 충격파(광역 · 공통 코인). 슬롯에 넣으려면 CombatManager 의 skill1/skill2/ultimate 에 SKILL_004 에셋 연결
             Add(S("SKILL_004", "충격파", 8, 3, 3, 1.0f, 5f, 0, 0.5f, 0.35f, 0.4f, A123, 4f, 360, 6f, desc: "주위에 충격파를 세 번 터뜨린다. 코인은 매번 한 번만, 범위 안의 모든 적에게 같은 위력."));
+            // ── 무기: 베개 방패(방어 코인 14+5 · 합 승리 보호막). 클립 타격 프레임: ShieldBash/Swing 10(0.30초) · ShieldSlam 15(0.47초) · ShieldLeap 22(0.70초)
+            string[] SB = { "ShieldBash" }, SW = { "ShieldSwing" }, SS = { "ShieldSlam" };
+            Add(S("SHIELD_1", "베개 밀치기", 7, 3, 1, 0.95f, 0f, 0, 0.8f, 0.30f, 0.28f, SB, 1.8f, 100, 6f, lunge: 1.5f, desc: "푹신한 방패로 앞을 밀어낸다."));
+            Add(S("SHIELD_2", "옆으로 휘두르기", 7, 3, 1, 0.95f, 0f, 0, 0.8f, 0.30f, 0.28f, SW, 2.0f, 150, 5f, desc: "방패를 옆으로 크게 휘둘러 친다."));
+            Add(S("SHIELD_3", "푹신 내려찍기", 9, 3, 1, 1.1f, 0f, 0, 0.8f, 0.47f, 0.35f, SS, 2.2f, 140, 7f, desc: "방패를 머리 위로 들었다가 힘껏 내려찍는다."));
+            Add(S("SHIELD_Q", "솜털 돌진", 10, 4, 2, 1.0f, 6f, 0, 0.5f, 0.30f, 0.35f, new[] { "ShieldBash", "ShieldBash" }, 2.2f, 90, 8f, lunge: 6f, desc: "방패를 앞세우고 두 번 들이받는다."));
+            Add(S("SHIELD_E", "포근한 충격파", 9, 3, 2, 0.9f, 8f, 0, 0.7f, 0.47f, 0.4f, new[] { "ShieldSlam", "ShieldSlam" }, 3.5f, 360, 6f, desc: "땅을 두 번 내려찍어 주위에 솜털 충격파를 퍼뜨린다. 적중하면 진동."));
+            Add(S("SHIELD_R", "거대 베개 낙하", 15, 5, 3, 1.25f, 20f, 0, 0.6f, 0.30f, 0.6f, new[] { "ShieldBash", "ShieldSwing", "ShieldLeap" }, 2.6f, 150, 9f,
+                  desc: "강화 스킬 — 에너지 60 소비. 밀치고 휘두른 뒤 높이 뛰어올라 방패째 떨어진다."));
+            if (map.TryGetValue("SHIELD_R", out var shr)) shr.hitTimes = new[] { 0.30f, 0.30f, 0.70f };
+            // ── 무기: 회전 쌍검(공격·방어 모두 높음 · 결투 고조). 클립 타격 프레임: Dual* 10(0.30초) · DualFinale 26(0.83초)
+            Add(S("DUAL_1", "회전 베기", 8, 4, 1, 1f, 0f, 0, 0.75f, 0.30f, 0.25f, new[] { "DualSlash1" }, 2.0f, 120, 4f, desc: "오른쪽 회전 날로 가로 벤다."));
+            Add(S("DUAL_2", "역회전 베기", 8, 4, 1, 1f, 0f, 0, 0.75f, 0.30f, 0.25f, new[] { "DualSlash2" }, 2.0f, 120, 4f, desc: "왼쪽 회전 날로 되받아 벤다."));
+            Add(S("DUAL_3", "교차 회전참", 9, 4, 2, 1f, 0f, 0, 0.45f, 0.30f, 0.35f, new[] { "DualSlash1", "DualCross" }, 2.2f, 140, 6f, desc: "한 번 더 베고 두 날을 엇갈려 X 자로 가른다."));
+            Add(S("DUAL_Q", "회전 돌진", 11, 4, 2, 1.05f, 6f, 0, 0.5f, 0.30f, 0.35f, new[] { "DualDash", "DualDash" }, 2.4f, 90, 6f, lunge: 5f, desc: "돌아가는 두 날을 앞세우고 두 번 파고든다."));
+            Add(S("DUAL_E", "회전 난무", 9, 3, 4, 0.9f, 9f, 0, 0.4f, 0.30f, 0.45f, new[] { "DualWhirl", "DualWhirl", "DualWhirl", "DualWhirl" }, 3.0f, 360, 5f, desc: "몸째로 빙글빙글 돌며 주위를 네 번 벤다."));
+            Add(S("DUAL_R", "궁극 - 회절원참격", 16, 6, 6, 1.3f, 3f, 0, 0.34f, 0.30f, 0.7f, new[] { "DualGrind", "DualGrind", "DualGrind", "DualGrind", "DualGrind", "DualFinale" }, 2.6f, 140, 10f, lunge: 1f,
+                  desc: "결투 고조 최대에서만. 회전하는 두 날로 상대를 다섯 번 갈아 버리고, 뛰어올라 내려찍는다. 파괴불가 코인 — 합에서 져도 끊기지 않는다."));
+            if (map.TryGetValue("DUAL_R", out var dur)) { dur.hitTimes = new[] { 0.30f, 0.30f, 0.30f, 0.30f, 0.30f, 0.83f }; dur.unbreakableCoins = true; dur.requiresDuelHeat = true; }
             // ── 인간형 적: 잠꾸러기 곰(애니메이션 있음 — hitTime 을 클립 타격 프레임에 맞춤: Attack1/2 0.35초, Attack3 0.43초)
             Add(S("HUMAN_JAB", "솜주먹 연타", 6, 3, 3, 0.6f, 2.5f, 0, 0.4f, 0.35f, 0.7f, new[] { "Attack1", "Attack2", "Attack1" }, 1.7f, 90, 3f, windup: 0.45f, lunge: 2f));
             Add(S("HUMAN_SLAM", "베개 내려찍기", 10, 4, 2, 0.8f, 5f, 0, 0.6f, 0.43f, 1.0f, new[] { "Attack3" }, 2.0f, 140, 7f, windup: 0.85f, lunge: 1.5f));
@@ -97,6 +116,11 @@ namespace MoominAction
             St("SKILL_001", StatusType.PowerUp, 1, 2); St("SKILL_002", StatusType.PowerDown, 2, 2); St("BASIC_3", StatusType.PowerUp, 1, 1);
             St("HUMAN_JAB", StatusType.Paralysis, 1, 1); St("ENEMY_BUMP", StatusType.PowerDown, 1, 2); St("BOSS_FLURRY", StatusType.PowerDown, 2, 2); St("BOSS_BREAK", StatusType.Paralysis, 1, 2);
             // 광역(공통 코인): 공격자 중심 반경 안 모든 적
+            Area("SHIELD_E", 3.5f); Area("DUAL_E", 3.0f);
+            Look("SHIELD_1", SkillAttribute.Yellow, SkillMotif.Rush); Look("SHIELD_2", SkillAttribute.Yellow, SkillMotif.Slash); Look("SHIELD_3", SkillAttribute.Orange, SkillMotif.Smash);
+            Look("SHIELD_Q", SkillAttribute.Yellow, SkillMotif.Rush); Look("SHIELD_E", SkillAttribute.Orange, SkillMotif.Smash); Look("SHIELD_R", SkillAttribute.Orange, SkillMotif.Leap);
+            Look("DUAL_1", SkillAttribute.Blue, SkillMotif.Slash); Look("DUAL_2", SkillAttribute.Blue, SkillMotif.Slash); Look("DUAL_3", SkillAttribute.Purple, SkillMotif.Flurry);
+            Look("DUAL_Q", SkillAttribute.Blue, SkillMotif.Rush); Look("DUAL_E", SkillAttribute.Purple, SkillMotif.Flurry); Look("DUAL_R", SkillAttribute.Red, SkillMotif.Flurry);
             Area("SKILL_003", 3.2f); Area("SKILL_004", 4f); Area("ENEMY_SLAM", 2f);
             // 고래고래: 빔 = 앞으로 13m·폭 2.4m 직선(합 불가), 점프·꼬리·물기둥 = 원(점프·물기둥 합 불가)
             Area("WHALE_BEAM", 13f); Area("WHALE_JUMP", 4f); Area("WHALE_TAIL", 3.6f); Area("WHALE_SPOUT", 5f);
@@ -129,7 +153,11 @@ namespace MoominAction
             // 에너지: (소비, 명중 시 추가 획득, 진동 폭발)
             Energy("BASIC_1", 0, 4); Energy("BASIC_2", 0, 4); Energy("BASIC_3", 0, 4);
             Energy("SKILL_001", 0, 2); Energy("SKILL_002", 0, 2);
-            Energy("SKILL_003", 60, 0, burst: true);   // 강화 스킬: 에너지 60 소비, 진동 폭발
+            Energy("SKILL_003", 60, 0, burst: true);
+            Energy("SHIELD_Q", 0, 2); Energy("SHIELD_E", 0, 2); Energy("SHIELD_R", 60, 0); Energy("DUAL_Q", 0, 2); Energy("DUAL_E", 0, 2);
+            St("SHIELD_E", StatusType.Tremor, 2, 1); St("SHIELD_3", StatusType.Tremor, 1, 1); St("DUAL_R", StatusType.Bleed, 2, 1, 1, 1); St("DUAL_E", StatusType.Bleed, 1, 1);
+            if (map.TryGetValue("SHIELD_E", out var she)) she.vfx = SkillVfx.Shockwave;
+            if (map.TryGetValue("SHIELD_R", out var shr2)) { shr2.vfx = SkillVfx.Shockwave; shr2.lunge = 3f; }   // 강화 스킬: 에너지 60 소비, 진동 폭발
             Energy("BOSS_BREAK", 40, 0, burst: true); Energy("HUMAN_RUSH", 0, 0, burst: true);
             Look("BOSS_LUNGE", SkillAttribute.Red, SkillMotif.Rush); Look("BOSS_FLURRY", SkillAttribute.Orange, SkillMotif.Flurry); Look("BOSS_BREAK", SkillAttribute.Black, SkillMotif.Smash);
         }

@@ -144,6 +144,15 @@ static class Tests
         Eq(LevelMath.Title(9), "초보 검사", "칭호 9"); Eq(LevelMath.Title(10), "새싹 검사", "칭호 10"); Eq(LevelMath.NewTitleAt(20), true, "20 새 칭호"); Eq(LevelMath.NewTitleAt(25), false, "25 아님");
         Eq(LevelMath.BonusLabel(-2), "코인 위력 -2", "보정 글자"); Eq(LevelMath.BonusLabel(0), "", "보정 없음 글자");
 
+        // ── 방어 코인: 방어 위력 ≥ 공격 위력이면 완벽 방어
+        Eq(DefenseRules.IsPerfect(19, 19), true, "같으면 완벽 방어"); Eq(DefenseRules.IsPerfect(14, 15), false, "작으면 보통 가드"); Eq(DefenseRules.IsPerfect(0, 0), false, "방어 위력 0 은 완벽 아님");
+        Eq(DefenseRules.GuardOutcome(19, 12, 0.65f, 0.9f), 0.1f, "베개 방패 완벽 방어 → 10%만", 1e-5f); Eq(DefenseRules.GuardOutcome(19, 12, 0.65f, 0.99f), 0.1f, "감소율 상한 90%", 1e-5f); Eq(DefenseRules.GuardOutcome(14, 20, 0.65f, 0.95f), 0.35f, "보통 가드 35%", 1e-5f);
+        Eq(DefenseRules.GuardOutcome(8, 30, 0.5f, 0.8f), 0.5f, "스파크 검 보통 가드 50%", 1e-5f);
+        // ── 무기 묶음
+        foreach (var k in WeaponKits.All) { Eq(k.basics.Length, 3, k.id + " 평타 3개"); Eq(string.IsNullOrEmpty(k.ultimate), false, k.id + " 궁극 있음"); Eq(k.guardBase > 0 && k.guardReduction > 0 && k.perfectReduction >= k.guardReduction, true, k.id + " 방어 값"); }
+        Eq(WeaponKits.Get("shield").guardBase > WeaponKits.Get("spark").guardBase, true, "방패가 방어 위력 더 높음"); Eq(WeaponKits.Get("dual").passive, WeaponPassive.DuelHeat, "쌍검 = 결투 고조");
+        Eq(WeaponKits.Get("없음").id, "spark", "모르는 무기 → 스파크 검"); Eq(WeaponKits.Get(null).id, "spark", "null → 스파크 검");
+
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }
