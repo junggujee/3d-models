@@ -97,3 +97,11 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 펫 `blender/build_seal.py`(gift-3d-models createSeal 치수 그대로, 뼈 body→chest/hips + 지느러미 4) → `World/PetSeal.cs`(야생 → F 로 조각 3개 → 길들임, G 따라오기/기다려, 보조 공격·막아서기·응원·물어 오기·냄새 맡기·기절·친밀도·레벨). 막아서기 = `CombatResolver.Interceptor` + `SkillExecutor.TimeToFirstHit` 에 맞춘 박치기. Pet 레이어(적 targetMask 에 포함). HUD `UI/PetHUD.cs`, 저장 `SaveData.pet` → `SaveSystem.LoadedPet`.
 - 한국어 조사는 `PetSeal.Josa(단어, 받침 있을 때, 없을 때)` — "(이)가" 같은 괄호 쓰지 말 것.
 - 집 장비 `blender/build_home_gear.py`(민미 공간, 부품마다 FBX) · `ItemDef.model = "경로@뼈|경로@뼈"`(EquipmentVisuals 가 부품마다 붙임). EquipStats 에 guard·evadePower·moveSpeed. 얻는 법 `HomeGear.Random`(적 4% · 땅콩빵 6%).
+
+## NPC · 대화 · 퀘스트 · 글꼴 (상세: docs/NPC_QUEST.md, docs/FONTS.md)
+- 조랭하프족 `blender/build_joraeng.py`(회전체 몸 r(z) + 앞뒤 납작 DEPTH, 얼굴은 `surf(x, z, off)` 로 표면에 붙임, 뼈 root→body→head(높이로 부드럽게)·eye(세로 스케일 = 눈 감기)·flip·fin, 상호작용 애니메이션 11개). 초상화 = 같은 스크립트가 Cycles 2패스(평면색 + Freestyle 선 / 음영) → `tools/portrait_art.py` 셀 채색 → `Resources/UI/Portraits/<이름>_<표정>.png`. **Workbench 는 이 컨테이너에서 GPU 가 없어 못 씀.**
+- F 상호작용은 `World/Interaction.cs` 하나로(대상은 매 프레임 `Interaction.Offer`, 가장 가까운 것만, `InteractionRunner` 가 LateUpdate 에서 결정). 펫·NPC 공용 — 새 상호작용 대상도 이것으로.
+- NPC `World/Npc.cs`(대화 중엔 애니메이터 UnscaledTime, 머리 위 !/?), 배치 `World/VillageSpawner.cs`(GameManager.npcPrefab). 대본 `Story/JoraengStory.cs`(Dialogue/DialogueLine/DialogueChoice — `Say(표정, 동작, 글).Label().Choose().End()`). 퀘스트 `Story/QuestLog.cs`(순수 C#, status_tests) + `Story/Quests.cs`(정의·건네기·보상·Announce) → 저장 `SaveData.quests`, HUD `UI/QuestTracker.cs`.
+- 대화창 `UI/DialogueBox.cs`(MenuPage, `UIRoot.StartDialogue`). 그림 `tools/dialogue_art.py` → `Resources/UI/Dialogue`, 미리보기 `tools/dialogue_mock.py` — **배치 숫자(PW·PH·TBX… )를 바꾸면 세 곳 모두**.
+- 글꼴 역할: `UITheme.DisplayFont`(빛의 계승자 Bold — 제목·장·보스·큰 알림) · `HeadingFont`(가웨인 파일이 있으면 그것, 없으면 빛의 계승자 Regular — 이름·퀘스트 제목·머리글) · `SkillFont`(빛의 계승자 Regular + 빛) · `BodyFont`(나눔명조 — 대사·설명·숫자). 꾸밈은 `UIFactory.StyleDisplay/StyleHeading/StyleSkill/Divider`, 효과 `UI/TextFx.cs`(UIGradient·TextGlow). FontStyle.Bold 로 가짜 굵게 하지 말 것.
+- 주석이 객체 초기화 항목(`이름 = 값,`)을 삼키는 경우도 unity_audit 4b 가 잡음(SaveData.sanity 가 저장 안 되던 버그).

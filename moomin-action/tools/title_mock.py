@@ -13,6 +13,7 @@ ART = os.path.join(ROOT, "unity", "Assets", "Resources", "UI", "Title")
 PREV = os.path.join(ROOT, "previews")
 FONTS = "/usr/share/fonts/truetype/nanum/"
 F_R, F_B, F_X = FONTS + "NanumMyeongjo.ttf", FONTS + "NanumMyeongjoBold.ttf", FONTS + "NanumMyeongjoExtraBold.ttf"
+F_T = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "unity", "Assets", "Resources", "Fonts", "HeirOfLight-Bold.ttf")   # 제목: 빛의 계승자 Bold(UITheme.DisplayFont)
 W, H = 1920, 1080
 
 # UITheme 색(0~1)
@@ -88,7 +89,7 @@ def left_shade(img):
 def title_screen(bg):
     img = bg.copy(); left_shade(img)
     paste(img, art("Crest"), box_center=(LEFT + CREST / 2 - 14, CREST_Y), size=(CREST, CREST))
-    text(img, (LEFT - 6, TITLE_Y), "민미의 모험", 132, IVORY, F_X, outline=BLUE_D, outline_w=3, shadow=None, big_shadow=(6, 8))
+    text(img, (LEFT - 6, TITLE_Y), "민미의 모험", 132, IVORY, F_T, outline=BLUE_D, outline_w=3, shadow=None, big_shadow=(6, 8))
     text(img, (LEFT, SUB_Y), "THE  ADVENTURE  OF  MINMI", 30, BLUE_B, F_R)
     paste(img, art("DividerLeft"), left_mid=(LEFT - 20, DIV_Y), size=(640, 26))
     items = ["이어하기", "새 게임", "불러오기", "설정", "종료"]; sel = 0

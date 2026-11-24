@@ -7,14 +7,14 @@ namespace MoominAction.UI
 {
     /// <summary>
     /// 전투 화면 HUD: 좌상단 체력(잔상)·스태미나 게이지, 목표 문구, 우하단 다이아몬드 퀵슬롯(1~4), 좌하단 금화·조작 안내,
-    /// 우상단 획득·저장 알림, 중앙 배너(웨이브/처치), 피격 붉은 번쩍임, 쓰러짐 → 결과 화면(GameOverScreen).
+    /// 우상단 획득·저장 알림, 중앙 배너(웨이브/처치/퀘스트 — 빛의 계승자 + 장식선), 퀘스트 추적(QuestTracker), 피격 붉은 번쩍임, 쓰러짐 → 결과 화면(GameOverScreen).
     /// </summary>
     public class HUD
     {
         UIRoot ui; GameObject hudRoot, coreRoot; CombatHUD combat; CharacterStats hp; Stamina st; Inventory inv;
         Gauge stBar; VitalBars vitals; Text objective, scoreText, goldText, weaponText;
         Image[] qIcon = new Image[4]; Text[] qCount = new Text[4]; Image flash;
-        Text banner; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver; PetHUD pet;
+        Text banner, bannerSub; Image bannerLine; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver; PetHUD pet; QuestTracker quests;
         class Toast { public RectTransform rt; public Text text; public Image icon; public CanvasGroup cg; public float t; }
         readonly List<Toast> toasts = new(); readonly List<Toast> pool = new(); Transform toastParent;
 
@@ -50,7 +50,9 @@ namespace MoominAction.UI
             var tp = NewRect("Toasts", hudRoot.transform); Stretch(tp); toastParent = tp;
             // 중앙 배너·피격 번쩍임·쓰러짐
             flash = Box(hudRoot.transform, "Flash", new Color(.6f, 0, 0, 0)); Stretch(flash.rectTransform);
-            banner = Txt(hudRoot.transform, "", 72, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Bold, "Banner"); At(banner.rectTransform, new Vector2(.5f, .62f), Vector2.zero, new Vector2(1600, 120));
+            banner = StyleDisplay(Txt(hudRoot.transform, "", 72, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Normal, "Banner"), true); At(banner.rectTransform, new Vector2(.5f, .62f), Vector2.zero, new Vector2(1600, 120));
+            bannerSub = StyleHeading(Txt(hudRoot.transform, "", 30, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Normal, "BannerSub")); At(bannerSub.rectTransform, new Vector2(.5f, .62f), new Vector2(0, 74), new Vector2(1000, 44));
+            bannerLine = Divider(hudRoot.transform, "BannerLine", 640); At(bannerLine.rectTransform, new Vector2(.5f, .62f), new Vector2(0, -62), bannerLine.rectTransform.sizeDelta);   // 스타 세일러풍 장식선
 
             hp.Damaged += (a, p, k) => flash.color = new Color(.6f, 0, 0, .38f);
             if (inv != null) { inv.Picked += OnPicked; inv.Message += m => Toast_Text(m); }
@@ -61,11 +63,14 @@ namespace MoominAction.UI
             hp.Died += gameOver.Show;
             SaveSystem.Saved += OnSaved;
             pet = new PetHUD(); pet.Build(core.transform, hudRoot.transform); PetSeal.Notice += OnPetNotice;
+            quests = new QuestTracker(); quests.Build(core.transform, inv); Quests.Announce += OnQuestAnnounce;
         }
 
         void OnPicked(ItemDef d, int n) { if (d == null) Toast_Item(null, "금화  +" + n); else Toast_Item(d, d.name + (n > 1 ? "  ×" + n : "")); }
         void Toast_Text(string m) => Toast_Item(null, m);
-        void Banner(string t, Color c, float dur) { banner.text = t; bannerCol = c; bannerT = bannerDur = dur; }
+        void Banner(string t, Color c, float dur, string sub = "") { banner.text = t; bannerSub.text = sub; bannerCol = c; bannerT = bannerDur = dur; }
+        /// <summary>퀘스트 수락·완료: 위 작은 글 "퀘스트 수락" + 큰 제목(크림→베이지) + 장식선.</summary>
+        void OnQuestAnnounce(string kind, string title) => Banner(title, Color.white, 3.2f, kind);
 
         void Toast_Item(ItemDef d, string msg)
         {
@@ -81,7 +86,7 @@ namespace MoominAction.UI
 
         void OnSaved(int slot) => Toast_Text(slot == SaveFormat.AutoSlot ? "자동 저장했다" : SaveFormat.SlotName(slot) + "에 저장했다");
         void OnPetNotice(string m) => Toast_Text(m);
-        public void Dispose() { combat?.Dispose(); SaveSystem.Saved -= OnSaved; PetSeal.Notice -= OnPetNotice; }
+        public void Dispose() { combat?.Dispose(); quests?.Dispose(); SaveSystem.Saved -= OnSaved; PetSeal.Notice -= OnPetNotice; Quests.Announce -= OnQuestAnnounce; }
 
         public void Update()
         {
@@ -99,9 +104,10 @@ namespace MoominAction.UI
             for (int i = toasts.Count - 1; i >= 0; i--) { var t = toasts[i]; t.t -= dt; if (t.t <= 0) { t.rt.gameObject.SetActive(false); toasts.RemoveAt(i); pool.Add(t); continue; } t.cg.alpha = Mathf.Clamp01(t.t / 0.6f); }
             for (int i = 0; i < toasts.Count; i++) toasts[i].rt.anchoredPosition = Vector2.Lerp(toasts[i].rt.anchoredPosition, new Vector2(-40, -40 - i * 72), 12f * dt);
             // 배너
-            if (bannerT > 0) { bannerT -= dt; float k = bannerT / bannerDur, a = Mathf.Clamp01(Mathf.Min(k * 3f, (1f - k) * 5f)); banner.color = new Color(bannerCol.r, bannerCol.g, bannerCol.b, a); } else banner.color = new Color(0, 0, 0, 0);
+            if (bannerT > 0) { bannerT -= dt; float k = bannerT / bannerDur, a = Mathf.Clamp01(Mathf.Min(k * 3f, (1f - k) * 5f)); banner.color = new Color(bannerCol.r, bannerCol.g, bannerCol.b, a); bannerSub.color = new Color(UITheme.Gold.r, UITheme.Gold.g, UITheme.Gold.b, a); bannerLine.color = new Color(1, 1, 1, a); }
+            else { banner.color = new Color(0, 0, 0, 0); bannerSub.color = banner.color; bannerLine.color = banner.color; }
             flash.color = new Color(.6f, 0, 0, Mathf.MoveTowards(flash.color.a, 0, 0.9f * dt));
-            gameOver.Update(dt); pet.Update(dt);
+            gameOver.Update(dt); pet.Update(dt); quests.Update(PetSeal.Current != null);
         }
     }
 }

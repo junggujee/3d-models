@@ -24,8 +24,39 @@ namespace MoominAction.UI
         }
 
         static Font titleFont;
-        /// <summary>타이틀 제목용 굵은 명조(나눔명조 ExtraBold, 없으면 기본 글꼴).</summary>
+        /// <summary>굵은 명조(나눔명조 ExtraBold) — 강조 숫자 등. 제목은 DisplayFont.</summary>
         public static Font TitleFont { get { if (titleFont == null) titleFont = Resources.Load<Font>("Fonts/NanumMyeongjoExtraBold"); return titleFont != null ? titleFont : Font; } }
+
+        // ── 글꼴 역할(docs/FONTS.md) ─────────────────────────────
+        //  Display : 게임 제목 · 장(칸토) · 보스 이름 · 큰 알림 — 빛의 계승자 Bold(굵고 날카로운 고전 판타지) + 크림→베이지 그라데이션(StyleDisplay)
+        //  Heading : 캐릭터·NPC 이름 · 퀘스트 제목 · 메뉴 머리글 · 선택지 — Sandoll 가웨인(사용자가 라이선스 파일을 넣으면) → 빛의 계승자 Regular
+        //  Skill   : 스킬 이름 — 빛의 계승자 Regular + 은은한 빛(StyleSkill)
+        //  Body    : 대사 · 설명 · 숫자 — 나눔명조(가독성) = Font
+        static Font display, heading, skill; static bool rolesLoaded;
+        static Font LoadFirst(params string[] names) { foreach (var n in names) { var f = Resources.Load<Font>("Fonts/" + n); if (f != null) return f; } return null; }
+        static void LoadRoles()
+        {
+            if (rolesLoaded) return; rolesLoaded = true;
+            display = LoadFirst("HeirOfLight-Bold", "NanumMyeongjoExtraBold");
+            heading = LoadFirst("SandollGawain", "Gawain", "HeirOfLight-Regular", "NanumMyeongjoExtraBold");
+            skill = LoadFirst("HeirOfLight-Regular", "NanumMyeongjoExtraBold");
+        }
+        public static Font DisplayFont { get { LoadRoles(); return display != null ? display : TitleFont; } }
+        public static Font HeadingFont { get { LoadRoles(); return heading != null ? heading : TitleFont; } }
+        public static Font SkillFont { get { LoadRoles(); return skill != null ? skill : TitleFont; } }
+        public static Font BodyFont => Font;
+        /// <summary>제목 글자 위·아래 색(크림 → 따뜻한 베이지).</summary>
+        public static readonly Color DisplayTop = new Color(1f, 0.97f, 0.9f), DisplayBottom = new Color(0.86f, 0.74f, 0.55f);
+
+        static readonly System.Collections.Generic.Dictionary<string, Sprite> uiArt = new();
+        /// <summary>Resources/UI/폴더/이름.png → 스프라이트(2배 해상도 그림: pixelsPerUnit 200, border = UI 단위 [왼, 아래, 오른, 위]). 없으면 null.</summary>
+        public static Sprite Art(string folder, string name, Vector4 border = default)
+        {
+            string key = folder + "/" + name; if (uiArt.TryGetValue(key, out var s)) return s;
+            var tex = Resources.Load<Texture2D>("UI/" + key);
+            if (tex != null) { tex.wrapMode = TextureWrapMode.Clamp; tex.filterMode = FilterMode.Bilinear; s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(.5f, .5f), 200f, 0, SpriteMeshType.FullRect, border * 2f); s.name = name; }
+            uiArt[key] = s; return s;
+        }
 
         static Sprite Make(int w, int h, System.Func<int, int, Color> px, Vector4 border)
         {

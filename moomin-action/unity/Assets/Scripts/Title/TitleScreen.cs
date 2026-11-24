@@ -53,7 +53,7 @@ namespace MoominAction
             var crestSprite = UITheme.TitleArt("Crest", 0, null);
             if (crestSprite != null) { var c = Img(crestG.transform, "Crest", crestSprite, Color.white, false); Set(c.rectTransform, tl, tl, new Vector2(.5f, .5f), TL(Left + CrestSize / 2 - 14, CrestY), new Vector2(CrestSize, CrestSize)); }
 
-            var title = Txt(titleG.transform, gameTitle, 132, UITheme.Ivory, TextAnchor.MiddleLeft, FontStyle.Normal, "Title"); title.font = UITheme.TitleFont; Set(title.rectTransform, tl, tl, new Vector2(0, .5f), TL(Left - 6, TitleY), new Vector2(1300, 160));
+            var title = Txt(titleG.transform, gameTitle, 132, UITheme.Ivory, TextAnchor.MiddleLeft, FontStyle.Normal, "Title"); title.font = UITheme.DisplayFont; var tg = title.gameObject.AddComponent<UIGradient>(); tg.top = new Color(1f, 0.99f, 0.95f); tg.bottom = new Color(0.86f, 0.79f, 0.68f); Set(title.rectTransform, tl, tl, new Vector2(0, .5f), TL(Left - 6, TitleY), new Vector2(1300, 160));
             var o = title.gameObject.AddComponent<Outline>(); o.effectColor = new Color(UITheme.BlueDeep.r, UITheme.BlueDeep.g, UITheme.BlueDeep.b, .9f); o.effectDistance = new Vector2(3, -3);
             if (title.TryGetComponent<Shadow>(out var sh)) { sh.effectColor = new Color(0, 0, 0, .7f); sh.effectDistance = new Vector2(6, -8); }
             var sub = Txt(titleG.transform, subtitle, 30, UITheme.BlueBright, TextAnchor.MiddleLeft, FontStyle.Normal, "Subtitle"); Set(sub.rectTransform, tl, tl, new Vector2(0, .5f), TL(Left, SubY), new Vector2(1000, 44));
@@ -74,7 +74,7 @@ namespace MoominAction
                 Set(e.row, tl, tl, new Vector2(0, .5f), TL(Left - 40, MenuY + i * MenuStep), new Vector2(760, 64));
                 e.glow = Img(row.transform, "Glow", pal.highlight, Color.white, false); Stretch(e.glow.rectTransform);
                 if (pal.marker != null) { e.marker = Img(row.transform, "Marker", pal.marker, Color.white, false); Set(e.marker.rectTransform, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(.5f, .5f), new Vector2(40, 0), new Vector2(30, 30)); }
-                e.text = Txt(row.transform, e.label, 40, pal.text, TextAnchor.MiddleLeft, FontStyle.Normal, "Label"); Set(e.text.rectTransform, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(76, 0), new Vector2(240, 60));
+                e.text = StyleHeading(Txt(row.transform, e.label, 40, pal.text, TextAnchor.MiddleLeft, FontStyle.Normal, "Label")); Set(e.text.rectTransform, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(76, 0), new Vector2(240, 60));
                 if (i == 0) { e.detail = Txt(row.transform, contDetail ?? "저장된 기록이 없다", 22, pal.muted, TextAnchor.MiddleLeft, FontStyle.Normal, "Detail"); Set(e.detail.rectTransform, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(270, -2), new Vector2(480, 40)); }
                 OnHover(row.gameObject, () => { if (Current == null && entries[idx].enabled) { sel = idx; Refresh(); } });
                 OnClick(row.gameObject, () => { if (Current == null && entries[idx].enabled && !SceneFader.Busy) { sel = idx; entries[idx].act?.Invoke(); } });

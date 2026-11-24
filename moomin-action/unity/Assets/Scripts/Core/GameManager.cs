@@ -21,6 +21,7 @@ namespace MoominAction
         public bool InWave => waveActive;
         [Tooltip("웨이브를 끝낼 때마다 자동 저장 슬롯에 저장")] public bool autoSave = true;
         [Header("자연")] [Tooltip("땅콩빵(자원) · 야생 하프물범(펫) — 비우면 생성 안 함")] public GameObject peanutPrefab, sealPrefab;
+        [Header("마을")] [Tooltip("조랭하프족 NPC(조랭이·몽글이·포실이) — 비우면 생성 안 함")] public GameObject npcPrefab;
         readonly List<GameObject> alive = new(); float nextWave = 2f; bool waveActive;
 
         void Awake() { Instance = this; }
@@ -50,6 +51,8 @@ namespace MoominAction
 #endif
             if (!hasUi) { var go = new GameObject("UIRoot"); var ui = go.AddComponent<UI.UIRoot>(); ui.player = player; }
             if ((peanutPrefab != null || sealPrefab != null) && !TryGetComponent<NatureSpawner>(out _)) { var ns = gameObject.AddComponent<NatureSpawner>(); ns.peanutPrefab = peanutPrefab; ns.sealPrefab = sealPrefab; }   // NavMesh 를 구운 뒤
+            if (npcPrefab != null && !TryGetComponent<VillageSpawner>(out _)) gameObject.AddComponent<VillageSpawner>().npcPrefab = npcPrefab;
+            if (!TryGetComponent<InteractionRunner>(out _)) gameObject.AddComponent<InteractionRunner>();   // F 상호작용(펫·NPC) 정리
         }
         public void AddScore(int s) { Score += s; }
         void OnDestroy() { RunStats.Unhook(); if (Instance == this) Instance = null; }

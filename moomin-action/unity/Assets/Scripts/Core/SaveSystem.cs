@@ -19,6 +19,8 @@ namespace MoominAction
         public int wave, score, kills, bossKills, clashWins, clashLosses, bestPower;
         public Inventory.State inventory;
         public PetData pet;
+        /// <summary>퀘스트 진행("id=Active" · "id=Completed").</summary>
+        public string[] quests;
     }
 
     /// <summary>길들인 하프물범(없으면 tamed = false).</summary>
@@ -29,7 +31,7 @@ namespace MoominAction
     /// 저장·불러오기. 슬롯 = 기록 1~3(휴식 메뉴에서 수동) + 자동 저장(웨이브를 끝낼 때마다).
     /// 파일: Application.persistentDataPath/saves/slot1.json … auto.json + 같은 이름 .jpg(작은 화면 사진).
     /// 장면 사이 전달: 타이틀/게임 오버에서 Load(slot) → Pending 에 담고 Main 씬을 엶 → Inventory.Awake·GameManager.Start 가 Pending 을 적용.
-    /// 저장 내용: 레벨·경험치·체력·정신력·위치·방향·웨이브·점수·여정 기록(RunStats)·가방·플레이 시간·장소 이름.
+    /// 저장 내용: 레벨·경험치·체력·정신력·위치·방향·웨이브·점수·여정 기록(RunStats)·가방·펫·퀘스트·플레이 시간·장소 이름.
     /// </summary>
     public static class SaveSystem
     {
@@ -120,7 +122,7 @@ namespace MoominAction
             var d = new SaveData
             {
                 savedAt = SaveFormat.Stamp(DateTime.UtcNow), scene = GameScene, playSeconds = PlayTime, place = MapPlaces.NearestName(tf.position),
-                maxHealth = p.maxHealth - p.equipHealth, health = p.currentHealth,   // 최대 체력은 장비 보너스를 뺀 값(불러올 때 장비가 다시 더함) sanity = p.currentSanity,
+                maxHealth = p.maxHealth - p.equipHealth, health = p.currentHealth, sanity = p.currentSanity,   // 최대 체력은 장비 보너스를 뺀 값(불러올 때 장비가 다시 더함)
                 position = new[] { tf.position.x, tf.position.y, tf.position.z }, yaw = tf.eulerAngles.y,
                 wave = gm.Wave, score = gm.Score,
                 kills = RunStats.Kills, bossKills = RunStats.BossKills, clashWins = RunStats.ClashWins, clashLosses = RunStats.ClashLosses, bestPower = RunStats.BestPower,
@@ -129,6 +131,7 @@ namespace MoominAction
             if (p.TryGetComponent<Inventory>(out var inv)) d.inventory = inv.Export();
             var pet = PetSeal.Current;
             if (pet != null) d.pet = new PetData { tamed = true, name = pet.petName, level = pet.level, exp = pet.exp, affection = pet.affection, health = pet.Stats.currentHealth };
+            d.quests = Quests.Export();
             return d;
         }
 
@@ -136,8 +139,8 @@ namespace MoominAction
         public static void ApplyPending(GameManager gm)
         {
             var d = Pending; Pending = null; LoadedPet = null;
-            if (d == null) { RunStats.Reset(); return; }
-            LoadedPet = d.pet;
+            if (d == null) { RunStats.Reset(); Quests.NewGame(); return; }
+            LoadedPet = d.pet; Quests.Import(d.quests);
             PlayTime = d.playSeconds;
             RunStats.Kills = d.kills; RunStats.BossKills = d.bossKills; RunStats.ClashWins = d.clashWins; RunStats.ClashLosses = d.clashLosses; RunStats.BestPower = d.bestPower;
             gm.RestoreProgress(d.wave, d.score);

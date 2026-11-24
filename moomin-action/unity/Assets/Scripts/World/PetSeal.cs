@@ -25,8 +25,6 @@ namespace MoominAction
     {
         public static PetSeal Current { get; private set; }
         public static readonly List<PetSeal> All = new();
-        /// <summary>화면 아래 상호작용 안내(가장 가까운 물범이 채움, 없으면 null).</summary>
-        public static string Prompt;
         /// <summary>펫 소식(HUD 알림).</summary>
         public static event Action<string> Notice;
 
@@ -39,7 +37,6 @@ namespace MoominAction
 
         NavMeshAgent agent; Animator anim; CharacterStats stats; SkillExecutor ex; Transform player; CharacterStats owner; Inventory inv; LockOnSystem ownerLock;
         Vector3 home; float nextWander, nextHeal, nextSniff, faintUntil = -1, nextIntercept, nextPet, idleSince, nextThink; bool intercepting; EnemyCombatController interceptFrom; ItemPickup fetching; string playing = "";
-        static int promptFrame = -1; static float promptDist;
 
         public CharacterStats Stats => stats; public bool Fainted => faintUntil > 0;
         public float FaintLeft => Fainted ? Mathf.Max(0, faintUntil - Time.time) : 0;
@@ -89,40 +86,33 @@ namespace MoominAction
         void HandleInteraction(float distToPlayer)
         {
             if (owner == null || !owner.IsAlive || distToPlayer > interactRange) return;
-            // 가장 가까운 물범 하나만 안내·입력을 받음
-            if (promptFrame == Time.frameCount && distToPlayer >= promptDist) return;
-            promptFrame = Time.frameCount; promptDist = distToPlayer;
             bool hasPiece = inv != null && inv.Contains("peanut_piece");
             if (!tamed)
             {
-                if (Current != null && Current != this) { Prompt = $"이미 {Josa(Current.petName, "과", "와")} 함께하고 있다"; return; }
-                Prompt = hasPiece ? $"F   땅콩빵 조각 주기  ({fed}/{FeedToTame})" : "야생 하프물범 — 땅콩빵 조각이 있으면 길들일 수 있다";
-                if (hasPiece && InputAdapter.InteractPressed())
+                if (Current != null && Current != this) { Interaction.Offer(this, distToPlayer, $"이미 {Josa(Current.petName, "과", "와")} 함께하고 있다", null); return; }
+                if (!hasPiece) { Interaction.Offer(this, distToPlayer, "야생 하프물범 — 땅콩빵 조각이 있으면 길들일 수 있다", null); return; }
+                Interaction.Offer(this, distToPlayer, $"F   땅콩빵 조각 주기  ({fed}/{FeedToTame})", () =>
                 {
-                    inv.Remove("peanut_piece", 1); fed++; Play("Eat"); Hearts(4);
+                    if (!inv.Remove("peanut_piece", 1)) return; fed++; Play("Eat"); Hearts(4);
                     if (fed >= FeedToTame) Tame(true); else Say($"하프물범이 땅콩빵 조각을 먹었다  ({fed}/{FeedToTame})");
-                }
+                });
                 return;
             }
-            if (Fainted) { Prompt = $"{petName} 기절 — {FaintLeft:0}초 뒤 일어남"; return; }
-            Prompt = hasPiece ? $"F   {petName}에게 간식 주기" : $"F   {petName} 쓰다듬기";
-            if (InputAdapter.InteractPressed() && Time.time >= nextPet)
+            if (Fainted) { Interaction.Offer(this, distToPlayer, $"{petName} 기절 — {FaintLeft:0}초 뒤 일어남", null); return; }
+            Interaction.Offer(this, distToPlayer, hasPiece ? $"F   {petName}에게 간식 주기" : $"F   {petName} 쓰다듬기", () =>
             {
-                nextPet = Time.time + 2.5f;
-                if (hasPiece) { inv.Remove("peanut_piece", 1); stats.Heal(stats.maxHealth * 0.3f); AddAffection(5); Play("Eat"); Hearts(6); Say($"{petName}: 냠냠! 체력 회복 · 친밀도 {affection:0}"); }
+                if (Time.time < nextPet) return; nextPet = Time.time + 2.5f;
+                if (hasPiece && inv.Remove("peanut_piece", 1)) { stats.Heal(stats.maxHealth * 0.3f); AddAffection(5); Play("Eat"); Hearts(6); Say($"{petName}: 냠냠! 체력 회복 · 친밀도 {affection:0}"); }
                 else { AddAffection(2); Play("Happy"); Hearts(5); }
-            }
+            });
         }
 
         // ── 매 프레임 ───────────────────────────
-        void LateUpdate() { if (promptFrame != Time.frameCount && promptFrame != Time.frameCount - 1) Prompt = null; }
-
         void Update()
         {
             if (UIState.Paused) return;
             if (player == null) { Start(); if (player == null) return; }
             float d = Vector3.Distance(transform.position, player.position);
-            if (promptFrame < Time.frameCount - 1) Prompt = null;
             HandleInteraction(d);
             if (anim) anim.SetFloat("Speed", agent != null && agent.enabled ? Mathf.Clamp01(agent.velocity.magnitude / runSpeed) : 0f);
             if (Fainted) { if (Time.time >= faintUntil) Revive(); return; }

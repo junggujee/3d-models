@@ -118,6 +118,21 @@ static class Tests
         Eq(string.Join("/", EquipmentMath.Describe(new EquipStats { moveSpeed = 0.1f, evadePower = 1 })), "회피 코인 위력 +1/이동 속도 +10%", "토끼 털 슬리퍼 설명");
         Eq(new EquipStats { evadePower = 1 }.IsEmpty, false, "회피만 있어도 비지 않음");
 
+        // ── 퀘스트 진행(땅콩빵이 먹고 싶은 조랭이)
+        var ql = new QuestLog(); int changes = 0; ql.Changed += (_, __) => changes++;
+        Eq(ql.State("peanut_craving"), QuestState.NotStarted, "처음엔 시작 전"); Eq(ql.Complete("peanut_craving"), false, "수락 전 완료 불가");
+        Eq(ql.Accept("peanut_craving"), true, "수락"); Eq(ql.Accept("peanut_craving"), false, "두 번 수락 안 됨"); Eq(ql.IsActive("peanut_craving"), true, "진행 중");
+        Eq(ql.Active().Count, 1, "진행 목록 1개"); Eq(ql.Complete("peanut_craving"), true, "완료"); Eq(ql.Complete("peanut_craving"), false, "두 번 완료 안 됨");
+        Eq(ql.Abandon("peanut_craving"), false, "완료한 건 포기 불가"); Eq(ql.Active().Count, 0, "완료 후 진행 목록 비움"); Eq(changes, 2, "바뀜 알림 2번(수락·완료)");
+        Eq(ql.Accept(""), false, "빈 id 수락 불가"); Eq(ql.Accept("b"), true, "다른 퀘스트 수락"); Eq(ql.Abandon("b"), true, "포기"); Eq(ql.State("b"), QuestState.NotStarted, "포기 → 시작 전");
+        ql.Accept("c"); var saved = ql.Export(); Eq(string.Join(",", saved), "peanut_craving=Completed,c=Active", "저장 글자(수락 순서)");
+        var ql2 = new QuestLog(); ql2.Import(new[] { "peanut_craving=Completed", "c=Active", "x=Weird", "=Active", "y=", "z=NotStarted", null, "c=Completed", "n=7" });
+        Eq(ql2.State("peanut_craving"), QuestState.Completed, "불러오기: 완료"); Eq(ql2.State("c"), QuestState.Completed, "같은 id 는 뒤의 것"); Eq(ql2.State("x"), QuestState.NotStarted, "모르는 상태 무시");
+        Eq(ql2.State("n"), QuestState.NotStarted, "숫자 상태 무시"); Eq(ql2.Export().Length, 2, "이상한 항목은 버림"); ql2.Import(null); Eq(ql2.Export().Length, 0, "null 불러오기 → 비움");
+        Eq(QuestText.Progress("땅콩빵 조각", 1, 2), "땅콩빵 조각 1/2", "진행 글자"); Eq(QuestText.Progress("땅콩빵 조각", 5, 2), "땅콩빵 조각 2/2", "넘치면 2/2"); Eq(QuestText.Progress("x", -3, 2), "x 0/2", "음수 → 0");
+        Eq(QuestText.Enough(2, 2), true, "2개면 건넬 수 있음"); Eq(QuestText.Enough(1, 2), false, "1개는 부족"); Eq(QuestText.Enough(0, 0), true, "필요 없음");
+        Eq(QuestText.Rewards(120, 50, new[] { ("빨간 물약", 2) }), "경험치 120 · 금화 50 · 빨간 물약 ×2", "보상 줄"); Eq(QuestText.Rewards(0, 0, new[] { ("열쇠", 1), ("", 3) }), "열쇠", "하나짜리·빈 이름");
+
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }

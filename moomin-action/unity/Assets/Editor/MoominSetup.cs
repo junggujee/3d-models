@@ -17,7 +17,7 @@ namespace MoominAction.EditorTools
         const string Models = "Assets/Models/", Prefabs = "Assets/Prefabs/", Anims = "Assets/Animations/", Scenes = "Assets/Scenes/";
 
         [MenuItem("Moomin/한 번에 설정 (전부 실행)")]
-        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildWhaleController(); BuildMonsterControllers(); BuildPrefabs(); BuildScene(); BuildTitleScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Title.unity 를 열고 Play! (Main.unity 를 바로 열면 새 게임으로 시작)"); }
+        public static void All() { ConfigureImports(); BuildController(); BuildBearController(); BuildWhaleController(); BuildMonsterControllers(); BuildNpcController(); BuildPrefabs(); BuildScene(); BuildTitleScene(); Debug.Log("[Moomin] 설정 완료 → Assets/Scenes/Title.unity 를 열고 Play! (Main.unity 를 바로 열면 새 게임으로 시작)"); }
 
         [MenuItem("Moomin/1. FBX 임포트 설정")]
         public static void ConfigureImports()
@@ -73,6 +73,27 @@ namespace MoominAction.EditorTools
                 foreach (var c in sclips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "Sleep"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
                 si.clipAnimations = sclips; si.SaveAndReimport();
             }
+            // NPC 조랭하프족(루프 = Idle·Walk·Talk)
+            if (AssetImporter.GetAtPath(Models + "Joraeng.fbx") is ModelImporter ji)
+            {
+                ji.animationType = ModelImporterAnimationType.Generic; ji.importAnimation = true; ji.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                var jclips = ji.defaultClipAnimations;
+                foreach (var c in jclips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Talk"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
+                ji.clipAnimations = jclips; ji.SaveAndReimport();
+            }
+            // 대화창·장식·초상화 그림: 밉맵 없이 선명하게(판 그림은 3200px 이라 최대 크기 4096)
+            foreach (var folder in new[] { "Assets/Resources/UI/Dialogue", "Assets/Resources/UI/Ornament", "Assets/Resources/UI/Portraits" })
+            {
+                if (!AssetDatabase.IsValidFolder(folder)) continue;
+                foreach (var g in AssetDatabase.FindAssets("t:Texture2D", new[] { folder }))
+                    if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(g)) is TextureImporter ui)
+                    { ui.mipmapEnabled = false; ui.alphaIsTransparency = true; ui.npotScale = TextureImporterNPOTScale.None; ui.maxTextureSize = 4096; ui.textureCompression = TextureImporterCompression.CompressedHQ; ui.wrapMode = TextureWrapMode.Clamp; ui.SaveAndReimport(); }
+            }
+            // 글꼴: 빛의 계승자(완성형 2,350자)에 없는 글자는 나눔명조에서 빌려 옴
+            var nanumFallback = AssetDatabase.LoadAssetAtPath<Font>("Assets/Resources/Fonts/NanumMyeongjoExtraBold.ttf");
+            foreach (var fn in new[] { "HeirOfLight-Bold", "HeirOfLight-Regular", "SandollGawain" })
+                if (AssetImporter.GetAtPath("Assets/Resources/Fonts/" + fn + ".ttf") is TrueTypeFontImporter fi && nanumFallback != null)
+                { fi.includeFontData = true; fi.fontReferences = new[] { nanumFallback }; fi.SaveAndReimport(); }
             // 맵(City.fbx): 애니메이션·카메라·조명 없음, 충돌용으로 읽기 가능, 메시 최적화 · 텍스처: 밉맵 + 2048 + 고품질 압축 + 비스듬히 봐도 선명하게
             foreach (var cg in AssetDatabase.FindAssets("City", new[] { "Assets/City" }))
             if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(cg)) is ModelImporter cityImp)
@@ -99,6 +120,21 @@ namespace MoominAction.EditorTools
             var sm = ac.layers[0].stateMachine;
             foreach (var n in states) { var st = sm.AddState(n); st.motion = ClipOf(fbx, n); if (System.Array.IndexOf(oneShots, n) >= 0) { var t = st.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f; } }
             AssetDatabase.SaveAssets(); return ac;
+        }
+
+        [MenuItem("Moomin/2-4. NPC(조랭하프족) Animator 만들기")]
+        public static void BuildNpcController()
+        {
+            const string fbx = "Joraeng.fbx"; if (AssetImporter.GetAtPath(Models + fbx) == null) { Debug.LogWarning("Assets/Models/Joraeng.fbx 가 없습니다."); return; }
+            var path = Anims + "Joraeng.controller"; System.IO.Directory.CreateDirectory(Anims); AssetDatabase.DeleteAsset(path);
+            var ac = AnimatorController.CreateAnimatorControllerAtPath(path); ac.AddParameter("Speed", AnimatorControllerParameterType.Float);
+            ac.CreateBlendTreeInController("Locomotion", out BlendTree tree); tree.blendParameter = "Speed";
+            tree.AddChild(ClipOf(fbx, "Idle"), 0f); tree.AddChild(ClipOf(fbx, "Walk"), 1f);
+            var sm = ac.layers[0].stateMachine;
+            var talk = sm.AddState("Talk"); talk.motion = ClipOf(fbx, "Talk");   // 대화 중 반복(Npc 가 끝낼 때 Locomotion 으로)
+            foreach (var n in new[] { "Wave", "Yes", "No", "Laugh", "Sad", "Surprised", "QuestAccept", "QuestComplete" })   // 표정 동작: 한 번 → 기본(Locomotion)
+            { var st = sm.AddState(n); st.motion = ClipOf(fbx, n); var t = st.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.12f; }
+            AssetDatabase.SaveAssets();
         }
 
         [MenuItem("Moomin/2-1. 곰(인간형 적) Animator 만들기")]
@@ -285,6 +321,22 @@ namespace MoominAction.EditorTools
                 ApplyMaterial(sg, "Seal_Nose", NormalMapped("Seal_Nose", new Color(0.5f, 0.5f, 0.55f), "Fur_Normal", 8f, 0.1f, 0.9f));
                 SetLayer(sg, petLayer >= 0 ? petLayer : playerLayer); PrefabUtility.SaveAsPrefabAsset(sg, Prefabs + "Seal.prefab"); Object.DestroyImmediate(sg);
             }
+            // ── NPC: 조랭하프족(마을 주민·퀘스트). 기본 레이어(전투에 안 걸림)
+            var npcModel = AssetDatabase.LoadAssetAtPath<GameObject>(Models + "Joraeng.fbx");
+            if (npcModel != null)
+            {
+                var ng = (GameObject)PrefabUtility.InstantiatePrefab(npcModel); ng.name = "Joraeng";
+                var na = ng.GetComponentInChildren<Animator>(); if (na == null) na = ng.AddComponent<Animator>(); na.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "Joraeng.controller"); na.applyRootMotion = false;
+                var ncol = ng.AddComponent<CapsuleCollider>(); ncol.center = new Vector3(0, 0.48f, 0); ncol.radius = 0.34f; ncol.height = 0.96f;
+                var nag = ng.AddComponent<UnityEngine.AI.NavMeshAgent>(); nag.radius = 0.32f; nag.height = 0.95f; nag.speed = 0.9f; nag.stoppingDistance = 0.1f; nag.avoidancePriority = 70;
+                ng.AddComponent<Npc>();
+                ApplyMaterial(ng, "Joraeng_Fur", NormalMapped("Joraeng_Fur", new Color(0.97f, 0.95f, 0.9f), "Fur_Normal", 9f, 0.12f, 1.0f));
+                ApplyMaterial(ng, "Joraeng_Scarf", NormalMapped("Joraeng_Scarf", Color.white, "Fur_Normal", 6f, 0.1f, 0.7f));   // 색은 Npc 가 주민마다
+                var eye = new Material(Shader.Find("Standard")) { name = "Joraeng_Eye", color = new Color(0.03f, 0.03f, 0.04f) }; eye.SetFloat("_Glossiness", 0.92f); ApplyMaterial(ng, "Joraeng_Eye", SaveMat(eye, "Joraeng_Eye"));
+                var brown = new Material(Shader.Find("Standard")) { name = "Joraeng_Brown", color = new Color(0.45f, 0.27f, 0.13f) }; brown.SetFloat("_Glossiness", 0.2f); ApplyMaterial(ng, "Joraeng_Brown", SaveMat(brown, "Joraeng_Brown"));
+                var seam = new Material(Shader.Find("Standard")) { name = "Joraeng_Seam", color = new Color(0.86f, 0.82f, 0.74f) }; seam.SetFloat("_Glossiness", 0.05f); ApplyMaterial(ng, "Joraeng_Seam", SaveMat(seam, "Joraeng_Seam"));
+                PrefabUtility.SaveAsPrefabAsset(ng, Prefabs + "Joraeng.prefab"); Object.DestroyImmediate(ng);
+            }
             AssetDatabase.SaveAssets();
             void Save(GameObject g, string n) { SetLayer(g, enemyLayer); PrefabUtility.SaveAsPrefabAsset(g, Prefabs + n + ".prefab"); Object.DestroyImmediate(g); }
         }
@@ -424,6 +476,7 @@ namespace MoominAction.EditorTools
             var gmGo = new GameObject("GameManager"); var gm = gmGo.AddComponent<GameManager>(); gmGo.AddComponent<NavMeshBaker>(); gmGo.AddComponent<ClashManager>();
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
             gm.peanutPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "PeanutBread.prefab"); gm.sealPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Seal.prefab");   // 자연: 땅콩빵 · 야생 하프물범
+            gm.npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Joraeng.prefab");   // 마을: 조랭이(퀘스트) · 몽글이 · 포실이
             foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");
             RegisterScenes();

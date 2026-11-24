@@ -34,7 +34,7 @@ namespace MoominAction.UI
             bannerRoot = NewRect("Banner", root); At(bannerRoot, new Vector2(.5f, .5f), new Vector2(0, -250), new Vector2(900, 160)); bannerGroup = bannerRoot.gameObject.AddComponent<CanvasGroup>();
             bannerGlow = Img(bannerRoot, "Glow", SkillPanelArt.Glow, new Color(1f, .8f, .3f, .55f), false); At(bannerGlow.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(760, 220));
             bannerStreak = Box(bannerRoot, "Streak", new Color(1f, .9f, .55f, .85f)); At(bannerStreak.rectTransform, new Vector2(.5f, .5f), new Vector2(0, -6), new Vector2(900, 4));
-            banner = Txt(bannerRoot, "", 84, UITheme.GoldBright, TextAnchor.MiddleCenter, FontStyle.BoldAndItalic); Stretch(banner.rectTransform); banner.rectTransform.offsetMax = new Vector2(0, 20);
+            banner = StyleDisplay(Txt(bannerRoot, "", 88, UITheme.GoldBright, TextAnchor.MiddleCenter, FontStyle.Normal), true); Stretch(banner.rectTransform); banner.rectTransform.offsetMax = new Vector2(0, 20);
             banner.gameObject.AddComponent<Outline>().effectDistance = new Vector2(3, -3); banner.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(5, -6);
             bannerSub = Txt(bannerRoot, "", 26, UITheme.Cream, TextAnchor.MiddleCenter, FontStyle.Bold); At(bannerSub.rectTransform, new Vector2(.5f, 0), new Vector2(0, -6), new Vector2(900, 34)); bannerSub.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, .9f);
             root.gameObject.SetActive(false);

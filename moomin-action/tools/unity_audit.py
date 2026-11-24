@@ -44,13 +44,18 @@ for m in re.finditer(r'MakeController\(n \+ "\.fbx",[^,]+,\s*new\[\]\s*\{([^}]*)
 moomin_states = set()
 for m in re.finditer(r'foreach \(var n in new\[\]\s*\{([^}]*)\}\)\s*\{\s*var s = sm\.AddState\(n\)', setup): moomin_states |= set(re.findall(r'"(\w+)"', m.group(1)))
 if moomin_states: controllers.setdefault("Moomin", set()).update(moomin_states | {"Locomotion"})
-glbs = {n: glb_anims(os.path.join(ROOT, "exports", n + ".glb")) for n in ("Moomin", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock", "Seal") if os.path.exists(os.path.join(ROOT, "exports", n + ".glb"))}
+npc = re.search(r'public static void BuildNpcController\(\)(.*?)\[MenuItem', setup, re.S)   # NPC: Locomotion + Talk + 표정 동작(foreach)
+if npc:
+    body = npc.group(1); st = set(re.findall(r'AddState\("(\w+)"\)', body))
+    for fe in re.finditer(r'foreach \(var n in new\[\]\s*\{([^}]*)\}\)', body): st |= set(re.findall(r'"(\w+)"', fe.group(1)))
+    controllers["Joraeng"] = st | {"Locomotion"}
+glbs = {n: glb_anims(os.path.join(ROOT, "exports", n + ".glb")) for n in ("Moomin", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock", "Seal", "Joraeng") if os.path.exists(os.path.join(ROOT, "exports", n + ".glb"))}
 for fbx, states in controllers.items():
     clips = glbs.get(fbx)
     if clips is None: continue
     for st in sorted(states - {"Locomotion"}):
         if st not in clips: err(f"{fbx} 컨트롤러 상태 '{st}' 에 해당하는 애니메이션이 모델에 없음")
-    for c in ("Idle", "Walk", "Run"):
+    for c in (("Idle", "Walk") if fbx == "Joraeng" else ("Idle", "Walk", "Run")):   # NPC 블렌드 트리 = Idle·Walk
         if c not in clips: err(f"{fbx} 모델에 블렌드 트리용 '{c}' 애니메이션이 없음")
 lib = SRC[os.path.join(A, "Scripts", "Combat", "SkillLibrary.cs")]
 OWNER = {"BASIC": "Moomin", "SKILL": "Moomin", "HUMAN": "SleepyBear", "WHALE": "Goraegorae", "CUBE": "PinkCube", "BLOCK": "GreenBlock", "SEAL": "Seal"}   # ENEMY/BOSS = 애니메이터 없는 그림자
@@ -97,6 +102,8 @@ for p, s in SRC.items():
         c = m.group(1)
         if re.search(r'[\w\]\)]\s*(=|\+=|-=|\*=)\s*[^=].*;|\b(var|return|if|foreach)\b[^;]*;|\b[A-Z]\w*(\.\w+)*\([^()]*\)\s*;', c) and c.count(";") >= 1 and re.search(r';\s*$|;\s*\w', c):
             err(f"주석 안에 코드처럼 보이는 문장 — 실행되지 않음: {rel(p)}:{i}  ({c.strip()[:60]}…)")
+        elif re.search(r'\)\s+[a-z]\w*\s*=\s*[\w.]+\s*,\s*$', c):   # 객체 초기화 "(설명) 이름 = 값," 이 주석에 들어감
+            err(f"주석 안에 초기화 항목(이름 = 값,)이 들어감 — 저장·설정이 빠짐: {rel(p)}:{i}  ({c.strip()[:60]}…)")
 
 # ── 5) Shader.Find
 ALWAYS = {"Sprites/Default", "UI/Default", "Standard", "Unlit/Color", "Unlit/Texture", "Unlit/Transparent", "Particles/Standard Unlit", "Hidden/InternalErrorShader"}

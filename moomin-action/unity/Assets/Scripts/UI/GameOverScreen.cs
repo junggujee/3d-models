@@ -32,7 +32,7 @@ namespace MoominAction.UI
             shade = Box(root, "Shade", new Color(0, 0, 0, 0)); Stretch(shade.rectTransform);
             band = Img(root, "Band", UITheme.Highlight, new Color(0, 0, 0, 0)); At(band.rectTransform, new Vector2(.5f, .5f), new Vector2(0, 20), new Vector2(2400, 260));
             var bandFill = Box(band.transform, "Fill", new Color(.08f, .05f, .05f, BandFill)); Stretch(bandFill.rectTransform, 2); bandFill.transform.SetAsFirstSibling();
-            bandText = Txt(band.transform, "패배....", 140, new Color(DefeatRed.r, DefeatRed.g, DefeatRed.b, 0), TextAnchor.MiddleCenter, FontStyle.Bold, "Text"); Stretch(bandText.rectTransform);
+            bandText = Txt(band.transform, "패배....", 140, new Color(DefeatRed.r, DefeatRed.g, DefeatRed.b, 0), TextAnchor.MiddleCenter, FontStyle.Normal, "Text"); bandText.font = UITheme.DisplayFont; Stretch(bandText.rectTransform);
             bandText.gameObject.AddComponent<Outline>().effectColor = new Color(.2f, 0, 0, .8f);
             // 눈이 ×× 인 민미 얼굴(Resources/UI/GameOver/DefeatFace.png — blender/render_defeat_face.py + tools/defeat_face.py): 띠 위로 떠오름, 결과 화면에서는 왼쪽 위로
             face = NewRect("Face", root); At(face, new Vector2(.5f, .5f), new Vector2(0, 300), new Vector2(300, 300));
@@ -43,7 +43,7 @@ namespace MoominAction.UI
             panel = Img(root, "Results", pal.frame, Color.white, true, true).rectTransform; At(panel, new Vector2(.5f, .5f), Vector2.zero, new Vector2(1060, 820));
             panelGroup = panel.gameObject.AddComponent<CanvasGroup>();
             var lift = Box(panel, "Lift", new Color(.45f, .36f, .25f, .28f)); Stretch(lift.rectTransform, 10);   // 바탕을 조금 밝게(따뜻한 양피지 빛)
-            var title = Txt(panel, "여정의 기록", 50, pal.bright, TextAnchor.MiddleCenter, FontStyle.Bold); Set(title.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -30), new Vector2(900, 66));
+            var title = StyleHeading(Txt(panel, "여정의 기록", 52, pal.bright, TextAnchor.MiddleCenter, FontStyle.Normal)); Set(title.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -30), new Vector2(900, 66));
             sub = Txt(panel, "", 26, SubRed, TextAnchor.MiddleCenter); Set(sub.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -96), new Vector2(900, 38));
             var line = Img(panel, "Divider", UITheme.Highlight, Color.white); Set(line.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -140), new Vector2(920, 12));
             string[] labels = { "처치한 적", "합 승률", "최고 위력", "도달 웨이브", "레벨", "플레이 시간" };

@@ -40,7 +40,7 @@ namespace MoominAction.UI
             // 이름 띠
             banner = Img(root, "Banner", SkillPanelArt.Banner, new Color(.07f, .06f, .05f, .92f), true); Set(banner.rectTransform, tl, tl, tl, new Vector2(128, -78), new Vector2(470, 74));
             bannerInk = Img(banner.transform, "Ink", SkillPanelArt.BannerInk, Color.white, true); Stretch(bannerInk.rectTransform);
-            skillName = Txt(banner.transform, "", 40, new Color(.96f, .92f, .82f), TextAnchor.MiddleLeft, FontStyle.Bold); Set(skillName.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(40, 0), new Vector2(-110, 0));
+            skillName = StyleSkill(Txt(banner.transform, "", 42, new Color(.98f, .95f, .88f), TextAnchor.MiddleLeft, FontStyle.Normal), new Color(1f, .86f, .55f)); Set(skillName.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(40, 0), new Vector2(-110, 0));
             skillName.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, .8f);
             // 육각형(기본 위력)
             hexGlow = Img(root, "HexGlow", SkillPanelArt.Glow, Color.white, false); Set(hexGlow.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(88, -138), new Vector2(230, 230));

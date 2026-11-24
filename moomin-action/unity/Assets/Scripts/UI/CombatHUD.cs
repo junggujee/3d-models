@@ -43,7 +43,7 @@ namespace MoominAction.UI
                 var u = new SlotUI { skill = cm != null ? cm.SlotSkill(i) : null };
                 u.frame = Img(core, "Skill" + i, UITheme.Slot, Color.white, true); Set(u.frame.rectTransform, bc, bc, bc, new Vector2(-189 + i * 126, 30), new Vector2(114, 114));
                 var key = Txt(u.frame.transform, keys[i], i == 0 ? 18 : 28, UITheme.Gold, TextAnchor.UpperLeft, FontStyle.Bold); Set(key.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(8, -4), Vector2.zero);
-                u.name = Txt(u.frame.transform, u.skill != null ? u.skill.skillName : "", 20, UITheme.Cream, TextAnchor.LowerCenter); Set(u.name.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(0, 8), new Vector2(-8, 0));
+                u.name = StyleSkill(Txt(u.frame.transform, u.skill != null ? u.skill.skillName : "", 21, UITheme.Cream, TextAnchor.LowerCenter), new Color(1f, .85f, .5f)); u.name.GetComponent<TextGlow>().radius = 2.5f; Set(u.name.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(0, 8), new Vector2(-8, 0));
                 u.cost = Txt(u.frame.transform, u.skill == null ? "" : u.skill.energyCost > 0 ? "에너지 " + u.skill.energyCost : u.skill.sanityCost > 0 ? "정신 " + u.skill.sanityCost : "", 16, new Color(.6f, .7f, 1f), TextAnchor.UpperRight); Set(u.cost.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(-8, -6), Vector2.zero);
                 int n = u.skill != null ? u.skill.coinCount : 0;
                 for (int c = 0; c < n; c++) { var pip = Img(u.frame.transform, "Pip", CoinDisplay.Coin(CoinDisplay.Look.Heads), Color.white, false); Set(pip.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2((c - (n - 1) * .5f) * 18, 8), new Vector2(16, 16)); }
@@ -64,13 +64,13 @@ namespace MoominAction.UI
             playerStatus = Txt(core, "", 20, UITheme.Cream); Set(playerStatus.rectTransform, tl, tl, new Vector2(0, .5f), new Vector2(44, -196), new Vector2(640, 26));   // 내 상태이상·경직
             // 클래시
             var kp = Img(hudRoot, "ClashPanel", UITheme.Frame, Color.white); clashPanel = kp.gameObject; clashGroup = clashPanel.AddComponent<CanvasGroup>(); At(kp.rectTransform, new Vector2(.5f, .7f), Vector2.zero, new Vector2(620, 240));
-            clashTitle = Txt(kp.transform, "클래시", 34, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Bold); Set(clashTitle.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(.5f, 1), new Vector2(0, -12), new Vector2(-40, 44));
+            clashTitle = StyleHeading(Txt(kp.transform, "클래시", 34, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Normal)); Set(clashTitle.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(.5f, 1), new Vector2(0, -12), new Vector2(-40, 44));
             clashRows = Txt(kp.transform, "", 30, UITheme.Cream, TextAnchor.UpperCenter); Set(clashRows.rectTransform, Vector2.zero, Vector2.one, new Vector2(.5f, .5f), new Vector2(0, -8), new Vector2(-40, -110));
             clashResult = Txt(kp.transform, "", 30, UITheme.GoldBright, TextAnchor.MiddleCenter, FontStyle.Bold); Set(clashResult.rectTransform, Vector2.zero, new Vector2(1, 0), new Vector2(.5f, 0), new Vector2(0, 16), new Vector2(-40, 40));
             clashGroup.alpha = 0;
             // 조준 대상
             var tp = Img(hudRoot, "TargetPanel", UITheme.Slot, new Color(1, 1, 1, .92f)); targetPanel = tp.gameObject; At(tp.rectTransform, new Vector2(.5f, 1), new Vector2(0, -28), new Vector2(640, 156)); tp.rectTransform.pivot = new Vector2(.5f, 1);
-            targetName = Txt(tp.transform, "", 26, UITheme.GoldBright, TextAnchor.MiddleLeft, FontStyle.Bold); Set(targetName.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(18, -6), new Vector2(-36, 32));
+            targetName = StyleHeading(Txt(tp.transform, "", 27, UITheme.GoldBright, TextAnchor.MiddleLeft, FontStyle.Normal)); Set(targetName.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(18, -6), new Vector2(-36, 32));
             targetHp = MakeGauge(tp.transform, "HP", UITheme.Red, new Vector2(600, 14), true, false); Set(targetHp.root, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -42), new Vector2(604, 14));
             // 경직 게이지(체력과 별개) + 상태이상 아이콘(강도/횟수)
             targetStagger = MakeGauge(tp.transform, "Stagger", new Color(.95f, .8f, .3f), new Vector2(420, 10), false, false); Set(targetStagger.root, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(18, -60), new Vector2(420, 10));

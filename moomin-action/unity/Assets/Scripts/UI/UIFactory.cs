@@ -44,6 +44,31 @@ namespace MoominAction.UI
             var sh = r.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, 0.85f); sh.effectDistance = new Vector2(1.5f, -1.5f); return t;
         }
 
+        /// <summary>제목·장·보스 이름: Display 글꼴 + 크림→베이지 그라데이션 + 부드러운 그림자(+ 선택: 은은한 빛).</summary>
+        public static Text StyleDisplay(Text t, bool glow = false)
+        {
+            t.font = UITheme.DisplayFont; t.fontStyle = FontStyle.Normal; t.color = Color.white;
+            var g = t.gameObject.AddComponent<UIGradient>(); g.top = UITheme.DisplayTop; g.bottom = UITheme.DisplayBottom;
+            if (t.TryGetComponent<Shadow>(out var sh)) { sh.effectColor = new Color(0.08f, 0.04f, 0.02f, 0.75f); sh.effectDistance = new Vector2(2f, -3f); }
+            if (glow) { var gl = t.gameObject.AddComponent<TextGlow>(); gl.color = new Color(1f, 0.86f, 0.6f, 0.28f); gl.radius = 5f; }
+            return t;
+        }
+        /// <summary>이름·퀘스트 제목·메뉴 머리글: Heading 글꼴(굵게 흉내 없이 글꼴 그대로).</summary>
+        public static Text StyleHeading(Text t) { t.font = UITheme.HeadingFont; t.fontStyle = FontStyle.Normal; return t; }
+        /// <summary>스킬 이름: Skill 글꼴 + 은은한 빛(glow 색 = 속성·코인 색 등) — "조금 빛나고 깔끔하게, 너무 컴퓨터스럽지 않게".</summary>
+        public static Text StyleSkill(Text t, Color glow)
+        {
+            t.font = UITheme.SkillFont; t.fontStyle = FontStyle.Normal;
+            var g = t.gameObject.AddComponent<UIGradient>(); g.top = Color.white; g.bottom = new Color(0.93f, 0.89f, 0.8f);
+            var gl = t.gameObject.AddComponent<TextGlow>(); gl.color = new Color(glow.r, glow.g, glow.b, 0.55f); gl.radius = 4f; return t;
+        }
+        /// <summary>스타 세일러풍 장식선(가는 금선 + 양끝 마름모 + 가운데 네 갈래 별). 없으면 금색 구분선.</summary>
+        public static Image Divider(Transform parent, string name, float width)
+        {
+            var sp = UITheme.Art("Ornament", "Divider"); var im = Img(parent, name, sp != null ? sp : UITheme.Highlight, Color.white, sp == null);
+            im.rectTransform.sizeDelta = new Vector2(width, sp != null ? width * 24f / 600f : 12f); im.preserveAspect = sp != null; return im;
+        }
+
         /// <summary>장식 패널(테두리 포함).</summary>
         public static Image Panel(Transform parent, string name, Vector2 size, Vector2 anchor = default, Vector2 pos = default)
         {
@@ -53,7 +78,7 @@ namespace MoominAction.UI
         /// <summary>제목 + 금색 구분선.</summary>
         public static void Header(Transform panel, string title, float width, float top = -26f)
         {
-            var t = Txt(panel, title, 46, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Bold, "Title"); At(t.rectTransform, new Vector2(.5f, 1), new Vector2(0, top), new Vector2(width - 80, 70)); t.rectTransform.pivot = new Vector2(.5f, 1);
+            var t = StyleHeading(Txt(panel, title, 46, UITheme.Gold, TextAnchor.MiddleCenter, FontStyle.Normal, "Title")); At(t.rectTransform, new Vector2(.5f, 1), new Vector2(0, top), new Vector2(width - 80, 70)); t.rectTransform.pivot = new Vector2(.5f, 1);
             var line = Img(panel, "Divider", UITheme.Highlight, new Color(1, 1, 1, 1), true); At(line.rectTransform, new Vector2(.5f, 1), new Vector2(0, top - 78), new Vector2(width - 120, 12)); line.rectTransform.pivot = new Vector2(.5f, 1);
         }
 

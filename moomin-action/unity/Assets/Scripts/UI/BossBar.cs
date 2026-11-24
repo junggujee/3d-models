@@ -39,12 +39,12 @@ namespace MoominAction.UI
             var capSp = Load("BossCap", Vector4.zero, 100f); if (capSp != null) { var cap = Img(root, "Cap", capSp, Color.white, false); Set(cap.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(0, .5f), new Vector2(-62, 38), new Vector2(64, 80)); }
             emblem = Img(root, "Emblem", null, Color.white, false); Set(emblem.rectTransform, Vector2.zero, Vector2.zero, new Vector2(.5f, .5f), new Vector2(58, 40), new Vector2(104, 104));
             // 이름 · 별칭(위 왼쪽) · 상태이상 · %(위 오른쪽)
-            nameText = Txt(root, "", 32, UITheme.Cream, TextAnchor.LowerLeft, FontStyle.Bold); Set(nameText.rectTransform, Vector2.zero, new Vector2(1, 0), Vector2.zero, new Vector2(120, 60), new Vector2(-400, 44));
+            nameText = StyleDisplay(Txt(root, "", 36, UITheme.Cream, TextAnchor.LowerLeft, FontStyle.Normal), true); Set(nameText.rectTransform, Vector2.zero, new Vector2(1, 0), Vector2.zero, new Vector2(120, 60), new Vector2(-400, 44));
             nameText.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, .9f);
             pctText = Txt(root, "", 22, UITheme.GoldBright, TextAnchor.LowerRight, FontStyle.Bold); Set(pctText.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-96, 60), new Vector2(120, 34));
             pctText.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, .9f);
             for (int i = 0; i < icons.Length; i++) { icons[i] = Img(root, "Status" + i, SkillPanelArt.StatusIcon(StatusInfo.All[i]), SkillPanelArt.StatusTint(StatusInfo.All[i]), false); Set(icons[i].rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(.5f, .5f), new Vector2(-240 - i * 32, 76), new Vector2(30, 30)); }
-            defeat = Txt(root, "격파", 72, UITheme.GoldBright, TextAnchor.MiddleCenter, FontStyle.BoldAndItalic); Set(defeat.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 0), new Vector2(0, 8), new Vector2(600, 90));
+            defeat = StyleDisplay(Txt(root, "격파", 76, UITheme.GoldBright, TextAnchor.MiddleCenter, FontStyle.Normal), true); Set(defeat.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(.5f, 0), new Vector2(0, 8), new Vector2(600, 90));
             defeat.gameObject.AddComponent<Outline>().effectDistance = new Vector2(3, -3); defeat.gameObject.SetActive(false);
             root.gameObject.SetActive(false);
         }
