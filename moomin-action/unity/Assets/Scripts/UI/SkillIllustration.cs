@@ -14,7 +14,9 @@ namespace MoominAction.UI
     {
         const int W = 384, H = 200; const float ASP = (float)W / H;
         static readonly Dictionary<string, Sprite> cache = new();
-        static float[] lum, glow, acc; static System.Random rng;
+        static float[] lum, glow, acc, neon; static System.Random rng;
+        /// <summary>레이저 블레이더 스킬: 칼날 둘레 네온 번짐(neon) + 동작 획을 시안 광선색으로.</summary>
+        static readonly Color NeonCyan = new Color(0.25f, 0.78f, 1f);
         static float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
         static int StableHash(string s) { unchecked { int h = (int)2166136261; foreach (char c in s) h = (h ^ c) * 16777619; return h; } }
 
@@ -58,6 +60,7 @@ namespace MoominAction.UI
                     pose = new[] { 20f, 40f, 210f, -55f, -125f, 60f }; for (int k = 0; k < 6; k++) Arc(fx + R(-.2f, .6f), R(.2f, .8f), R(.3f, .6f), R(.3f, .5f), R(0, 360), R(0, 360), R(.006f, .025f), R(.6f, 1f), R(0, 1) > .5f ? 1 : 0, 14);
                     break;
             }
+            LaserScene(s.skillId, fx);   // 레이저 블레이더: 스킬마다 다른 빛 무늬(네온은 색 입힐 때)
             // 먹 얼룩(방울 + 주변 작은 튀김)
             for (int k = 0; k < 18; k++)
             {
@@ -73,7 +76,8 @@ namespace MoominAction.UI
                 if (v > .15f && v < .6f) { float gx = i % 6 - 3f, gy = j % 6 - 3f; v += Mathf.Sqrt(gx * gx + gy * gy) < v * 6f * 0.75f ? .15f : -.08f; }
                 lum[idx] = v;
             }
-            if (wp.HasValue) WhaleFigure(wp.Value); else if (cp.HasValue) CubeFigure(cp.Value); else Figure(pose, fx, s.skillId.StartsWith("SHIELD") ? 1 : s.skillId.StartsWith("DUAL") ? 2 : s.skillId.StartsWith("LASER") ? 3 : 0);
+            bool laser = s.skillId.StartsWith("LASER"); neon = new float[W * H];
+            if (wp.HasValue) WhaleFigure(wp.Value); else if (cp.HasValue) CubeFigure(cp.Value); else Figure(pose, fx, s.skillId.StartsWith("SHIELD") ? 1 : s.skillId.StartsWith("DUAL") ? 2 : laser ? 3 : 0);
             // 색 입히기
             var c = SkillAttributes.ColorOf(s.attribute); var px = new Color[W * H];
             for (int k = 0; k < px.Length; k++)
@@ -82,9 +86,14 @@ namespace MoominAction.UI
                 float v = Mathf.Clamp01(lum[k] * Mathf.Clamp(1 - (vd - .5f) * .9f, .5f, 1f));   // 비네트
                 float a = Mathf.Clamp01(acc[k]) * (v > .3f ? 1f : 0f) * .45f, m = Mathf.Max(v, .6f);   // 속성색은 아주 조금
                 px[k] = new Color(v * (1 - a * .8f) + c.r * a * m, v * (1 - a * .8f) + c.g * a * m, v * (1 - a * .8f) + c.b * a * m, 1f);
+                if (laser)   // 빛나는 레이저: 칼날 둘레 네온 + 동작 획(빛 번짐)이 시안으로, 가운데는 흰 심지
+                {
+                    float n = Mathf.Clamp01(neon[k] + Mathf.Clamp01(glow[k] - 0.1f) * 0.9f), core = n * n * n * n;
+                    var neonCol = Color.Lerp(NeonCyan, Color.white, core); px[k] = Color.Lerp(px[k], neonCol, Mathf.Clamp01(n * 1.1f)); px[k].a = 1f;
+                }
             }
             var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp }; tex.SetPixels(px); tex.Apply();
-            sp = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(.5f, .5f), 100f); cache[key] = sp; lum = glow = acc = null; return sp;
+            sp = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(.5f, .5f), 100f); cache[key] = sp; lum = glow = acc = neon = null; return sp;
         }
 
         // ── 고래고래 실루엣(옆모습, 오른쪽을 봄) — tools/illustration_preview.py 의 whale() 과 같은 도형
@@ -335,6 +344,25 @@ namespace MoominAction.UI
             }
         }
 
+        /// <summary>레이저 블레이더 스킬 무늬(난수 없음 — tools/illustration_preview.py 의 laser_scene 과 같음).</summary>
+        static void LaserScene(string id, float fx)
+        {
+            switch (id)
+            {
+                case "LASER_2": Arc(fx + .45f, .45f, .95f, .16f, 200f, -20f, .03f, 1f, 0f, 28); Arc(fx + .4f, .52f, .7f, .1f, 195f, -10f, .015f, .9f, 0f, 24); break;   // 넓게 휩쓰는 가로 광선
+                case "LASER_3": Stroke(fx + .5f, .02f, fx + .5f, .98f, .022f, 1f, 0f, true); Stroke(fx - .1f, .5f, fx + 1.1f, .5f, .02f, 1f, 0f, true); break;   // 십자 광선
+                case "LASER_Q":   // 날아가는 광륜(고리) + 뒤로 남는 줄
+                    Arc(fx + 1.05f, .6f, .17f, .1f, 0f, 360f, .018f, 1f, 0f, 30); Arc(fx + 1.05f, .6f, .1f, .06f, 0f, 360f, .01f, 1f, 0f, 24);
+                    for (int k = 0; k < 5; k++) { float y = .52f + k * .04f; Stroke(fx + .35f, y, fx + .88f, .6f + (y - .6f) * .4f, .006f, .8f, 0f, true); }
+                    break;
+                case "LASER_E": foreach (var (rx, ry) in new[] { (.5f, .18f), (.72f, .26f), (.95f, .34f) }) Arc(fx, .42f, rx, ry, 0f, 360f, .012f, .9f, 0f, 36); break;   // 겹겹 빛 고리
+                case "LASER_R":   // 몸을 감싸는 큰 광륜 + 바퀴살
+                    Arc(fx + .05f, .5f, .85f, .48f, 0f, 360f, .03f, 1f, 0f, 40);
+                    for (int k = 0; k < 16; k++) { float a = k * Mathf.PI * 2f / 16f; Stroke(fx + .05f + Mathf.Cos(a) * .3f, .5f + Mathf.Sin(a) * .17f, fx + .05f + Mathf.Cos(a) * .55f, .5f + Mathf.Sin(a) * .31f, .008f, .85f, 0f, true); }
+                    break;
+            }
+        }
+
         /// <summary>인물 실루엣(캡슐 SDF): 검은 몸 + 빛 쪽 가장자리 하이라이트 + 밝은 칼날. pose = 몸 기울기, 앞팔, 뒷팔, 앞다리, 뒷다리, 무기 각도(도).</summary>
         /// <summary>무기 모양(밝은 실루엣)까지의 거리: 0 검(앞손에서 무기 각도로 뻗은 날) · 1 베개 방패(앞손의 땅콩 모양) · 2 회전 쌍검(양손 끝 바람개비 두 날).</summary>
         static float PropDist(float x, float y, int prop, Vector2 front, Vector2 back, float wa)
@@ -385,7 +413,8 @@ namespace MoominAction.UI
                 foreach (var c in caps) d = Mathf.Min(d, Seg(x, y, c.a.x, c.a.y, c.b.x, c.b.y, out _) - c.r);
                 float rim = Mathf.Clamp01(1 - Mathf.Abs(d) * H * 0.35f) * Mathf.Clamp01(glow[idx]);
                 if (d < 0) lum[idx] = 0.02f + 0.15f * rim; lum[idx] = Mathf.Max(lum[idx], rim * 0.8f);
-                if (PropDist(x, y, prop, f[1], b[1], wa) < 0) lum[idx] = prop == 1 ? 0.82f : 0.9f;
+                float pd = PropDist(x, y, prop, f[1], b[1], wa); if (pd < 0) lum[idx] = prop == 1 ? 0.82f : prop == 3 ? 1f : 0.9f;
+                if (prop == 3) neon[idx] = Mathf.Max(neon[idx], Mathf.Exp(-Mathf.Max(pd, 0f) * 38f));   // 광선 칼날 번짐
             });
         }
     }

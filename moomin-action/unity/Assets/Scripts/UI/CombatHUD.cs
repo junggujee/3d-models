@@ -138,6 +138,11 @@ namespace MoominAction.UI
 
         /// <summary>정적 이벤트·적 구독 해제(씬 재시작 시 파괴된 UI 를 건드리지 않도록).</summary>
         public void Dispose() { if (onGuard != null) DefenseController.AnyGuardResolved -= onGuard; if (onEvade != null) DefenseController.AnyEvadeResolved -= onEvade; stage?.Dispose(); if (onExchange != null) ClashManager.ClashExchange -= onExchange; if (onClashEnd != null) ClashManager.ClashEnded -= onClashEnd; if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
+        // 조준 대상 컴포넌트는 대상이 바뀔 때만 찾음(매 프레임 GetComponent 하지 않게)
+        EnemyCombatController cT; StatusEffectManager cTse; EnemyBrain cBrain; Image staggerFillImg;
+        void CacheTarget(EnemyCombatController t) { if (t == cT) return; cT = t; cTse = t != null ? t.GetComponent<StatusEffectManager>() : null; cBrain = t != null ? t.GetComponent<EnemyBrain>() : null; }
+        Image StaggerFillImg() { if (staggerFillImg == null) staggerFillImg = targetStagger.fill.GetComponent<Image>(); return staggerFillImg; }
+
         /// <summary>무기를 바꾸면 스킬 칸(이름·비용·코인 — 파괴불가면 빨간 코인)을 다시 씀.</summary>
         void RefreshSlots()
         {
@@ -205,10 +210,10 @@ namespace MoominAction.UI
                 targetName.text = LevelTag(t.Stats) + t.Stats.displayName + (string.IsNullOrEmpty(t.Stats.epithet) ? "" : $"  <size=19><color=#CFC4A8>{t.Stats.epithet}</color></size>") + (t.Stats.IsVulnerable ? "   <color=#E8C97A><size=20>경직 — 반격 기회</size></color>" : "") + $"   <size=18><color=#9E9178>정신력 {t.Stats.currentSanity:+0;-0;0} · {SkillAttributes.Names[(int)t.Stats.attribute]} 속성 · {SkillAttributes.WeaknessText(t.Stats.attribute)}</color></size>";
                 // 경직 게이지
                 targetStagger.SetFill(t.Stats.IsStaggerBroken ? 1f : t.Stats.StaggerGauge.Ratio); if (staggerFlash > 0) staggerFlash -= dt;
-                targetStagger.fill.GetComponent<Image>().color = staggerFlash > 0 ? Color.white : t.Stats.IsStaggerBroken ? UITheme.GoldBright : new Color(.95f, .8f, .3f);
+                StaggerFillImg().color = staggerFlash > 0 ? Color.white : t.Stats.IsStaggerBroken ? UITheme.GoldBright : new Color(.95f, .8f, .3f);
                 targetStaggerLabel.text = t.Stats.IsStaggerBroken ? "경직!" : $"경직 {Mathf.RoundToInt(t.Stats.StaggerGauge.Current)}/{Mathf.RoundToInt(t.Stats.StaggerGauge.Max)}";
                 // 상태이상 아이콘: 강도/횟수, 발동하면 잠깐 커짐
-                var tse = t.GetComponent<StatusEffectManager>();
+                CacheTarget(t); var tse = cTse;
                 float x = 32f;   // 켜진 효과만 왼쪽부터 차례로
                 for (int i = 0; i < tIcons.Length; i++)
                 {
@@ -220,7 +225,7 @@ namespace MoominAction.UI
                     tIcons[i].rectTransform.anchoredPosition = new Vector2(x, -86); tIconNums[i].rectTransform.anchoredPosition = new Vector2(x + 18, -86);
                     x += 18 + 6 + tIconNums[i].preferredWidth + 18;
                 }
-                var s = t.Executor.CurrentSkill; var brain = t.GetComponent<EnemyBrain>();
+                var s = t.Executor.CurrentSkill; CacheTarget(t); var brain = cBrain;
                 if (s != null) targetIntent.text = (t.Executor.Phase == SkillPhase.Windup ? "<color=#E06060>예고</color> " : "<color=#E06060>공격</color> ") + $"{s.skillName} · 기본 {s.basePower} · 코인 {s.coinCount}개 +{s.coinPower}" + (!s.canBeGuarded ? "  <color=#B070FF>방어 불가</color>" : "") + (!s.canBeEvaded ? "  <color=#B070FF>회피 불가</color>" : "") + (s.isAreaAttack ? $"  <color=#E8C97A>광역 {s.areaRadius:0.#}m</color>" : "") + (s.isProjectile ? $"  <color=#9BE07A>원거리 {s.range:0.#}m</color>" : "");
                 else targetIntent.text = t.IsStaggered ? "경직" : t.Stats.Guarding ? "방어" : t.IsDodging ? "회피" : brain != null ? brain.LastAction switch { EnemyAction.Approach => "접근", EnemyAction.Attack => "공격 준비", EnemyAction.Guard => "방어", EnemyAction.Dodge => "회피", _ => "관찰" } : "";
                 if (enemyCoinT > 0) enemyCoinT -= dt; targetCoins.text = enemyCoinT > 0 ? "적 코인  " + string.Join("  ", enemyCoins) : "";

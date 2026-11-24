@@ -112,7 +112,21 @@ def gear(X, Y, c, r):
     dx, dy = X - c[0], Y - c[1]; rr = np.hypot(dx, dy); th = np.arctan2(dy, dx)
     R_ = np.where(np.cos(8 * th) > 0.3, r, r * .74); return np.maximum(rr - R_, -(rr - r * .3))
 
-def render(motif, seed, accent, subject="human", prop=0):
+def laser_patterns(sid, fx, stroke, arc):
+    """레이저 블레이더 스킬마다 다른 빛 무늬(난수 없음)."""
+    if sid == "LASER_2": arc((fx + .45, .45), .95, .16, 200, -20, .03, 1, 0, 28); arc((fx + .4, .52), .7, .1, 195, -10, .015, .9, 0, 24)
+    elif sid == "LASER_3": stroke((fx + .5, .02), (fx + .5, .98), .022, 1, 0); stroke((fx - .1, .5), (fx + 1.1, .5), .02, 1, 0)
+    elif sid == "LASER_Q":
+        arc((fx + 1.05, .6), .17, .1, 0, 360, .018, 1, 0, 30); arc((fx + 1.05, .6), .1, .06, 0, 360, .01, 1, 0, 24)
+        for k in range(5): y = .52 + k * .04; stroke((fx + .35, y), (fx + .88, .6 + (y - .6) * .4), .006, .8, 0)
+    elif sid == "LASER_E":
+        for rx, ry in ((.5, .18), (.72, .26), (.95, .34)): arc((fx, .42), rx, ry, 0, 360, .012, .9, 0, 36)
+    elif sid == "LASER_R":
+        arc((fx + .05, .5), .85, .48, 0, 360, .03, 1, 0, 40)
+        for k in range(16):
+            a = k * math.pi * 2 / 16; stroke((fx + .05 + math.cos(a) * .3, .5 + math.sin(a) * .17), (fx + .05 + math.cos(a) * .55, .5 + math.sin(a) * .31), .008, .85, 0)
+
+def render(motif, seed, accent, subject="human", prop=0, laser_scene=None):
     rng = np.random.default_rng(seed); R = lambda a, b: a + rng.random() * (b - a)
     xs = (np.arange(W) + .5) / W * ASP; ys = (np.arange(H) + .5) / H; X, Y = np.meshgrid(xs, ys[::-1])
     # 바탕: 어두운 종이 + 먹 얼룩(낮은 주파수 노이즈) + 거친 입자
@@ -194,6 +208,7 @@ def render(motif, seed, accent, subject="human", prop=0):
     else:
         pose = (20, 40, 210, -55, -125, 60)
         for k in range(6): c = (fx + R(-.2, .6), R(.2, .8)); arc(c, R(.3, .6), R(.3, .5), R(0, 360), R(0, 360), R(.006, .025), R(.6, 1), R(0, 1) > .5, n=14)
+    if laser_scene: laser_patterns(laser_scene, fx, stroke, arc)   # C# SkillIllustration.LaserScene 과 같음
     # 먹 얼룩(방울 + 주변 작은 튀김)
     for k in range(18):
         cx, cy, r = R(0, ASP), R(0, 1), R(.006, .03)
@@ -217,7 +232,8 @@ def render(motif, seed, accent, subject="human", prop=0):
     else: d, wd, tip = figure(X, Y, pose, fx, 1.0, prop)
     rim = np.clip(1 - np.abs(d) * H * 0.35, 0, 1) * np.clip(glow, 0, 1)
     lum = np.where(d < 0, 0.02 + 0.15 * rim, lum); lum = np.maximum(lum, rim * 0.8)
-    lum = np.where(wd < 0, 0.9, lum)   # 무기(밝은 칼날)
+    lum = np.where(wd < 0, 1.0 if prop == 3 else 0.9, lum)   # 무기(밝은 칼날)
+    neon = np.exp(-np.maximum(wd, 0) * 38) if prop == 3 else None   # 레이저: 칼날 번짐
     if W_ is not None:   # 고래: 눈의 흰 점 + 숨구멍 물방울(밝게) — 실루엣이어도 고래고래로 알아보게
         c0, s0, t0 = W_[:3]; tt = math.radians(t0); ex, ey = c0[0] + (.27 * math.cos(tt) - .02 * math.sin(tt)) * s0, c0[1] + (.27 * math.sin(tt) + .02 * math.cos(tt)) * s0
         lum = np.where(np.hypot(X - ex, Y - ey) < .012 * s0, 0.95, lum)
@@ -238,6 +254,10 @@ def render(motif, seed, accent, subject="human", prop=0):
     vig = np.clip(1 - (np.hypot((X / ASP - .5) * 1.6, (Y - .5) * 1.6) - .5) * 0.9, .5, 1); lum = lum * vig   # 비네트
     lum = np.clip(lum, 0, 1); acc = np.clip(acc, 0, 1) * (lum > .3) * 0.45      # 속성색은 아주 조금
     rgb = np.stack([lum] * 3, -1) * (1 - acc[..., None] * .8) + np.array(accent)[None, None, :] / 255 * acc[..., None] * np.maximum(lum, .6)[..., None]
+    if neon is not None:   # C# SkillIllustration 의 laser 와 같음: 시안 네온 + 흰 심지
+        n = np.clip(neon + np.clip(glow - 0.1, 0, 1) * 0.9, 0, 1); core = n ** 4
+        col = np.array([0.25, 0.78, 1.0])[None, None, :] * (1 - core[..., None]) + core[..., None]
+        rgb = rgb * (1 - np.clip(n * 1.1, 0, 1)[..., None]) + col * np.clip(n * 1.1, 0, 1)[..., None]
     return Image.fromarray((np.clip(rgb, 0, 1) * 255).astype(np.uint8))
 
 if __name__ == "__main__":

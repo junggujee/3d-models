@@ -48,6 +48,7 @@ namespace MoominAction.UI
             defeat.gameObject.AddComponent<Outline>().effectDistance = new Vector2(3, -3); defeat.gameObject.SetActive(false);
             root.gameObject.SetActive(false);
         }
+        EnemyCombatController seOwner; StatusEffectManager seCached;   // 상태이상 관리자는 대상이 바뀔 때만 찾음
 
         public void Update(float dt)
         {
@@ -72,7 +73,7 @@ namespace MoominAction.UI
             }
             pctText.text = Mathf.CeilToInt(r * 100f) + "%";
             stag.anchorMax = new Vector2(st.IsStaggerBroken ? 1f : st.StaggerGauge.Ratio, 1); stagImg.color = st.IsStaggerBroken ? Color.Lerp(UITheme.GoldBright, Color.white, .5f + .5f * Mathf.Sin(Time.time * 14f)) : new Color(.95f, .8f, .3f);
-            var se = target.GetComponent<StatusEffectManager>(); int k = 0;
+            if (seOwner != target) { seOwner = target; seCached = target != null ? target.GetComponent<StatusEffectManager>() : null; } var se = seCached; int k = 0;
             for (int i = 0; i < icons.Length; i++) { var e = se != null ? se.Get(StatusInfo.All[i]) : null; bool on = e != null && e.Active; icons[i].gameObject.SetActive(on); if (on) icons[i].rectTransform.anchoredPosition = new Vector2(-240 - k++ * 32, 76); }
         }
 

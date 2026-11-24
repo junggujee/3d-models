@@ -70,7 +70,11 @@ namespace MoominAction
             if (bag != null)
             {
                 if (q.rewardGold > 0) bag.AddGold(q.rewardGold);
-                foreach (var (rid, n) in q.rewardItems) bag.Add(rid, n);
+                foreach (var (rid, n) in q.rewardItems)
+                {   // 가방이 가득 차면 남은 보상은 발밑에 떨어뜨림(예전엔 그냥 사라짐)
+                    int left = bag.Add(rid, n);
+                    if (left > 0) ItemPickup.Spawn(rid, left, bag.transform.position + bag.transform.forward * 0.8f + Vector3.up * 0.4f, 2f);
+                }
             }
             Announce?.Invoke("퀘스트 완료", q.title); return true;
         }

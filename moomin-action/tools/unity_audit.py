@@ -20,6 +20,12 @@ def err(m): errors.append(m)
 def warn(m): warns.append(m)
 def line_of(text, idx): return text.count("\n", 0, idx) + 1
 
+# ── 1b) UITheme.Art("폴더", "이름") · TitleArt("이름") — Resources/UI/폴더/이름.png 이 있는가
+for p, s in SRC.items():
+    for m in re.finditer(r'\bArt\("(\w+)", "(\w+)"', s):
+        if not os.path.exists(os.path.join(A, "Resources", "UI", m.group(1), m.group(2) + ".png")): err(f"UI 그림 없음: Resources/UI/{m.group(1)}/{m.group(2)}.png ({rel(p)}:{line_of(s, m.start())})")
+    for m in re.finditer(r'TitleArt\("(\w+)"', s):
+        if not os.path.exists(os.path.join(A, "Resources", "UI", "Title", m.group(1) + ".png")): warn(f"타이틀 그림 없음(대체 그림 사용): Resources/UI/Title/{m.group(1)}.png ({rel(p)}:{line_of(s, m.start())})")
 # ── 1) Resources.Load
 res = os.path.join(A, "Resources")
 for p, s in SRC.items():

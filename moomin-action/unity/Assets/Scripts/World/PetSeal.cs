@@ -202,7 +202,8 @@ namespace MoominAction
         {
             if (fetching == null)
             {
-                foreach (var p in FindObjectsOfTypeAll())
+                if (Time.time < nextFetch) return false; nextFetch = Time.time + 0.5f;   // 찾기는 0.5초마다(예전엔 매 프레임 장면 전체 검색)
+                foreach (var p in ItemPickup.All)
                 {
                     if (p == null) continue; float dp = Vector3.Distance(p.transform.position, player.position);
                     if (dp > 4f && dp < 14f && Vector3.Distance(p.transform.position, transform.position) < 16f) { fetching = p; break; }
@@ -211,21 +212,18 @@ namespace MoominAction
             }
             if (Vector3.Distance(transform.position, fetching.transform.position) < 0.9f)
             {
-                var d = ItemDatabase.Get(fetching.id); bool ok = fetching.id == "gold" ? Give(() => inv.AddGold(fetching.amount)) : inv != null && inv.Add(fetching.id, fetching.amount) > 0;
-                if (ok) { Say($"{Ga} {Eul(fetching.id == "gold" ? "금화" : d != null ? d.name : "아이템")} 물어 왔다"); Destroy(fetching.gameObject); AddAffection(0.5f); }
+                // Inventory.Add 는 "못 넣고 남은 개수"를 돌려줌(예전엔 반대로 읽어서: 다 넣어도 아이템이 남아 계속 복제, 가방이 차면 아이템 삭제)
+                var d = ItemDatabase.Get(fetching.id); int left = fetching.amount;
+                if (fetching.id == "gold") { if (Give(() => inv.AddGold(fetching.amount))) left = 0; }
+                else if (inv != null) left = inv.Add(fetching.id, fetching.amount);
+                if (left < fetching.amount) { Say($"{Ga} {Eul(fetching.id == "gold" ? "금화" : d != null ? d.name : "아이템")} 물어 왔다"); AddAffection(0.5f); }
+                if (left <= 0) Destroy(fetching.gameObject); else { fetching.amount = left; nextFetch = Time.time + 5f; }
                 fetching = null; return true;
             }
             MoveTo(fetching.transform.position, runSpeed); return true;
         }
         bool Give(Action a) { if (inv == null) return false; a(); return true; }
-        static ItemPickup[] FindObjectsOfTypeAll()
-        {
-#if UNITY_2023_1_OR_NEWER
-            return FindObjectsByType<ItemPickup>(FindObjectsSortMode.None);
-#else
-            return FindObjectsOfType<ItemPickup>();
-#endif
-        }
+        float nextFetch;
 
         // ── 냄새 맡기: 가까운 땅콩빵 방향 알려 주기
         void TrySniff()

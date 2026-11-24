@@ -119,14 +119,16 @@ namespace MoominAction
             if (isExecuting && currentCoin >= s.coinCount) ApplyAllHeadsEffect(s);
         }
         /// <summary>레벨 비교 상대: 적은 쫓는 대상, 플레이어는 조준 대상, 없으면 12m 안 가장 가까운 다른 팀.</summary>
+        static readonly Collider[] oppBuf = new Collider[32];
         public CharacterStats LevelOpponent()
         {
             if (TryGetComponent<EnemyCombatController>(out var ec) && ec.Target != null && ec.Target.TryGetComponent<CharacterStats>(out var ts)) return ts;
             if (TryGetComponent<LockOnSystem>(out var lo) && lo.Target != null && lo.Target.TryGetComponent<CharacterStats>(out var ls)) return ls;
             CharacterStats best = null; float bd = 144f; int mask = resolver != null && resolver.targetMask != 0 ? (int)resolver.targetMask : ~0;
-            foreach (var c in Physics.OverlapSphere(transform.position, 12f, mask))
+            int n = Physics.OverlapSphereNonAlloc(transform.position, 12f, oppBuf, mask, QueryTriggerInteraction.Ignore);   // 할당 없이(코인마다 부름)
+            for (int i = 0; i < n; i++)
             {
-                var cs = c.GetComponentInParent<CharacterStats>(); if (cs == null || cs == stats || !cs.IsAlive || cs.team == stats.team) continue;
+                var cs = oppBuf[i].GetComponentInParent<CharacterStats>(); if (cs == null || cs == stats || !cs.IsAlive || cs.team == stats.team) continue;
                 float d = (cs.transform.position - transform.position).sqrMagnitude; if (d < bd) { bd = d; best = cs; }
             }
             return best;

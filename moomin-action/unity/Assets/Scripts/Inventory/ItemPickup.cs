@@ -14,10 +14,24 @@ namespace MoominAction
             Object.Destroy(go.GetComponent<Collider>());
             var p = go.AddComponent<ItemPickup>(); p.id = id; p.amount = amount; p.delay = delay;
             var d = ItemDatabase.Get(id); Color c = id == "gold" ? new Color(1f, .82f, .25f) : (d != null ? Color.Lerp(d.color, Color.white, .25f) : Color.white);
-            var r = go.GetComponent<Renderer>(); var m = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard")); m.color = c; m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", c * 2.5f); r.material = m;
+            var r = go.GetComponent<Renderer>(); r.sharedMaterial = MatFor(c); r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             var l = new GameObject("Glow").AddComponent<Light>(); l.transform.SetParent(go.transform, false); l.type = LightType.Point; l.color = c; l.range = 3f; l.intensity = 1.2f;
             return p;
         }
+
+        // 색마다 재질 하나를 같이 씀(예전엔 구슬마다 새 재질 → 지워지지 않고 쌓였음)
+        static readonly System.Collections.Generic.Dictionary<Color, Material> mats = new System.Collections.Generic.Dictionary<Color, Material>();
+        static Material MatFor(Color c)
+        {
+            if (mats.TryGetValue(c, out var m) && m != null) return m;
+            var sh = Shader.Find("Universal Render Pipeline/Lit"); if (sh == null) sh = Shader.Find("Standard");
+            m = new Material(sh) { color = c }; m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", c * 2.5f); mats[c] = m; return m;
+        }
+
+        /// <summary>장면에 있는 모든 줍기 아이템(찾기용, FindObjectsOfType 대신)</summary>
+        public static readonly System.Collections.Generic.List<ItemPickup> All = new System.Collections.Generic.List<ItemPickup>();
+        void OnEnable() { All.Add(this); }
+        void OnDisable() { All.Remove(this); }
 
         void Start() { var pl = GameObject.FindGameObjectWithTag("Player"); if (pl) { player = pl.transform; inv = pl.GetComponent<Inventory>(); } born = Time.time; baseY = transform.position.y; vel = new Vector3(Random.Range(-1f, 1f), 3f, Random.Range(-1f, 1f)); }
 
@@ -29,7 +43,11 @@ namespace MoominAction
             if (player == null || inv == null || Time.time - born < delay) return;
             Vector3 to = player.position + Vector3.up * 0.7f - transform.position; float d = to.magnitude;
             if (d < magnetRange) transform.position += to.normalized * Mathf.Lerp(2f, 9f, 1f - d / magnetRange) * Time.deltaTime;
-            if (d < collectRange) { if (id == "gold") inv.AddGold(amount); else if (inv.Add(id, amount) >= amount) return; Destroy(gameObject); }
+            if (d < collectRange) { if (id == "gold") { inv.AddGold(amount); Destroy(gameObject); return; }
+                int left = inv.Add(id, amount);
+                if (left <= 0) { Destroy(gameObject); return; }
+                amount = left; born = Time.time; delay = 2f;   // 가방이 가득 참: 남은 만큼 그대로 두고 2초 뒤 다시(예전엔 매 프레임 "가득 찼다" + 일부만 들어가면 나머지 사라짐)
+            }
         }
     }
 }

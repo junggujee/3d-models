@@ -123,3 +123,9 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 고유 효과 `Weapons/WeaponPassives.cs`: ShieldBarrier(CharacterStats.barrier) · DuelHeat(bonusMultiplier, requiresDuelHeat 스킬 게이트) · WeaponSpin(Grip_*→Rotor_* 축 회전).
 - 모델 `blender/build_weapons.py`(민미 공간, Moomin.blend 를 열어 만듦 — build_moomin.py 다음에), 클립 `blender/moomin_weapon_anims.py`(HIT 표 = MoominSetup.WeaponHitFrames = SkillLibrary hitTime). 클립 이름은 정확 일치로 찾음(`Clip`/`ClipOf` — "Guard" 가 "ShieldGuard" 에 걸리지 않게).
 - 레이저 블레이더(kit laser, 회전 쌍검 상위): `build_weapons.py` ③(사용자 spin-saber-3d 를 옮김, Grip_R_Laser/Rotor_R_Laser, 몸 오른쪽 옆면에서 바퀴처럼 돎) · 양손 클립 Laser*(`two()`) · `Weapons/SaberTrail.cs`(TrailRenderer 4 + 빛 가루) · 발광 재질은 이름(Glow·Core·Edge)으로 `EquipmentVisuals.GlowMaterials`.
+
+## 최적화 · 디버깅 (상세: docs/OPTIMIZATION.md)
+- 수정 뒤 `bash tools/check_all.sh`(컴파일 + unity_audit ✘0 + status_tests) 하나로 확인.
+- 불꽃·빛 가루는 `SparkBurst.Spawn` 하나(장면당 ParticleSystem 하나에 Emit) — 연출마다 ParticleSystem 만들지 말 것. 투사체·줍기 구슬 재질은 정적 캐시.
+- `Inventory.Add` 는 **남은 개수**를 돌려줌(0 = 다 들어감). 가방이 차면 남은 건 `ItemPickup.Spawn` 으로 떨어뜨림. 장면의 줍기 아이템은 `ItemPickup.All`.
+- 레이저 스킬(LASER_*) 일러스트는 네온 덧칠(`SkillIllustration.LaserScene`/`neon` = `illustration_preview.laser_patterns`) — 두 곳 숫자를 같이. LASER_Q = 광륜 투척(`ProjectileKind.LaserDisc`).

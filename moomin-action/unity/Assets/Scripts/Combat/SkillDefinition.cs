@@ -15,7 +15,7 @@ namespace MoominAction
     /// <summary>코인 판정 순간의 특수 연출(Effects/SkillVfx).</summary>
     public enum SkillVfx { None, WhaleBeam, Shockwave, WaterSpout }
     /// <summary>원거리 투사체 모양(Combat/Projectile 이 코드로 만듦).</summary>
-    public enum ProjectileKind { Gear, Bubble }
+    public enum ProjectileKind { Gear, Bubble, LaserDisc }
 
     public static class SkillAttributes
     {

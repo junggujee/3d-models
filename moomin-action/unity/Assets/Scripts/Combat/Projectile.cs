@@ -13,7 +13,8 @@ namespace MoominAction
     public class Projectile : MonoBehaviour
     {
         static readonly List<Projectile> live = new(); static readonly Collider[] buf = new Collider[16];
-        static Mesh gearMesh; static Material gearMat;
+        static Mesh gearMesh, ringMesh; static Material gearMat, bubbleMat, bubbleHiMat, trailMat, discMat, discCoreMat;   // 재질·메시는 한 번만 만들어 함께 씀(예전엔 투사체마다 새 재질)
+        static Material Trail() { if (trailMat == null) trailMat = new Material(Shader.Find("Sprites/Default")); return trailMat; }
         CombatResolver owner; AttackContext attack; SkillDefinition skill; CharacterStats target; Team team;
         Vector3 vel; float traveled, maxDist; Transform spin;
         public AttackContext Attack => attack;
@@ -33,17 +34,52 @@ namespace MoominAction
 
         void OnDestroy() { live.Remove(this); }
 
+        /// <summary>납작한 고리 메시(안 반지름 r0 · 바깥 r1, 반지름 1 기준) — 같은 값이면 하나를 함께 씀.</summary>
+        static readonly Dictionary<(float, float), Mesh> rings = new();
+        static Mesh RingMesh(float r0, float r1)
+        {
+            if (rings.TryGetValue((r0, r1), out var m) && m != null) return m;
+            const int N = 48; var v = new Vector3[N * 2]; var tri = new int[N * 12];
+            for (int i = 0; i < N; i++) { float a = i * Mathf.PI * 2f / N; var c = new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0); v[i] = c * r0; v[N + i] = c * r1; }
+            for (int i = 0, t = 0; i < N; i++)
+            {
+                int j = (i + 1) % N; int[] q = { i, N + i, N + j, i, N + j, j };
+                foreach (var x in q) tri[t++] = x; foreach (var x in new[] { q[0], q[2], q[1], q[3], q[5], q[4] }) tri[t++] = x;   // 양면
+            }
+            m = new Mesh { name = "Ring", vertices = v, triangles = tri }; m.RecalculateBounds(); rings[(r0, r1)] = m; return m;
+        }
+
         void BuildVisual(bool heads)
         {
             if (skill.projectileKind == ProjectileKind.Bubble)
             {   // 물방울: 반투명 하늘색 공 + 흰 반짝임
                 var b = GameObject.CreatePrimitive(PrimitiveType.Sphere); Destroy(b.GetComponent<Collider>()); b.transform.SetParent(transform, false); b.transform.localScale = Vector3.one * skill.projectileRadius * 1.6f; spin = null;
-                var sh = Shader.Find("Standard"); var m = new Material(sh) { color = new Color(0.55f, 0.82f, 1f, 0.55f) };
-                m.SetFloat("_Mode", 3); m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha); m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha); m.SetInt("_ZWrite", 0);
-                m.EnableKeyword("_ALPHABLEND_ON"); m.renderQueue = 3000; m.SetFloat("_Glossiness", 0.95f); b.GetComponent<Renderer>().sharedMaterial = m;
+                var sh = Shader.Find("Standard");
+                if (bubbleMat == null)
+                {
+                    var m = new Material(sh) { color = new Color(0.55f, 0.82f, 1f, 0.55f) };
+                    m.SetFloat("_Mode", 3); m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha); m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha); m.SetInt("_ZWrite", 0);
+                    m.EnableKeyword("_ALPHABLEND_ON"); m.renderQueue = 3000; m.SetFloat("_Glossiness", 0.95f); bubbleMat = m;
+                }
+                b.GetComponent<Renderer>().sharedMaterial = bubbleMat;
                 var hi = GameObject.CreatePrimitive(PrimitiveType.Sphere); Destroy(hi.GetComponent<Collider>()); hi.transform.SetParent(b.transform, false); hi.transform.localPosition = new Vector3(-0.2f, 0.25f, -0.25f); hi.transform.localScale = Vector3.one * 0.25f;
-                var hm = new Material(sh) { color = Color.white }; hm.EnableKeyword("_EMISSION"); hm.SetColor("_EmissionColor", Color.white * 0.8f); hi.GetComponent<Renderer>().sharedMaterial = hm;
-                var trB = gameObject.AddComponent<TrailRenderer>(); trB.time = 0.15f; trB.startWidth = skill.projectileRadius; trB.endWidth = 0f; trB.material = new Material(Shader.Find("Sprites/Default")); trB.startColor = new Color(0.7f, 0.9f, 1f, 0.5f); trB.endColor = new Color(1, 1, 1, 0);
+                if (bubbleHiMat == null) { bubbleHiMat = new Material(sh) { color = Color.white }; bubbleHiMat.EnableKeyword("_EMISSION"); bubbleHiMat.SetColor("_EmissionColor", Color.white * 0.8f); }
+                hi.GetComponent<Renderer>().sharedMaterial = bubbleHiMat;
+                var trB = gameObject.AddComponent<TrailRenderer>(); trB.time = 0.15f; trB.startWidth = skill.projectileRadius; trB.endWidth = 0f; trB.material = Trail(); trB.startColor = new Color(0.7f, 0.9f, 1f, 0.5f); trB.endColor = new Color(1, 1, 1, 0);
+                return;
+            }
+            if (skill.projectileKind == ProjectileKind.LaserDisc)
+            {   // 광륜: 푸른 빛 고리 두 겹(바깥 시안 · 안 흰 심) + 시안 잔상 + 빛
+                var d = new GameObject("LaserDisc"); d.transform.SetParent(transform, false); d.transform.localRotation = Quaternion.Euler(90, 0, 0); spin = d.transform;
+                if (discMat == null) { discMat = new Material(Shader.Find("Sprites/Default")) { color = new Color(0.35f, 0.82f, 1f, 0.85f) }; discCoreMat = new Material(Shader.Find("Sprites/Default")) { color = new Color(0.9f, 0.98f, 1f, 1f) }; }
+                float R = skill.projectileRadius;
+                foreach (var (r0, r1, m) in new[] { (R * 0.72f, R, discMat), (R * 0.8f, R * 0.9f, discCoreMat) })
+                {
+                    var o = new GameObject("Ring"); o.transform.SetParent(d.transform, false); o.AddComponent<MeshFilter>().sharedMesh = RingMesh(r0 / R, r1 / R); var rr = o.AddComponent<MeshRenderer>(); rr.sharedMaterial = m; rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    o.transform.localScale = Vector3.one * R;
+                }
+                var lg = new GameObject("Glow").AddComponent<Light>(); lg.transform.SetParent(transform, false); lg.type = LightType.Point; lg.range = 3f; lg.intensity = heads ? 2.2f : 1.4f; lg.color = new Color(0.4f, 0.8f, 1f);
+                var trD = gameObject.AddComponent<TrailRenderer>(); trD.time = 0.22f; trD.startWidth = R * 1.6f; trD.endWidth = 0f; trD.material = Trail(); trD.startColor = new Color(0.45f, 0.88f, 1f, 0.6f); trD.endColor = new Color(0.15f, 0.4f, 1f, 0f);
                 return;
             }
             var v = new GameObject("Gear"); v.transform.SetParent(transform, false); v.transform.localRotation = Quaternion.Euler(0, 90, 0); spin = v.transform;   // 톱니 면이 옆을 봄 → 바퀴처럼 세로로 돌며 날아감
@@ -52,7 +88,7 @@ namespace MoominAction
             float sc = skill.projectileRadius / 0.15f * 0.85f; v.transform.localScale = Vector3.one * sc;
             if (heads) { var glow = new GameObject("Glow").AddComponent<Light>(); glow.transform.SetParent(transform, false); glow.type = LightType.Point; glow.range = 2.2f; glow.intensity = 1.6f; glow.color = new Color(1f, 0.85f, 0.4f); }
             var tr = gameObject.AddComponent<TrailRenderer>(); tr.time = 0.18f; tr.startWidth = skill.projectileRadius * 1.4f; tr.endWidth = 0f;
-            tr.material = new Material(Shader.Find("Sprites/Default")); tr.startColor = heads ? new Color(1f, 0.86f, 0.4f, 0.7f) : new Color(0.45f, 0.95f, 0.35f, 0.55f); tr.endColor = new Color(1, 1, 1, 0);
+            tr.material = Trail(); tr.startColor = heads ? new Color(1f, 0.86f, 0.4f, 0.7f) : new Color(0.45f, 0.95f, 0.35f, 0.55f); tr.endColor = new Color(1, 1, 1, 0);
         }
 
         void Update()

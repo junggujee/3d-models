@@ -77,7 +77,8 @@ namespace MoominAction
             Add(S("LASER_1", "광선 내려베기", 9, 4, 1, 1.05f, 0f, 0, 0.75f, 0.30f, 0.25f, new[] { "LaserSlash1" }, 2.9f, 160, 5f, desc: "돌아가는 광선검을 머리 위에서 크게 내려벤다."));
             Add(S("LASER_2", "광선 휩쓸기", 9, 4, 1, 1.05f, 0f, 0, 0.75f, 0.30f, 0.25f, new[] { "LaserSlash2" }, 2.9f, 200, 5f, desc: "광선검을 옆으로 크게 휘둘러 넓게 쓸어 낸다."));
             Add(S("LASER_3", "십자 광참", 10, 4, 2, 1.05f, 0f, 0, 0.45f, 0.30f, 0.35f, new[] { "LaserSlash2", "LaserCross" }, 3.1f, 200, 7f, desc: "휩쓸고 뛰어올라 내려찍어 십자 광선을 남긴다."));
-            Add(S("LASER_Q", "광선 돌진", 12, 5, 2, 1.1f, 6f, 0, 0.5f, 0.30f, 0.35f, new[] { "LaserDash", "LaserDash" }, 3.0f, 100, 7f, lunge: 6f, desc: "도는 광선을 앞세우고 두 번 꿰뚫어 나간다."));
+            Add(S("LASER_Q", "광륜 투척", 12, 5, 2, 1.1f, 6f, 0, 0.55f, 0.30f, 0.4f, new[] { "LaserSlash2", "LaserSlash2" }, 11f, 60, 6f, desc: "도는 광선검에서 푸른 빛의 고리를 두 번 날린다. 원거리 — 다른 원거리 공격하고만 공중에서 합한다."));
+            if (map.TryGetValue("LASER_Q", out var lq)) { lq.isProjectile = true; lq.projectileKind = ProjectileKind.LaserDisc; lq.projectileSpeed = 15f; lq.projectileRadius = 0.55f; lq.projectileHoming = 40f; }
             Add(S("LASER_E", "광륜 난무", 10, 4, 4, 0.95f, 9f, 0, 0.4f, 0.30f, 0.45f, new[] { "LaserWhirl", "LaserWhirl", "LaserWhirl", "LaserWhirl" }, 4.5f, 360, 6f, desc: "몸째로 돌며 빛의 고리를 네 번 그린다(회전 난무보다 1.5배 넓다)."));
             Add(S("LASER_R", "궁극 - 광륜 회절참", 18, 6, 6, 1.4f, 3f, 0, 0.34f, 0.30f, 0.7f, new[] { "LaserGrind", "LaserGrind", "LaserGrind", "LaserGrind", "LaserGrind", "LaserFinale" }, 3.2f, 180, 11f, lunge: 1f,
                   desc: "결투 고조 최대에서만. 광선검을 최고 속도로 돌려 다섯 번 갈아 버리고, 뛰어올라 빛의 고리째 내려찍는다. 파괴불가 코인."));
@@ -127,7 +128,7 @@ namespace MoominAction
             // 광역(공통 코인): 공격자 중심 반경 안 모든 적
             Area("SHIELD_E", 3.5f); Area("DUAL_E", 3.0f); Area("LASER_E", 4.5f);
             Look("LASER_1", SkillAttribute.Blue, SkillMotif.Slash); Look("LASER_2", SkillAttribute.Blue, SkillMotif.Slash); Look("LASER_3", SkillAttribute.Blue, SkillMotif.Smash);
-            Look("LASER_Q", SkillAttribute.Blue, SkillMotif.Thrust); Look("LASER_E", SkillAttribute.Purple, SkillMotif.Flurry); Look("LASER_R", SkillAttribute.Blue, SkillMotif.Flurry);
+            Look("LASER_Q", SkillAttribute.Blue, SkillMotif.Throw); Look("LASER_E", SkillAttribute.Purple, SkillMotif.Flurry); Look("LASER_R", SkillAttribute.Blue, SkillMotif.Flurry);
             Look("SHIELD_1", SkillAttribute.Yellow, SkillMotif.Rush); Look("SHIELD_2", SkillAttribute.Yellow, SkillMotif.Slash); Look("SHIELD_3", SkillAttribute.Orange, SkillMotif.Smash);
             Look("SHIELD_Q", SkillAttribute.Yellow, SkillMotif.Rush); Look("SHIELD_E", SkillAttribute.Orange, SkillMotif.Smash); Look("SHIELD_R", SkillAttribute.Orange, SkillMotif.Leap);
             Look("DUAL_1", SkillAttribute.Blue, SkillMotif.Slash); Look("DUAL_2", SkillAttribute.Blue, SkillMotif.Slash); Look("DUAL_3", SkillAttribute.Purple, SkillMotif.Flurry);

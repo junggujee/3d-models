@@ -81,7 +81,7 @@
 | 키 | 스킬 | 회전 쌍검과 비교 |
 |---|---|---|
 | 좌클릭 | 광선 내려베기 → 광선 휩쓸기 → 십자 광참(마지막에 충격파) | 위력 +1, 사거리 2.0 → 2.9~3.1m, 각도 160~200° |
-| Q | 광선 돌진 12+5 ×2 | 더 멀리(돌진 6) |
+| Q | **광륜 투척** 12+5 ×2 — 회전하는 빛 고리(`ProjectileKind.LaserDisc`)를 던짐: 사거리 11m, 속도 15, 유도 40°/s | 쌍검엔 없는 원거리 |
 | E | 광륜 난무 10+4 ×4, 원 **4.5m**, 화상 | 범위 1.5배 |
 | R | **궁극 - 광륜 회절참** 18+6 ×6, 파괴불가 코인, 결투 고조 최대 | 위력·배율(×1.4) 더 큼, 마지막 충격파, 화상 |
 
@@ -93,5 +93,9 @@
 
 - 모델 `blender/build_weapons.py` (`build_moomin.py` 다음에 실행) → `Resources/Weapons/PillowShield.fbx`, `SpinBlade_R.fbx`, `SpinBlade_L.fbx`, 아이콘 `Resources/ItemIcons/pillow_shield.png`, `spin_blades.png`
 - 민미 클립 `blender/moomin_weapon_anims.py`. 타격 프레임 표 `HIT`는 `MoominSetup.WeaponHitFrames`, `SkillLibrary`의 hitTime(s)와 같아야 한다.
-- 일러스트: `SkillIllustration.PropDist`가 무기 모양을 그린다(SHIELD_* = 땅콩 방패, DUAL_* = 양손 바람개비 날). Python 쌍둥이는 `illustration_preview.prop_dist`다.
+- 일러스트: `SkillIllustration.PropDist`가 무기 모양을 그린다(SHIELD_* = 땅콩 방패, DUAL_* = 양손 바람개비 날, LASER_* = 긴 양날 광선검 + 고리). Python 쌍둥이는 `illustration_preview.prop_dist`다.
+- **레이저 스킬 일러스트(네온):** LASER_* 는 붓 그림 위에 빛나는 시안 레이저를 얹는다.
+  - 칼날·획에서 `neon` 버퍼를 쌓고(거리 → exp 감쇠), 마지막에 `시안 → 흰 심지`(n⁴)로 덧칠 → 가장자리는 푸르고 가운데는 하얗게 빛난다.
+  - 스킬마다 무늬(`SkillIllustration.LaserScene` = `illustration_preview.laser_patterns`): 1 내려베기 호 · 2 넓은 가로 호 · 3 십자 광선 · Q 날아가는 고리 + 줄기 · E 동심원 3겹 · R 큰 고리 + 살 16개.
+  - **C# 와 Python 의 숫자를 같이 바꿀 것**(미리보기 `previews/laser_skill_illustrations.png`).
 - 미리보기: `previews/weapons_sheet.png`, `weapon_*.png`, `weapon_skill_illustrations.png`
