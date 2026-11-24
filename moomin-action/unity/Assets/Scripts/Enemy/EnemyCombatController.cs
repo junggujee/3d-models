@@ -210,7 +210,7 @@ namespace MoominAction
     }
 
     /// <summary>처치 보상: 금화 항상, 별조각 40% · 붉은 약병 25% · 불꽃 가루 30% · 은빛 깃털 8% · 무기 3%(보스는 4번 굴리고 무기 25%).</summary>
-    /// <summary>집에서 찾은 장비 5종(이불 로브·각티슈 방패·수면 모자·수면 바지·털 슬리퍼) — 적·땅콩빵에서 가끔.</summary>
+    /// <summary>집에서 찾은 장비 5종(이불 로브·각티슈 방패·솜털 밀집모자·수면 바지·토끼 털 슬리퍼) — 적·땅콩빵에서 가끔.</summary>
     public static class HomeGear
     {
         public static readonly string[] Ids = { "robe_blanket", "shield_tissue", "cap_sleep", "pants_pajama", "slippers_fuzzy" };

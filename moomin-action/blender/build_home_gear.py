@@ -1,9 +1,9 @@
 """집에서 볼 수 있는 물건으로 만든 장비 5종 — 민미 모델 공간(기본 자세)에서 만들어 뼈마다 따로 내보냄(EquipmentVisuals 가 bindpose 로 붙임).
   이불 로브(가슴)  : 누빔 이불(마름모 누빔 두 색)이 등·옆을 덮는 망토 + 머리 뒤 두건            → Robe_Body@hips · Robe_Hood@head
   각티슈 방패(아티팩트): 꽃무늬 띠 각티슈 상자를 왼팔 바깥에 — 위로 휴지 한 장이 삐죽          → TissueShield@arm.L
-  수면 모자(머리)  : 남색 고깔 + 크림색 접단 + 흰 방울, 뒤로 처짐(귀는 모자 위로 쏙)           → NightCap@head
+  솜털 밀집모자(머리): 두 색 밀짚 챙 + 둥근 꼭지 + 꼭지 둘레 솜털 뭉치 띠(귀는 꼭지 옆으로 쏙) → StrawHat@head
   수면 바지(다리)  : 하늘색 체크 반바지(몸 아래쪽을 감쌈) + 허리 고무줄                         → PajamaShorts@hips
-  털 슬리퍼(발)    : 분홍 털 슬리퍼 + 발등 방울                                                  → Slipper_L@leg.L · Slipper_R@leg.R
+  토끼 털 슬리퍼(발): 하얀 토끼털 + 발등 토끼 얼굴(긴 귀·분홍 속귀·구슬 눈·코) + 솜꼬리          → Slipper_L@leg.L · Slipper_R@leg.R
 출력: unity/Assets/Resources/Equipment/*.fbx · Resources/ItemIcons/<id>.png · previews/home_gear_*.png
 실행: <bpy 파이썬> blender/build_home_gear.py"""
 import sys, os, math
@@ -73,19 +73,28 @@ box = obj("TissueShield", bm, [WHITE, BAND, TISSUE])
 tis = obj("Tissue", sheet(lambda u, v: (cx + 0.05 * math.sin(u * 6) * v, cy + sy / 2 + 0.16 * v, cz - 0.1 + 0.2 * u + 0.04 * math.sin(v * 5)), 8, 6, lambda i, j: 2), [WHITE, BAND, TISSUE]); solid(tis, 0.004)
 box = merge([box, tis], "TissueShield"); PARTS["shield_tissue"] = [(box, "arm.L")]
 
-# ── 수면 모자: 머리 꼭대기 고깔(뒤로 처짐) + 접단 + 방울
-NAVY, CUFF, POM = mat("Cap_Navy", (0.12, 0.17, 0.42), rough=0.9, sheen=0.5), mat("Cap_Cuff", (0.95, 0.91, 0.8), rough=1.0, sheen=0.8), mat("Cap_Pom", (1, 1, 1), rough=1.0, sheen=1.0)
-TH0 = 0.78
-def cap(u, v):
-    phi = 2 * math.pi * u; base = surf(HEAD_C, HEAD_R, phi, TH0, 0.02)
-    tip = Vector((0, 2.75, -0.55)); mid = Vector((0, 2.45, 0.05))
-    b = (1 - v) ** 2 * base + 2 * (1 - v) * v * (mid + (base - Vector((0, base.y, 0))) * 0.35) + v * v * tip   # 굽은 고깔
-    return b
-capm = obj("NightCap", sheet(cap, 28, 14, lambda i, j: 0, close_u=True), [NAVY, CUFF, POM])
-ring = [T(*surf(HEAD_C, HEAD_R, 2 * math.pi * k / 40, TH0 - 0.05, 0.05)) for k in range(41)] + [T(*surf(HEAD_C, HEAD_R, 2 * math.pi / 40, TH0 - 0.05, 0.05))]
-tb, _ = tube(ring, lambda t: 0.055 * K, sides=10, mat_idx=1); cuff = obj("Cuff", tb, [NAVY, CUFF, POM])
-pom = obj("Pom", ball((0, 2.75, -0.55), (0.1, 0.1, 0.1), 2, fuzz=0.01), [NAVY, CUFF, POM])
-capm = merge([capm, cuff, pom], "NightCap"); PARTS["cap_sleep"] = [(capm, "head")]
+# ── 솜털 밀집모자: 밀짚 챙(두 색 밀짚 고리가 번갈아, 앞이 살짝 들림) + 둥근 꼭지 + 꼭지 둘레 솜털 뭉치 띠 + 챙 위 솜털 몇 개(귀는 꼭지 옆으로 쏙)
+STRAW_A, STRAW_B, COTTON = mat("Straw_Light", (0.88, 0.74, 0.44), rough=0.85), mat("Straw_Dark", (0.74, 0.58, 0.3), rough=0.9), mat("Hat_Cotton", (1, 0.99, 0.97), rough=1.0, sheen=1.0)
+HY, TILT = 2.0, -0.12                                   # 챙 높이(three) · 앞이 들리게 기울임(라디안)
+def tilt(p):
+    q = Vector(p) - Vector((0, HY, 0)); c, s_ = math.cos(TILT), math.sin(TILT)
+    return Vector((q.x, q.y * c - q.z * s_, q.y * s_ + q.z * c)) + Vector((0, HY, 0))
+def brim(u, v):
+    a = 2 * math.pi * u; r = 0.3 + 0.52 * v
+    y = HY + 0.03 * (1 - v) - 0.05 * v * v + 0.015 * math.sin(a * 7) * v   # 바깥으로 갈수록 살짝 처지고 물결
+    return tilt((math.sin(a) * r * 1.05, y, math.cos(a) * r))
+def crown(u, v):
+    a = 2 * math.pi * u; r = 0.32 * math.cos(v * math.pi / 2) ** 0.45 + 0.01
+    return tilt((math.sin(a) * r * 1.05, HY + 0.24 * math.sin(v * math.pi / 2), math.cos(a) * r))
+hb = obj("StrawHat", sheet(brim, 40, 12, lambda i, j: j % 2, close_u=True), [STRAW_A, STRAW_B, COTTON]); solid(hb, 0.02)
+hc = obj("Crown", sheet(crown, 32, 10, lambda i, j: (j + 1) % 2, close_u=True), [STRAW_A, STRAW_B, COTTON]); solid(hc, 0.02)
+puffs = []
+for k in range(14):   # 꼭지 둘레 솜털 띠
+    a = 2 * math.pi * k / 14; c = tilt((math.sin(a) * 0.335, HY + 0.05, math.cos(a) * 0.32))
+    puffs.append(obj("Puff", ball(tuple(c), (0.065, 0.06, 0.065), 2, fuzz=0.012), [STRAW_A, STRAW_B, COTTON]))
+for a, r in ((0.5, 0.62), (2.3, 0.7), (4.1, 0.58), (5.4, 0.66)):   # 챙 위에 몇 개
+    c = tilt((math.sin(a) * r, HY + 0.03, math.cos(a) * r)); puffs.append(obj("Puff", ball(tuple(c), (0.055, 0.045, 0.055), 2, fuzz=0.012), [STRAW_A, STRAW_B, COTTON]))
+hat = merge([hb, hc] + puffs, "StrawHat"); PARTS["cap_sleep"] = [(hat, "head")]   # 아이템 id 는 예전 그대로(저장 호환)
 
 # ── 수면 바지: 몸 아래쪽 체크 반바지 + 허리 고무줄
 PJ1, PJ2, PJW = mat("Pajama_Blue", (0.42, 0.62, 0.9), rough=0.95, sheen=0.5), mat("Pajama_Light", (0.78, 0.87, 0.98), rough=0.95, sheen=0.5), mat("Pajama_Band", (0.95, 0.95, 0.97), rough=0.9)
@@ -94,16 +103,37 @@ band = [T(*surf(BODY_C, BODY_R, 2 * math.pi * k / 48, -0.36, 0.06)) for k in ran
 tb, _ = tube(band, lambda t: 0.03 * K, sides=8, mat_idx=2); bandm = obj("Band", tb, [PJ1, PJ2, PJW])
 shorts = merge([shorts, bandm], "PajamaShorts"); PARTS["pants_pajama"] = [(shorts, "hips")]
 
-# ── 털 슬리퍼: 발 조각 아래쪽을 감싸는 털 껍데기 + 털 테두리 + 발등 방울
-FUZ, FPOM = mat("Slipper_Pink", (0.98, 0.66, 0.76), rough=1.0, sheen=1.0), mat("Slipper_Pom", (1, 0.92, 0.95), rough=1.0, sheen=1.0)
+# ── 토끼 털 슬리퍼: 하얀 토끼털 껍데기 + 털 테두리, 발등에 토끼 얼굴(긴 귀 두 개·분홍 속귀·까만 구슬 눈·분홍 코) + 뒤꿈치 솜꼬리
+FUZ, PINK, BEAD = mat("Bunny_Fur", (0.97, 0.96, 0.95), rough=1.0, sheen=1.0), mat("Bunny_Pink", (0.98, 0.62, 0.72), rough=0.9, sheen=0.6), mat("Bunny_Eye", (0.03, 0.03, 0.04), rough=0.2)
+BM = [FUZ, PINK, BEAD]
 sl = []
 for s, side in ((1, "L"), (-1, "R")):
     Cc, Rr = LEG[s]
-    shell = obj(f"Slipper_{side}", sheet(lambda u, v, Cc=Cc, Rr=Rr: surf(Cc, Rr, 2 * math.pi * u, -1.3 + 1.3 * v, 0.04), 28, 10, lambda i, j: 0, close_u=True), [FUZ, FPOM]); solid(shell, 0.03)
-    rim = [T(*surf(Cc, Rr, 2 * math.pi * k / 32, 0.0, 0.06)) for k in range(33)] + [T(*surf(Cc, Rr, 2 * math.pi / 32, 0.0, 0.06))]
-    tb, _ = tube(rim, lambda t: 0.04 * K, sides=10, mat_idx=0); rimo = obj("Rim", tb, [FUZ, FPOM])
-    pm = obj("Pom", ball(tuple(surf(Cc, Rr, 0.0, 0.35, 0.09)), (0.07, 0.07, 0.07), 1, fuzz=0.008), [FUZ, FPOM])
-    sl.append((merge([shell, rimo, pm], f"Slipper_{side}"), f"leg.{side}"))
+    shell = obj(f"Slipper_{side}", sheet(lambda u, v, Cc=Cc, Rr=Rr: surf(Cc, Rr, 2 * math.pi * u, -1.3 + 1.3 * v, 0.045), 28, 10, lambda i, j: 0, close_u=True), BM); solid(shell, 0.035)
+    rim = [T(*surf(Cc, Rr, 2 * math.pi * k / 32, 0.0, 0.065)) for k in range(33)] + [T(*surf(Cc, Rr, 2 * math.pi / 32, 0.0, 0.065))]
+    tb, _ = tube(rim, lambda t: 0.045 * K, sides=10, mat_idx=0); rimo = obj("Rim", tb, BM)
+    parts_ = [shell, rimo]
+    face = surf(Cc, Rr, 0.0, 0.3, 0.1)   # 발등 앞(토끼 얼굴 자리)
+    parts_.append(obj("Head", ball(tuple(face), (0.11, 0.09, 0.09), 0, fuzz=0.012), BM))
+    for e in (-1, 1):   # 긴 귀: 뒤로 눕고 바깥으로 벌어짐(분홍 속귀)
+        base = Vector(face) + Vector((e * 0.05, 0.08, -0.02)); tip = base + Vector((e * 0.06, 0.22, -0.12))
+        mid = (base + tip) / 2; L = (tip - base).length; d = (tip - base).normalized()
+        rx = -math.atan2(d.z, d.y); rz = -math.atan2(d.x, d.y)
+        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=10, radius=1.0)
+        for vv in bm.verts: vv.co = Vector((vv.co.x * 0.045, vv.co.y * 0.022, vv.co.z * L / 2))   # 납작한 긴 타원(z = 귀 길이)
+        Mr = Matrix.Rotation(rx, 3, "X") @ Matrix.Rotation(rz, 3, "Z")
+        for vv in bm.verts: q = Vector((vv.co.x, vv.co.z, vv.co.y)); q = Mr @ q; vv.co = T(*(mid + q))
+        for f in bm.faces: f.material_index = 0; f.smooth = True
+        parts_.append(obj("Ear", bm, BM))
+        bi = bmesh.new(); bmesh.ops.create_uvsphere(bi, u_segments=12, v_segments=8, radius=1.0)
+        for vv in bi.verts: vv.co = Vector((vv.co.x * 0.025, vv.co.y * 0.012, vv.co.z * L / 2 * 0.75))
+        for vv in bi.verts: q = Vector((vv.co.x, vv.co.z, vv.co.y)); q = Mr @ q; vv.co = T(*(mid + q + Vector((0, 0, 0.018))))
+        for f in bi.faces: f.material_index = 1; f.smooth = True
+        parts_.append(obj("EarIn", bi, BM))
+        parts_.append(obj("Eye", ball(tuple(Vector(face) + Vector((e * 0.045, 0.02, 0.08))), (0.018, 0.018, 0.012), 2), BM))
+    parts_.append(obj("Nose", ball(tuple(Vector(face) + Vector((0, -0.02, 0.095))), (0.022, 0.016, 0.015), 1), BM))
+    parts_.append(obj("Tail", ball(tuple(surf(Cc, Rr, math.pi, 0.1, 0.09)), (0.065, 0.065, 0.065), 0, fuzz=0.014), BM))
+    sl.append((merge(parts_, f"Slipper_{side}"), f"leg.{side}"))
 PARTS["slippers_fuzzy"] = sl
 
 # ── 내보내기(부품마다 FBX)

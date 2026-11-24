@@ -115,7 +115,7 @@ static class Tests
         var gear = EquipmentMath.Sum(new[] { new EquipStats { guard = 0.15f }, new EquipStats { evadePower = 2 }, new EquipStats { evadePower = 1, moveSpeed = 0.1f }, new EquipStats { health = 25, damageReduction = 0.08f } });
         Eq(gear.guard, 0.15f, "가드 보너스 합", 1e-5f); Eq(gear.evadePower, 3, "회피 코인 합"); Eq(gear.moveSpeed, 0.1f, "이동 속도 합", 1e-5f); Eq(gear.health, 25f, "체력 합", 1e-5f);
         Eq(string.Join("/", EquipmentMath.Describe(new EquipStats { guard = 0.15f })), "가드 피해 감소 +15%", "각티슈 방패 설명");
-        Eq(string.Join("/", EquipmentMath.Describe(new EquipStats { moveSpeed = 0.1f, evadePower = 1 })), "회피 코인 위력 +1/이동 속도 +10%", "털 슬리퍼 설명");
+        Eq(string.Join("/", EquipmentMath.Describe(new EquipStats { moveSpeed = 0.1f, evadePower = 1 })), "회피 코인 위력 +1/이동 속도 +10%", "토끼 털 슬리퍼 설명");
         Eq(new EquipStats { evadePower = 1 }.IsEmpty, false, "회피만 있어도 비지 않음");
 
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
