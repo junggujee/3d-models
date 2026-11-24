@@ -92,7 +92,7 @@ namespace MoominAction.UI
         {
             target = e; if (e == null) return;
             root.gameObject.SetActive(true); defeat.gameObject.SetActive(false); introT = 0f; group.alpha = 0f; flash.color = new Color(1, 1, 1, 0);
-            var st = e.Stats; nameText.text = st.displayName + (string.IsNullOrEmpty(st.epithet) ? "" : $"   <size=20><color=#C9B27A>{st.epithet}</color></size>");
+            var st = e.Stats; nameText.text = $"<size=26>Lv.{st.level}</size>  " + st.displayName + (string.IsNullOrEmpty(st.epithet) ? "" : $"   <size=20><color=#C9B27A>{st.epithet}</color></size>");
             var em = Resources.Load<Texture2D>("UI/Bars/BossEmblem_" + (string.IsNullOrEmpty(e.bossEmblem) ? "Default" : e.bossEmblem)); if (em == null) em = Resources.Load<Texture2D>("UI/Bars/BossEmblem_Default");
             emblem.sprite = em != null ? Sprite.Create(em, new Rect(0, 0, em.width, em.height), new Vector2(.5f, .5f), 100f) : UITheme.Slot;
             fillImg.color = e.bossEmblem == "Whale" ? new Color(.22f, .58f, .98f) : new Color(.78f, .14f, .12f);   // 고래 = 바다색, 그 밖의 보스 = 핏빛

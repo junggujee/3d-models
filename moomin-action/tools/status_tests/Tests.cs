@@ -133,6 +133,17 @@ static class Tests
         Eq(QuestText.Enough(2, 2), true, "2개면 건넬 수 있음"); Eq(QuestText.Enough(1, 2), false, "1개는 부족"); Eq(QuestText.Enough(0, 0), true, "필요 없음");
         Eq(QuestText.Rewards(120, 50, new[] { ("빨간 물약", 2) }), "경험치 120 · 금화 50 · 빨간 물약 ×2", "보상 줄"); Eq(QuestText.Rewards(0, 0, new[] { ("열쇠", 1), ("", 3) }), "열쇠", "하나짜리·빈 이름");
 
+        // ── 레벨: 차이 → 코인 위력(3레벨마다 ±1, 최대 ±3), 적 레벨·경험치·칭호
+        Eq(LevelMath.CoinBonus(5, 5), 0, "같은 레벨 보정 없음"); Eq(LevelMath.CoinBonus(7, 5), 0, "2레벨 차이는 아직 0"); Eq(LevelMath.CoinBonus(8, 5), 1, "3레벨 높음 +1");
+        Eq(LevelMath.CoinBonus(5, 8), -1, "3레벨 낮음 -1"); Eq(LevelMath.CoinBonus(5, 10), -1, "5레벨 낮음도 -1"); Eq(LevelMath.CoinBonus(30, 1), 3, "최대 +3"); Eq(LevelMath.CoinBonus(1, 40), -3, "최소 -3");
+        Eq(LevelMath.CoinBonus(0, 5), 0, "레벨 0(모름) 보정 없음"); Eq(LevelMath.CoinPower(3, -3), 0, "코인 위력 0 아래 없음"); Eq(LevelMath.CoinPower(3, 2), 5, "코인 위력 3 + 2");
+        Eq(LevelMath.CoinPower(4, -1) + 8, EquipmentMath.FinalPower(8, LevelMath.CoinPower(4, -1), true, 0), "보정은 앞면 코인에만(최종 위력 11)");
+        Eq(LevelMath.EnemyLevel(4, -1, 0, false), 3, "웨이브 4 - 1"); Eq(LevelMath.EnemyLevel(4, 0, 2, true), 9, "고래 보스 4+2+3"); Eq(LevelMath.EnemyLevel(0, -1, 0, false), 1, "최소 1");
+        Eq(LevelMath.EnemyHealthScale(11), 1.6f, "레벨 11 체력 ×1.6", 1e-4f); Eq(LevelMath.EnemyAttackBonus(1), 0f, "레벨 1 공격 보너스 0", 1e-5f);
+        Eq(LevelMath.ExpReward(100, 5, 5), 100L, "같은 레벨 경험치 그대로"); Eq(LevelMath.ExpReward(100, 8, 5), 130L, "3레벨 높은 적 +30%"); Eq(LevelMath.ExpReward(100, 1, 20), 50L, "최소 50%"); Eq(LevelMath.ExpReward(100, 30, 1), 150L, "최대 150%");
+        Eq(LevelMath.Title(9), "초보 검사", "칭호 9"); Eq(LevelMath.Title(10), "새싹 검사", "칭호 10"); Eq(LevelMath.NewTitleAt(20), true, "20 새 칭호"); Eq(LevelMath.NewTitleAt(25), false, "25 아님");
+        Eq(LevelMath.BonusLabel(-2), "코인 위력 -2", "보정 글자"); Eq(LevelMath.BonusLabel(0), "", "보정 없음 글자");
+
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }

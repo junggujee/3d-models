@@ -73,7 +73,7 @@ namespace MoominAction
 
         void ApplyLevel(bool heal)
         {
-            float before = stats.maxHealth; stats.maxHealth = baseHealth + 10f * (level - 1); stats.equipFinalPower = (level - 1) / 2;
+            float before = stats.maxHealth; stats.level = level; stats.maxHealth = baseHealth + 10f * (level - 1); stats.equipFinalPower = (level - 1) / 2;
             if (heal) stats.currentHealth = Mathf.Min(stats.maxHealth, stats.currentHealth + (stats.maxHealth - before)); else stats.currentHealth = Mathf.Min(stats.currentHealth <= 0 ? stats.maxHealth : stats.currentHealth, stats.maxHealth);
         }
         public void GainExp(long amount)

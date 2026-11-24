@@ -282,7 +282,7 @@ namespace MoominAction.UI
             }
             int lv = xp != null ? xp.level : 1;
             nameText.text = stats.displayName;
-            subText.text = $"Lv.{lv}  ·  스파크 검사  ·  전투력 <color=#3B7A2E>{EquipmentMath.CombatPower(stats.Attack, stats.equipFinalPower, stats.maxHealth, stats.equipDamageReduction, lv):N0}</color>";
+            subText.text = $"Lv.{lv}  ·  {LevelMath.Title(lv)}  ·  전투력 <color=#3B7A2E>{EquipmentMath.CombatPower(stats.Attack, stats.equipFinalPower, stats.maxHealth, stats.equipDamageReduction, lv):N0}</color>";
             for (int i = 0; i < Inventory.PresetCount; i++) { bool on = i == inv.preset; presetBtn[i].sprite = UITheme.Art("Sheet", on ? "SlotSel" : "Button", new Vector4(12, 12, 12, 12)); presetTxt[i].color = on ? Gold : Ink; }
             // B
             UpdateBars();

@@ -18,6 +18,8 @@ namespace MoominAction
         public bool clashed, cancelled; public float activeUntil;
         /// <summary>마지막으로 맞힌 대상과의 상성(+1 유리, -1 불리).</summary>
         public int affinity;
+        /// <summary>레벨 차이로 더해진 코인 위력(LevelMath.CoinBonus) — 화면 표시용.</summary>
+        public int levelBonus;
         public readonly HashSet<CharacterStats> hitTargets = new();
 
         public AttackContext(int power, bool isHeads) { this.power = power; this.isHeads = isHeads; isResolved = true; }

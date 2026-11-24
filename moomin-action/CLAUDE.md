@@ -52,7 +52,7 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 
 ## 체력바·경험치바
 - `UI/VitalBars.cs`(HUD 왼쪽 위): 체력 "체력 283/391" + 줄었을 때만 붉은 [72%] 꼬리표, 맞으면 줄어든 만큼 빨간 조각(0.45초 유지 → 0.35초 동안 줄며 사라짐, 연속 피해는 이어서 커짐), 체력 25% 아래면 붉게 깜빡. 경험치바 + 레벨 원판, 얻은 만큼 밝게 번쩍이며 차오름, 레벨 업이면 끝까지 찼다가 다시.
-- 순수 로직 `Core/VitalsMath.cs`(DamageChunk · ExpCurve 100×레벨^1.6 · NumberFormat 2.6M/14.44M) → status_tests. 레벨·경험치 `Player/Experience.cs`(적 처치 시 `EnemyCombatController.expReward`: 그림자 40 · 곰 70 · 보스 ×5, 레벨 업 최대 체력 +10).
+- 순수 로직 `Core/VitalsMath.cs`(DamageChunk · ExpCurve 100×레벨^1.6 · NumberFormat 2.6M/14.44M) → status_tests. 레벨·경험치 `Player/Experience.cs`(적 처치 시 `EnemyCombatController.expReward`: 그림자 40 · 곰 70 · 보스 ×5, 레벨 업 최대 체력 +12·공격력 +0.6·완전 회복 — docs/LEVEL.md).
 - 그림 `tools/bar_art.py` → `Resources/UI/Bars/*.png`(BarArt 가 9분할로 로드, 테두리 값은 두 파일이 같아야 함). 미리보기 `tools/vital_bars_mock.py` → `previews/vital_bars_mock.png`.
 - HUD 세로 배치: 체력 -22 · 경험치 -80 · 스태미나 -124 · 정신력 -142 · 에너지 -166 · 상태 -196 · 목표 -236.
 
@@ -111,3 +111,8 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - `UI/CodexPage.cs`(K): 가진 장비·스킬만. [ ] 탭, 분류 칩, 세로 카드(등급·속성 색 번짐), 오른쪽 큰 그림 + 대표 수치. 스킬 글자는 `UI/SkillInfo.cs`(종류는 키 칸으로: 좌클릭/Q·E/R).
 - 그림 `tools/sheet_art.py` → `Resources/UI/Sheet|Codex|Fx` — **판 그림에 칸 테두리·머리 먹줄이 들어 있으니 SEC/CSEC 좌표와 C# 상수를 같이**. 미리보기 `tools/sheet_mock.py`(previews/sheet_mock·sheet_skill_popup_mock·codex_mock·stun_fx_mock).
 - 경직이 깨지면 `World/StunFx.cs`(GameManager 가 `CharacterStats.AnyStaggerBroken` 에 Hook): 몸 위 주황 폭발 + "기절" 글자(카메라 쪽으로 당겨 가려지지 않게), 경직이 끝나면 사라짐.
+
+## 레벨 (상세: docs/LEVEL.md)
+- 규칙 `Core/LevelMath.cs`(순수 C#, status_tests): 3레벨 차이마다 코인 위력 ±1(최대 ±3, 앞면 코인 위력에만) · 적 레벨 = 웨이브 ± 1 + levelOffset + 보스 3(체력 +6%/공격 +0.5 per Lv) · 경험치 레벨 차이 ±10%(50~150%) · 10레벨마다 칭호.
+- `CharacterStats.level`(플레이어 = Experience.Refresh, 적 = GameManager.SpawnWave → `EnemyCombatController.SetLevel`, 펫 = ApplyLevel). 보정은 `SkillExecutor.OnCoinAttack` → `LevelOpponent()` → `AttackContext.levelBonus`.
+- 연출 `Effects/LevelUpFx.cs`(금빛 기둥·고리) + `UI/LevelUpPopup.cs`(Experience.LevelJumped). 빛의 계승자 글꼴엔 "−"(U+2212)가 없으니 화면 글자는 ASCII "-".

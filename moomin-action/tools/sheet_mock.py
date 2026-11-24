@@ -162,4 +162,4 @@ def stun():
     b = art("Fx", "StunBurst", (420, 420)); t = art("Fx", "StunText", (300, 127)); img.alpha_composite(b, (150, 40)); img.alpha_composite(t.rotate(4, expand=False), (210, 187))
     img.convert("RGB").save(os.path.join(PRE, "stun_fx_mock.png")); print("✔ stun_fx_mock.png")
 
-sheet(); codex(); stun()
+if __name__ == "__main__": sheet(); codex(); stun()

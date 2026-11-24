@@ -16,6 +16,7 @@ namespace MoominAction
     {
         public string displayName = "민미"; [Tooltip("이름 옆 별칭(예: 지상 최대의 끼룩이)")] public string epithet = ""; public Team team = Team.Player;
         [Tooltip("몸 속성(공격 중이 아닐 때 맞는 쪽 상성). 검정 = 상성 없음")] public SkillAttribute attribute = SkillAttribute.Black;
+        [Tooltip("레벨(플레이어 = Experience, 적 = 웨이브로 정함, 펫 = 펫 레벨). 상대와 3레벨 차이마다 코인 위력 ±1(최대 ±3) — LevelMath")] [Min(1)] public int level = 1;
         [Header("Health")] public float maxHealth = 100f; public float currentHealth = 100f;
         [Header("Attack")] [Tooltip("기본 공격력. 피해 = 공격력 × (최종 위력 ÷ 10) × 배율 (EquipmentMath.Damage) — 10 이면 예전 공식과 같음")] public float attack = 10f;
         /// <summary>레벨(Experience)·장비(Inventory)가 더하는 값. 장비 체력은 maxHealth 에 이미 더해져 있고 equipHealth 로 기억(저장 시 뺌).</summary>

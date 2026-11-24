@@ -33,7 +33,8 @@ namespace MoominAction
         /// <summary>스킬·경직·회피·방어 중이면 새 판단을 하지 않음.</summary>
         public bool Busy => !stats.IsAlive || skillExecutor.IsExecuting || IsStaggered || IsDodging || Time.time < busyUntil;
 
-        [Tooltip("쓰러뜨리면 플레이어가 얻는 경험치")] public int expReward = 40;
+        [Tooltip("쓰러뜨리면 플레이어가 얻는 경험치(레벨 1 기준 — 레벨·레벨 차이로 바뀜)")] public int expReward = 40;
+        [Tooltip("종류별 레벨 보정(곰 +1 · 그린볼런 +1 · 고래 +2)")] public int levelOffset;
         [Header("Boss Bar")] [Tooltip("화면 아래 보스바로 표시")] public bool showBossBar; [Tooltip("보스바 문장(Resources/UI/Bars/BossEmblem_이름)")] public string bossEmblem = "Default";
         [Header("Wave")] [Tooltip("이 웨이브부터 등장")] public int minWave = 1; [Tooltip("한 웨이브에 최대 몇 마리(0 = 제한 없음)")] public int maxPerWave = 0;
         DefenseController defense; SkillPhase lastPhase; public Transform Target => target;
@@ -108,7 +109,7 @@ namespace MoominAction
             foreach (var c in GetComponents<Collider>()) c.enabled = false;
             RunStats.Kills++; if (isBoss || showBossBar) RunStats.BossKills++;
             if (GameManager.Instance != null) GameManager.Instance.AddScore(score);
-            if (Experience.Instance != null) Experience.Instance.Gain(expReward); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
+            if (Experience.Instance != null) Experience.Instance.Gain(LevelMath.ExpReward(expReward, stats.level, Experience.Instance.level)); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
         }
 
         void Update()
@@ -194,6 +195,13 @@ namespace MoominAction
 
         void Face(float speed) { if (!target) return; Vector3 to = target.position - transform.position; to.y = 0; if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), speed * Time.deltaTime); }
         void FaceNow(Transform t) { Vector3 to = t.position - transform.position; to.y = 0; if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(to); }
+
+        /// <summary>레벨 정하기(웨이브 생성 직후): 체력 +6%/레벨 · 공격력 +0.5/레벨 · 경험치 +8%/레벨.</summary>
+        public void SetLevel(int lv)
+        {
+            stats.level = Mathf.Max(1, lv); stats.maxHealth *= LevelMath.EnemyHealthScale(stats.level); stats.attack += LevelMath.EnemyAttackBonus(stats.level);
+            expReward = Mathf.RoundToInt(expReward * (1f + 0.08f * (stats.level - 1))); stats.ResetStats();
+        }
 
         /// <summary>보스로 전환(웨이브 3마다): 체력 ×6, 크기 ×1.8, 위력 ×1.35, 보스 기술, 신중한 성격.</summary>
         public void ConfigureBoss()

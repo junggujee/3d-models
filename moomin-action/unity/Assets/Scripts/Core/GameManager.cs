@@ -99,9 +99,10 @@ namespace MoominAction
                 Vector3 p = SpawnPoint(spawnRadius + UnityEngine.Random.value * 4f);
                 var prefab = PickPrefab(counts); if (prefab == null) prefab = enemyPrefab;
                 counts[prefab] = counts.TryGetValue(prefab, out var c0) ? c0 + 1 : 1;
-                alive.Add(Instantiate(prefab, p, Quaternion.identity));
+                var go = Instantiate(prefab, p, Quaternion.identity); alive.Add(go);
+                if (go.TryGetComponent<EnemyCombatController>(out var ec)) ec.SetLevel(LevelMath.EnemyLevel(Wave, UnityEngine.Random.Range(-1, 2), ec.levelOffset, false));
             }
-            if (boss) { Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(enemyPrefab, bp, Quaternion.identity); if (b.TryGetComponent<EnemyCombatController>(out var becc)) becc.ConfigureBoss(); alive.Add(b); }
+            if (boss) { Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(enemyPrefab, bp, Quaternion.identity); if (b.TryGetComponent<EnemyCombatController>(out var becc)) { becc.ConfigureBoss(); becc.SetLevel(LevelMath.EnemyLevel(Wave, 0, becc.levelOffset, true)); } alive.Add(b); }
             WaveStarted?.Invoke(Wave);
         }
     }

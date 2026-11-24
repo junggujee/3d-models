@@ -107,13 +107,27 @@ namespace MoominAction
             var ctx = new AttackContext(0, r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
             // 코인 위력 보정(힘·위력 감소·마비)을 이 코인에 한 번 적용 → 최종 위력 = 기본 + (앞면 ? 보정된 코인 위력 : 0) + 장비 보너스(예: 파란 머리띠 +1)
             ctx.modifiers = status != null ? status.UseCoinModifiers(ctx.id) : default;
-            ctx.power = EquipmentMath.FinalPower(s.basePower, ctx.modifiers.CoinValue(s.coinPower), r.heads, stats.equipFinalPower);
+            var opp = LevelOpponent(); ctx.levelBonus = opp != null ? LevelMath.CoinBonus(stats.level, opp.level) : 0;   // 레벨 차이: 3레벨마다 코인 위력 ±1(최대 ±3)
+            ctx.power = EquipmentMath.FinalPower(s.basePower, ctx.modifiers.CoinValue(LevelMath.CoinPower(s.coinPower, ctx.levelBonus)), r.heads, stats.equipFinalPower);
             CurrentAttack = ctx; results.Add(ctx); currentCoin++; coinDoneThisStage = true; if (hitboxHeld) ctx.activeUntil = float.MaxValue;
             CoinAttacked?.Invoke(ctx);
             if (status != null) status.OnCoinUsed(ctx);   // 출혈: 공격 코인을 쓸 때(같은 ctx.id 로는 한 번만)
             if (!stats.IsAlive) { Interrupt(); return; }   // 출혈로 쓰러짐
             resolver.ResolveAttack(ctx, s);
             if (isExecuting && currentCoin >= s.coinCount) ApplyAllHeadsEffect(s);
+        }
+        /// <summary>레벨 비교 상대: 적은 쫓는 대상, 플레이어는 조준 대상, 없으면 12m 안 가장 가까운 다른 팀.</summary>
+        public CharacterStats LevelOpponent()
+        {
+            if (TryGetComponent<EnemyCombatController>(out var ec) && ec.Target != null && ec.Target.TryGetComponent<CharacterStats>(out var ts)) return ts;
+            if (TryGetComponent<LockOnSystem>(out var lo) && lo.Target != null && lo.Target.TryGetComponent<CharacterStats>(out var ls)) return ls;
+            CharacterStats best = null; float bd = 144f; int mask = resolver != null && resolver.targetMask != 0 ? (int)resolver.targetMask : ~0;
+            foreach (var c in Physics.OverlapSphere(transform.position, 12f, mask))
+            {
+                var cs = c.GetComponentInParent<CharacterStats>(); if (cs == null || cs == stats || !cs.IsAlive || cs.team == stats.team) continue;
+                float d = (cs.transform.position - transform.position).sqrMagnitude; if (d < bd) { bd = d; best = cs; }
+            }
+            return best;
         }
         public void OpenHitbox() { hitboxHeld = true; if (CurrentAttack != null && !CurrentAttack.cancelled) CurrentAttack.activeUntil = Time.time + CurrentSkill.activeWindow * 3f; }
         public void CloseHitbox() { hitboxHeld = false; if (CurrentAttack != null) CurrentAttack.activeUntil = Mathf.Min(CurrentAttack.activeUntil, Time.time); }

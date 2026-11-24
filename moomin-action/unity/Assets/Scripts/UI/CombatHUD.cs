@@ -124,6 +124,12 @@ namespace MoominAction.UI
 
         /// <summary>정적 이벤트·적 구독 해제(씬 재시작 시 파괴된 UI 를 건드리지 않도록).</summary>
         public void Dispose() { if (onEvade != null) DefenseController.AnyEvadeResolved -= onEvade; stage?.Dispose(); if (onExchange != null) ClashManager.ClashExchange -= onExchange; if (onClashEnd != null) ClashManager.ClashEnded -= onClashEnd; if (onTremor != null) CombatResolver.TremorBurst -= onTremor; if (onStatus != null) StatusEffectManager.AnyTriggered -= onStatus; if (onClash != null) ClashManager.Clashed -= onClash; if (onHit != null) CombatResolver.DamageDealt -= onHit; if (lastTarget != null) lastTarget.Executor.CoinAttacked -= onEnemyCoin; }
+        /// <summary>조준 대상 레벨 표시: 내가 높으면 초록, 낮으면 빨강 + 레벨 차이로 바뀌는 내 코인 위력.</summary>
+        string LevelTag(CharacterStats t)
+        {
+            int b = LevelMath.CoinBonus(stats.level, t.level); string col = b > 0 ? "#9BE86A" : b < 0 ? "#E87060" : "#E8DDC4";
+            return $"<color={col}>Lv.{t.level}</color>" + (b != 0 ? $"<size=17><color={col}> ({LevelMath.BonusLabel(b)})</color></size>" : "") + "  ";
+        }
         void Popup(string t, Color c) { popup.text = t; popup.color = c; popupT = 1.2f; }
 
         public void Update(float dt)
@@ -163,7 +169,7 @@ namespace MoominAction.UI
             if (t != null)
             {
                 float r = t.Stats.HealthRatio; targetHp.SetFill(r); targetTrail = r < targetTrail ? Mathf.MoveTowards(targetTrail, r, .4f * dt) : r; targetHp.SetTrail(targetTrail);
-                targetName.text = t.Stats.displayName + (string.IsNullOrEmpty(t.Stats.epithet) ? "" : $"  <size=19><color=#CFC4A8>{t.Stats.epithet}</color></size>") + (t.Stats.IsVulnerable ? "   <color=#E8C97A><size=20>경직 — 반격 기회</size></color>" : "") + $"   <size=18><color=#9E9178>정신력 {t.Stats.currentSanity:+0;-0;0} · {SkillAttributes.Names[(int)t.Stats.attribute]} 속성 · {SkillAttributes.WeaknessText(t.Stats.attribute)}</color></size>";
+                targetName.text = LevelTag(t.Stats) + t.Stats.displayName + (string.IsNullOrEmpty(t.Stats.epithet) ? "" : $"  <size=19><color=#CFC4A8>{t.Stats.epithet}</color></size>") + (t.Stats.IsVulnerable ? "   <color=#E8C97A><size=20>경직 — 반격 기회</size></color>" : "") + $"   <size=18><color=#9E9178>정신력 {t.Stats.currentSanity:+0;-0;0} · {SkillAttributes.Names[(int)t.Stats.attribute]} 속성 · {SkillAttributes.WeaknessText(t.Stats.attribute)}</color></size>";
                 // 경직 게이지
                 targetStagger.SetFill(t.Stats.IsStaggerBroken ? 1f : t.Stats.StaggerGauge.Ratio); if (staggerFlash > 0) staggerFlash -= dt;
                 targetStagger.fill.GetComponent<Image>().color = staggerFlash > 0 ? Color.white : t.Stats.IsStaggerBroken ? UITheme.GoldBright : new Color(.95f, .8f, .3f);

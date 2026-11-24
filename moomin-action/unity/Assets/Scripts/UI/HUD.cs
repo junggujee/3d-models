@@ -14,7 +14,7 @@ namespace MoominAction.UI
         UIRoot ui; GameObject hudRoot, coreRoot; CombatHUD combat; CharacterStats hp; Stamina st; Inventory inv;
         Gauge stBar; VitalBars vitals; Text objective, scoreText, goldText, weaponText;
         Image[] qIcon = new Image[4]; Text[] qCount = new Text[4]; Image flash;
-        Text banner, bannerSub; Image bannerLine; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver; PetHUD pet; QuestTracker quests;
+        Text banner, bannerSub; Image bannerLine; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver; PetHUD pet; QuestTracker quests; LevelUpPopup levelUp;
         class Toast { public RectTransform rt; public Text text; public Image icon; public CanvasGroup cg; public float t; }
         readonly List<Toast> toasts = new(); readonly List<Toast> pool = new(); Transform toastParent;
 
@@ -57,7 +57,7 @@ namespace MoominAction.UI
             hp.Damaged += (a, p, k) => flash.color = new Color(.6f, 0, 0, .38f);
             if (inv != null) { inv.Picked += OnPicked; inv.Message += m => Toast_Text(m); }
             var gm = GameManager.Instance; if (gm != null) { gm.WaveStarted += w => Banner("웨이브 " + w, UITheme.Gold, 2.4f); gm.WaveCleared += w => Banner("적을 쓰러뜨렸다", new Color(1f, .86f, .5f), 2.6f); }
-            var xp = ui.player.GetComponent<Experience>(); if (xp != null) xp.LeveledUp += lv => Banner("레벨 업!  Lv." + lv, UITheme.GoldBright, 2.2f);
+            var xp = ui.player.GetComponent<Experience>(); levelUp = new LevelUpPopup(); levelUp.Build(hudRoot.transform, xp);   // 레벨업: LEVEL UP + 오른 능력치(월드 연출은 Effects/LevelUpFx)
             combat = new CombatHUD(); combat.Build(ui, hudRoot.transform, core);
             gameOver = new GameOverScreen(); gameOver.Build(hudRoot.transform, hp);   // 쓰러짐 띠 → 결과 화면(맨 위에 그려지게 마지막에)
             hp.Died += gameOver.Show;
@@ -107,7 +107,7 @@ namespace MoominAction.UI
             if (bannerT > 0) { bannerT -= dt; float k = bannerT / bannerDur, a = Mathf.Clamp01(Mathf.Min(k * 3f, (1f - k) * 5f)); banner.color = new Color(bannerCol.r, bannerCol.g, bannerCol.b, a); bannerSub.color = new Color(UITheme.Gold.r, UITheme.Gold.g, UITheme.Gold.b, a); bannerLine.color = new Color(1, 1, 1, a); }
             else { banner.color = new Color(0, 0, 0, 0); bannerSub.color = banner.color; bannerLine.color = banner.color; }
             flash.color = new Color(.6f, 0, 0, Mathf.MoveTowards(flash.color.a, 0, 0.9f * dt));
-            gameOver.Update(dt); pet.Update(dt); quests.Update(PetSeal.Current != null);
+            gameOver.Update(dt); pet.Update(dt); quests.Update(PetSeal.Current != null); levelUp.Update(dt);
         }
     }
 }

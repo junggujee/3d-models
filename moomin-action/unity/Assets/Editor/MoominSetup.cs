@@ -260,7 +260,7 @@ namespace MoominAction.EditorTools
                 var bcc = b.AddComponent<EnemyCombatController>(); bcc.archetype = EnemyArchetype.Humanoid; bcc.animator = bAnim; bcc.agent = ba; bcc.visual = b.transform; bcc.moveSpeed = 2.2f; bcc.score = 15;
                 bcc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("HUMAN_JAB"), SkillAsset("HUMAN_SLAM"), SkillAsset("HUMAN_RUSH") }; bcc.basicSkill = bcc.skills[0];
                 b.AddComponent<EnemyBrain>().personality = EnemyPersonality.Humanoid;
-                var becc = b.GetComponent<EnemyCombatController>(); if (becc != null) becc.expReward = 70;   // 인간형은 경험치 더 많이
+                var becc = b.GetComponent<EnemyCombatController>(); if (becc != null) { becc.expReward = 70; becc.levelOffset = 1; }   // 인간형은 경험치 더 많이 · 레벨 +1
                 SetLayer(b, enemyLayer);
                 PrefabUtility.SaveAsPrefabAsset(b, Prefabs + "SleepyBear.prefab"); Object.DestroyImmediate(b);
             }
@@ -279,7 +279,7 @@ namespace MoominAction.EditorTools
                 w.AddComponent<CoinSystem>(); w.AddComponent<StatusEffectManager>(); w.AddComponent<DefenseController>(); w.AddComponent<EnergyManager>(); var wr = w.AddComponent<CombatResolver>(); wr.targetMask = playerMask;
                 var wex = w.AddComponent<SkillExecutor>(); wex.useAnimationEvents = false; wex.animator = wAnim;
                 var wcc = w.AddComponent<EnemyCombatController>(); wcc.archetype = EnemyArchetype.GroundMonster; wcc.animator = wAnim; wcc.agent = wa; wcc.visual = w.transform; wcc.moveSpeed = 1.8f; wcc.score = 40;
-                wcc.expReward = 150; wcc.minWave = 2; wcc.maxPerWave = 1; wcc.showBossBar = true; wcc.bossEmblem = "Whale";   // 전용 보스바
+                wcc.expReward = 150; wcc.levelOffset = 2; wcc.minWave = 2; wcc.maxPerWave = 1; wcc.showBossBar = true; wcc.bossEmblem = "Whale";   // 전용 보스바
                 wcc.skills = new System.Collections.Generic.List<SkillDefinition> { SkillAsset("WHALE_FLIPPER"), SkillAsset("WHALE_RAM"), SkillAsset("WHALE_BEAM"), SkillAsset("WHALE_JUMP"), SkillAsset("WHALE_TAIL"), SkillAsset("WHALE_SPOUT") };
                 wcc.basicSkill = wcc.skills[0];
                 w.AddComponent<EnemyBrain>().personality = EnemyPersonality.Grunt;
@@ -355,7 +355,7 @@ namespace MoominAction.EditorTools
             g.AddComponent<CoinSystem>(); g.AddComponent<StatusEffectManager>(); g.AddComponent<DefenseController>(); g.AddComponent<EnergyManager>(); var rs = g.AddComponent<CombatResolver>(); rs.targetMask = playerMask;
             var ex = g.AddComponent<SkillExecutor>(); ex.useAnimationEvents = false; ex.animator = an;
             var ec = g.AddComponent<EnemyCombatController>(); ec.archetype = EnemyArchetype.GroundMonster; ec.animator = an; ec.agent = ag; ec.visual = g.transform; ec.moveSpeed = speed; ec.score = score;
-            ec.expReward = exp; ec.minWave = minWave; ec.maxPerWave = maxPerWave;
+            ec.expReward = exp; ec.minWave = minWave; ec.maxPerWave = maxPerWave; ec.levelOffset = exp >= 60 ? 1 : 0;   // 그린볼런(경험치 큼) 레벨 +1
             ec.skills = new System.Collections.Generic.List<SkillDefinition>(); foreach (var id in skillIds) { var sk = SkillAsset(id); if (sk != null) ec.skills.Add(sk); }
             ec.basicSkill = ec.skills.Count > 0 ? ec.skills[0] : null;
             g.AddComponent<EnemyBrain>().personality = EnemyPersonality.Grunt;
