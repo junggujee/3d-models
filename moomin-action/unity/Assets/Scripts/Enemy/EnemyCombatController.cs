@@ -94,6 +94,8 @@ namespace MoominAction
             if (s.windup <= 0f) return; HideTelegraph(); Play(string.IsNullOrEmpty(s.windupAnimation) ? "Windup" : s.windupAnimation, 0.1f);
             if (s.vfx == SkillVfx.WhaleBeam) WhaleChargeFx.Play(transform, s.windup);   // 고래빔 기 모으기
             Color tc = !s.canBeGuarded ? new Color(0.65f, 0.2f, 1f, 0.45f) : !s.canBeClashed ? new Color(0.2f, 0.55f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f);   // 보라 = 방어 불가 · 파랑 = 합 불가 · 빨강 = 일반 · 초록 직선 = 원거리
+            if (s.isProjectile && s.projectileLob) return;   // 딸기 폭탄: 떨어질 자리마다 던질 때 예고(Projectile)
+            if (s.isProjectile && s.projectileSpread >= 359f) { tele = TelegraphIndicator.Show(transform, Vector3.zero, 4.5f / transform.localScale.x, s.windup, new Color(0.75f, 0.35f, 1f, 0.42f)); return; }   // 회전 탄막: 몸 둘레 보라 원
             if (s.isProjectile) { tele = TelegraphIndicator.ShowLine(transform, s.range / transform.localScale.z, s.projectileRadius * 2.2f / transform.localScale.x, s.windup, new Color(0.45f, 0.95f, 0.3f, 0.42f)); return; }   // 초록 직선 = 원거리(날아오는 길)
             if (s.isAreaAttack && s.areaShape == AreaShape.Line) { tele = TelegraphIndicator.ShowLine(transform, s.areaRadius / transform.localScale.z, s.areaWidth / transform.localScale.x, s.windup, tc); return; }
             bool aoe = s.isAreaAttack || s.angle >= 360f; float r = (aoe ? s.Reach : Mathf.Max(1f, s.range * 0.6f)) / transform.localScale.x;

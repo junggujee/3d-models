@@ -159,6 +159,35 @@ namespace MoominAction.UI
                     for (int k = 0; k < 16; k++) { float a = R(-80f, 80f) * Mathf.Deg2Rad; Stroke(tip.x, tip.y, tip.x + Mathf.Cos(a) * R(.1f, .3f), tip.y + Mathf.Sin(a) * R(.1f, .3f), R(.006f, .02f), R(.7f, 1f), R(0, 1) > .6f ? 1 : 0, true); }
                     break;
                 }
+                case SkillMotif.Barrage: // 회전 탄막: 고래 둘레로 소용돌이치며 퍼지는 빛 구슬 + 도는 궤적
+                {
+                    w = new WhalePose(fx + .2f, .45f, .85f, 0f, .25f, .2f); float cx = fx + .2f, cy = .45f;
+                    for (int k = 0; k < 26; k++) { float t = k / 26f, a = t * 4.2f * Mathf.PI, r = .25f + t * .55f; Arc(cx + Mathf.Cos(a) * r * 1.2f, cy + Mathf.Sin(a) * r * .8f, .028f, .028f, 0, 360, .009f, R(.75f, 1f), 1, 10); }
+                    for (int k = 0; k < 4; k++) Arc(cx, cy, .3f + k * .17f, .2f + k * .12f, R(0f, 90f), R(250f, 360f), .004f, .6f, .3f, 22);
+                    break;
+                }
+                case SkillMotif.Bomb:    // 딸기 폭탄: 숨구멍에서 던진 딸기가 포물선으로 떨어져 퍽 터짐
+                {
+                    w = new WhalePose(fx + .35f, .3f, .9f, 8f, .2f, .3f); var hole = WP(w, .16f, .15f);
+                    for (int k = 0; k < 4; k++)
+                    {
+                        float tx = hole.x - .2f - k * .28f, ty = R(.05f, .2f), px = hole.x, py = hole.y;
+                        for (int j = 1; j <= 10; j++) { float u = j / 10f, nx = Mathf.Lerp(hole.x, tx, u), ny = Mathf.Lerp(hole.y, ty, u) + Mathf.Sin(u * Mathf.PI) * .35f; Stroke(px, py, nx, ny, .003f, .5f, 0, true); px = nx; py = ny; }
+                        Arc(tx, ty + .05f, .05f, .06f, 0, 360, .016f, 1f, 1, 14); Stroke(tx - .03f, ty + .11f, tx + .03f, ty + .11f, .012f, .9f, 0, false);
+                        for (int j = 0; j < 8; j++) { float a = R(0f, 6.28f); Stroke(tx, ty, tx + Mathf.Cos(a) * .12f, ty + Mathf.Sin(a) * .08f, R(.004f, .01f), R(.6f, 1f), 1, true); }
+                    }
+                    break;
+                }
+                case SkillMotif.Bubbles: // 버블 감옥: 입에서 나온 커다란 물방울들(반짝임)
+                {
+                    w = new WhalePose(fx - .1f, .4f, .9f, 4f, .45f, -.2f); var tip = WP(w, .5f, -.02f);
+                    for (int k = 0; k < 6; k++)
+                    {
+                        float r = R(.06f, .16f), bx = tip.x + .15f + k * .16f + R(-.03f, .03f), by = tip.y + R(-.15f, .2f);
+                        Arc(bx, by, r, r, 0, 360, .006f, 1f, .4f, 20); Arc(bx - r * .35f, by + r * .35f, r * .3f, r * .3f, 100, 170, .006f, 1f, 1, 8);
+                    }
+                    break;
+                }
                 case SkillMotif.Flurry: // 지느러미 주변에 엇갈린 궤적
                 {
                     w = new WhalePose(fx + .3f, .5f, .9f, 6f, .05f, -.3f); var fp = WP(w, .14f, -.12f);

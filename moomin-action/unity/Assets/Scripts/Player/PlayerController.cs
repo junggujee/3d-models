@@ -44,6 +44,7 @@ namespace MoominAction
             if (locked && mult > 0f) { Vector3 to = lockOn.Target.transform.position - transform.position; to.y = 0; if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), turnSpeed * Time.deltaTime); }
             else if (dir.sqrMagnitude > 0.001f && mult > 0.4f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), turnSpeed * Time.deltaTime);
             if (cc.isGrounded && vel.y < 0) vel.y = -2f; vel.y += gravity * Time.deltaTime;
+            if (vel.y < -4f && AirDome.Inside(transform.position)) vel.y = -4f;   // 용궁 공기방울 안: 둥실둥실 천천히 내려옴
             cc.Move((dir.normalized * target + new Vector3(0, vel.y, 0)) * Time.deltaTime);
             cm?.SetLocomotion(target > 0.1f);
             speed01 = Mathf.MoveTowards(speed01, mv.magnitude * mult * (run ? 1f : 0.5f), 6f * Time.deltaTime);

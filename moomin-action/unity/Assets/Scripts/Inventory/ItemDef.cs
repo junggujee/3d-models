@@ -41,6 +41,8 @@ namespace MoominAction
             Add(new ItemDef { id = "dust_fire", name = "불꽃 가루", type = ItemType.Material, icon = IconKind.Dust, color = new Color(1f, 0.55f, 0.1f), value = 12, description = "스파크 검에서 튀어 나온 불꽃이 굳은 가루. 대장장이가 좋아한다." });
             Add(new ItemDef { id = "shard_star", name = "별조각", type = ItemType.Material, icon = IconKind.Shard, color = new Color(1f, 0.9f, 0.4f), value = 40, description = "밤하늘에서 떨어진 작은 조각. 검을 담금질하는 데 쓰인다." });
             Add(new ItemDef { id = "feather_silver", name = "은빛 깃털", type = ItemType.Material, icon = IconKind.Feather, color = new Color(0.78f, 0.84f, 0.92f), value = 55, description = "달빛 아래서만 보이는 희귀한 깃털." });
+            Add(new ItemDef { id = "royal_pearl", name = "임금님의 무지개 진주", type = ItemType.Key, icon = IconKind.Shard, color = new Color(0.9f, 0.82f, 1f), maxStack = 1, value = 0,
+                description = "용궁의 고래고래 임금님이 '친구가 된 기념'이라며 준 진주. 빛에 비추면 무지개가 일렁인다. 어부 철썩이에게 보여 주자." });
             Add(new ItemDef { id = "key_old", name = "낡은 열쇠", type = ItemType.Key, icon = IconKind.Key, color = new Color(0.75f, 0.6f, 0.25f), maxStack = 1, value = 0, description = "어느 문을 여는 열쇠인지는 아무도 기억하지 못한다." });
             Add(new ItemDef { id = "sword_spark", name = "스타 스파크 검", type = ItemType.Weapon, grade = "B", icon = IconKind.Sword, color = new Color(0.55f, 0.6f, 0.7f), damageMultiplier = 1f, hue = -1f, maxStack = 1, value = 100, kit = "spark", description = "무지개빛 날이 흐르는 검. 휘두를 때마다 불꽃이 튄다." });
             Add(new ItemDef { id = "sword_frost", name = "서리 스파크 검", type = ItemType.Weapon, grade = "A", icon = IconKind.Sword, color = new Color(0.4f, 0.85f, 1f), damageMultiplier = 1.25f, hue = 0.52f, maxStack = 1, value = 260, kit = "spark", description = "차가운 푸른 불꽃이 어린 검. 공격력 +25%." });

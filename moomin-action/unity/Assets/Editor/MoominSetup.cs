@@ -107,7 +107,7 @@ namespace MoominAction.EditorTools
                 if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(g)) is TextureImporter ti)
                 { ti.mipmapEnabled = true; ti.maxTextureSize = 2048; ti.textureCompression = TextureImporterCompression.CompressedHQ; ti.anisoLevel = 4; ti.wrapMode = TextureWrapMode.Repeat; ti.SaveAndReimport(); }
             // 바다·선착장·통통배·어부 모자(Resources): 바닥·충돌 메시는 런타임 MeshCollider 용으로 읽기 가능
-            foreach (var path in new[] { "Assets/Resources/World/Seaside.fbx", "Assets/Resources/World/Boat.fbx", "Assets/Resources/Npc/FisherHat.fbx" })
+            foreach (var path in new[] { "Assets/Resources/World/Seaside.fbx", "Assets/Resources/World/Boat.fbx", "Assets/Resources/Npc/FisherHat.fbx", "Assets/Resources/World/Palace.fbx", "Assets/Resources/Boss/KingCrown.fbx", "Assets/Resources/Boss/KingCape.fbx" })
                 if (AssetImporter.GetAtPath(path) is ModelImporter seaImp)
                 {
                     seaImp.preserveHierarchy = true; seaImp.importAnimation = false; seaImp.importCameras = false; seaImp.importLights = false; seaImp.isReadable = true;

@@ -43,6 +43,7 @@ namespace MoominAction
             if (!player) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<CharacterStats>(); }
             RunStats.Hook(); StunFx.Hook(); Hunts.Hook(); SaveSystem.ApplyPending(this);
             Seaside.Ensure();   // 남쪽 바다·선착장(충돌·바다·선착장 NavMesh 자리) — NavMesh 굽기 전에
+            Palace.Ensure();    // 바다 밑 용궁(공기방울 돔 · 결투장 · 고래고래 임금님)
             if (player && !player.TryGetComponent<PlayerSwim>(out _)) player.gameObject.AddComponent<PlayerSwim>();   // 헤엄·잠수(예전 프리팹에도)
             var baker = GetComponent<NavMeshBaker>(); if (baker == null) baker = gameObject.AddComponent<NavMeshBaker>(); baker.Build();
             if (player) player.Died += () => IsOver = true;

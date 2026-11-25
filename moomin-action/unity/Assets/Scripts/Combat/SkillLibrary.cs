@@ -145,6 +145,27 @@ namespace MoominAction
             foreach (var id in new[] { "WHALE_RAM", "WHALE_BEAM", "WHALE_JUMP", "WHALE_FLIPPER", "WHALE_TAIL", "WHALE_SPOUT" }) if (map.TryGetValue(id, out var wsk)) wsk.subject = IllustrationSubject.Whale;   // 일러스트 = 고래 실루엣
             St("WHALE_RAM", StatusType.Tremor, 2, 1); St("WHALE_BEAM", StatusType.Sinking, 2, 2, 1, 1); St("WHALE_JUMP", StatusType.Tremor, 3, 1, 1, 1);
             St("WHALE_FLIPPER", StatusType.PowerDown, 1, 1); St("WHALE_SPOUT", StatusType.Sinking, 1, 2);
+            // ── 고래고래 임금님(용궁 보스) 2페이지(각성) 기술 — 사용자 그림: 고래빔(각성) · 박치기 · 회전 탄막 · 딸기 폭탄 · 버블 감옥
+            //    탄막·원거리(회전 탄막 · 딸기 폭탄 · 버블 감옥 · 각성 고래빔)는 합 불가 광역: 날아오는 걸 보고 피하기. 박치기만 합 가능(근접)
+            Add(S("KING_RAM", "박치기", 14, 5, 2, 1.0f, 5f, 0, 0.85f, 0.37f, 0.9f, new[] { "Attack1", "Attack1" }, 3.8f, 90, 12f, windup: 0.65f, lunge: 13f,
+                  desc: "왕관을 앞세워 결투장을 가로질러 두 번 들이받는다. 합 가능."));
+            Add(S("KING_ORBIT", "회전 탄막", 8, 3, 3, 0.75f, 9f, 0, 0.6f, 0.47f, 0.8f, new[] { "Attack3" }, 15f, 360, 3f, windup: 0.9f,
+                  desc: "몸을 빙글 돌며 빛 구슬 고리를 사방으로 세 번 뿜는다. 고리마다 조금씩 엇갈리니 틈으로 피할 것. 합 불가 광역."));
+            Add(S("KING_STRAWBERRY", "딸기 폭탄", 11, 4, 3, 0.9f, 8f, 0, 0.55f, 0.53f, 0.8f, new[] { "Spout" }, 13f, 360, 6f, windup: 0.8f,
+                  desc: "숨구멍으로 딸기를 퐁퐁 던진다. 떨어질 자리에 분홍 원이 생기니 원 밖으로! 터지면 딸기잼 화상. 합 불가 광역."));
+            Add(S("KING_BUBBLE", "버블 감옥", 9, 3, 2, 0.8f, 11f, 0, 0.9f, 0.27f, 0.8f, new[] { "Beam", "Beam" }, 12f, 360, 2f, windup: 0.9f,
+                  desc: "커다란 물방울 세 개를 부채꼴로 천천히 불어 보낸다. 맞으면 물방울에 갇혀 2초 동안 못 움직인다. 합 불가 광역."));
+            Add(S("KING_RAINBOW", "고래빔(각성)", 14, 5, 5, 1.0f, 12f, 0, 0.45f, 0.27f, 0.9f, new[] { "Beam", "BeamHold", "BeamHold", "BeamHold", "BeamHold" }, 16f, 30, 7f, windup: 1.1f,
+                  desc: "각성했을 때만: 무지갯빛 고래빔을 길고 굵게 쏘아 휩쓴다(5번 판정). 합 불가 광역."));
+            if (map.TryGetValue("KING_RAM", out var kr)) { kr.lungeTime = 0.4f; }
+            if (map.TryGetValue("KING_ORBIT", out var ko)) { ko.isProjectile = true; ko.canBeClashed = false; ko.projectileKind = ProjectileKind.Orb; ko.projectileSpeed = 6.5f; ko.projectileRadius = 0.32f; ko.projectileHoming = 0f; ko.projectileCount = 14; ko.projectileSpread = 360f; ko.projectileSpin = 12.857f; }
+            if (map.TryGetValue("KING_STRAWBERRY", out var ksb)) { ksb.isProjectile = true; ksb.canBeClashed = false; ksb.projectileKind = ProjectileKind.Strawberry; ksb.projectileRadius = 0.35f; ksb.projectileLob = true; ksb.projectileCount = 3; ksb.lobTime = 1.15f; ksb.lobScatter = 3.2f; ksb.areaRadius = 2.3f; }
+            if (map.TryGetValue("KING_BUBBLE", out var kbb)) { kbb.isProjectile = true; kbb.canBeClashed = false; kbb.projectileKind = ProjectileKind.Bubble; kbb.projectileSpeed = 5.2f; kbb.projectileRadius = 0.75f; kbb.projectileHoming = 30f; kbb.projectileCount = 3; kbb.projectileSpread = 50f; kbb.trapSeconds = 2f; kbb.windupAnimation = "BeamCharge"; }
+            if (map.TryGetValue("KING_RAINBOW", out var krb)) { krb.isAreaAttack = true; krb.areaRadius = 16f; krb.areaShape = AreaShape.Line; krb.areaWidth = 3.0f; krb.canBeClashed = false; krb.vfx = SkillVfx.WhaleBeam; krb.windupAnimation = "BeamCharge"; krb.recoveryAnimation = "BeamEnd"; }
+            Look("KING_RAM", SkillAttribute.Blue, SkillMotif.Rush); Look("KING_ORBIT", SkillAttribute.Purple, SkillMotif.Barrage); Look("KING_STRAWBERRY", SkillAttribute.Red, SkillMotif.Bomb);
+            Look("KING_BUBBLE", SkillAttribute.Blue, SkillMotif.Bubbles); Look("KING_RAINBOW", SkillAttribute.Purple, SkillMotif.Beam);
+            foreach (var id in new[] { "KING_RAM", "KING_ORBIT", "KING_STRAWBERRY", "KING_BUBBLE", "KING_RAINBOW" }) if (map.TryGetValue(id, out var kk)) kk.subject = IllustrationSubject.Whale;
+            St("KING_RAM", StatusType.Tremor, 3, 1, 1, 1); St("KING_ORBIT", StatusType.PowerDown, 1, 1); St("KING_STRAWBERRY", StatusType.Burn, 2, 2, 1, 1); St("KING_RAINBOW", StatusType.Sinking, 3, 2, 1, 1);
             Look("SKILL_004", SkillAttribute.Yellow, SkillMotif.Smash);
             // 일반 몬스터: 핑크큐브(빨강, 말랑이 실루엣) · 그린볼런(초록, 블럭 실루엣)
             foreach (var id in new[] { "CUBE_BOUNCE", "CUBE_STRETCH", "CUBE_TRIPLE" }) if (map.TryGetValue(id, out var cs)) cs.subject = IllustrationSubject.Slime;

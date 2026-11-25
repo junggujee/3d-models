@@ -17,19 +17,71 @@ namespace MoominAction
         static Material Trail() { if (trailMat == null) trailMat = new Material(Shader.Find("Sprites/Default")); return trailMat; }
         CombatResolver owner; AttackContext attack; SkillDefinition skill; CharacterStats target; Team team;
         Vector3 vel; float traveled, maxDist; Transform spin;
+        bool lob; Vector3 lobFrom, lobTo; float lobT, lobDist; TelegraphIndicator lobTele;   // 포물선(딸기 폭탄)
         public AttackContext Attack => attack;
 
-        public static Projectile Launch(CombatResolver owner, AttackContext attack, CharacterStats target, Vector3 from)
+        /// <summary>
+        /// 코인 하나의 투사체들(CombatResolver 가 부름): 한 발 · 부채꼴(projectileSpread) · 둘레 고리(360, 회전 탄막 — 몸 둘레에서 바깥으로, 코인마다 projectileSpin 만큼 엇갈림)
+        /// · 포물선(projectileLob — 목표 자리 + 둘레로 흩어져 떨어지고, 떨어질 자리에 분홍 예고 원).
+        /// 같은 코인의 투사체는 AttackContext 하나를 나눠 써서 한 대상은 한 번만 맞음(hitTargets).
+        /// </summary>
+        public static void LaunchPattern(CombatResolver owner, AttackContext attack, CharacterStats target, Vector3 from)
+        {
+            var s = attack.skill; int n = Mathf.Max(1, s.projectileCount);
+            if (s.projectileLob)
+            {
+                Vector3 c = target != null ? target.transform.position : owner.transform.position + owner.transform.forward * Mathf.Min(8f, s.range);
+                int mask = GroundMask();
+                for (int i = 0; i < n; i++)
+                {
+                    Vector3 land = c; if (i > 0) { var r = Random.insideUnitCircle * s.lobScatter; land += new Vector3(r.x, 0f, r.y); }
+                    if (Physics.Raycast(land + Vector3.up * 6f, Vector3.down, out var g, 20f, mask, QueryTriggerInteraction.Ignore)) land = g.point;
+                    LaunchLob(owner, attack, from, land, i == 0);
+                }
+                return;
+            }
+            if (n == 1 && s.projectileSpread <= 0f) { Launch(owner, attack, target, from); return; }
+            bool ring = s.projectileSpread >= 359f; var ot = owner.transform;
+            Vector3 fwd = target != null ? target.transform.position - ot.position : ot.forward; fwd.y = 0f; if (fwd.sqrMagnitude < 1e-4f) fwd = ot.forward;
+            Vector3 origin = ring ? ot.position + Vector3.up * Mathf.Max(0.8f, 0.55f * ot.lossyScale.y) : from;
+            var angles = ProjectilePattern.Angles(n, s.projectileSpread, Mathf.Atan2(fwd.x, fwd.z) * Mathf.Rad2Deg, attack.coinIndex, s.projectileSpin);
+            for (int i = 0; i < angles.Length; i++)
+            {
+                var d = Quaternion.Euler(0f, angles[i], 0f) * Vector3.forward;
+                Launch(owner, attack, s.projectileHoming > 0f ? target : null, origin + d * (ring ? 1.2f * ot.lossyScale.x : 0f), d, i == 0);
+            }
+        }
+        static int groundMask = 0;
+        static int GroundMask()
+        {
+            if (groundMask != 0) return groundMask; int m = ~0;
+            foreach (var n in new[] { "Player", "Enemy", "Pet" }) { int l = LayerMask.NameToLayer(n); if (l >= 0) m &= ~(1 << l); }
+            groundMask = m; return m;
+        }
+
+        public static Projectile Launch(CombatResolver owner, AttackContext attack, CharacterStats target, Vector3 from, Vector3? direction = null, bool sparks = true)
         {
             var skill = attack.skill; var go = new GameObject("Projectile_" + skill.skillId); go.transform.position = from;
             var p = go.AddComponent<Projectile>(); p.owner = owner; p.attack = attack; p.skill = skill; p.target = target;
             p.team = owner.TryGetComponent<CharacterStats>(out var st) ? st.team : Team.Enemy;
-            Vector3 aim = target != null ? target.transform.position + Vector3.up * 0.6f : from + owner.transform.forward * 10f;
-            Vector3 dir = aim - from; dir.y *= 0.6f; if (dir.sqrMagnitude < 1e-4f) dir = owner.transform.forward;
+            Vector3 dir;
+            if (direction.HasValue) dir = direction.Value;
+            else { Vector3 aim = target != null ? target.transform.position + Vector3.up * 0.6f : from + owner.transform.forward * 10f; dir = aim - from; dir.y *= 0.6f; }
+            if (dir.sqrMagnitude < 1e-4f) dir = owner.transform.forward;
             p.vel = dir.normalized * skill.projectileSpeed; p.maxDist = skill.range + 2f;
             p.BuildVisual(attack.isHeads); live.Add(p);
-            SparkBurst.Spawn(from, p.vel.normalized, attack.isHeads ? 14 : 8, 3f, attack.isHeads ? SparkBurst.Gold : new Color(0.5f, 0.95f, 0.4f));
+            if (sparks) SparkBurst.Spawn(from, p.vel.normalized, attack.isHeads ? 14 : 8, 3f, attack.isHeads ? SparkBurst.Gold : new Color(0.5f, 0.95f, 0.4f));
             return p;
+        }
+
+        static void LaunchLob(CombatResolver owner, AttackContext attack, Vector3 from, Vector3 land, bool sparks)
+        {
+            var skill = attack.skill; var go = new GameObject("Lob_" + skill.skillId); go.transform.position = from;
+            var p = go.AddComponent<Projectile>(); p.owner = owner; p.attack = attack; p.skill = skill; p.lob = true; p.lobFrom = from; p.lobTo = land;
+            p.team = owner.TryGetComponent<CharacterStats>(out var st) ? st.team : Team.Enemy;
+            p.lobDist = Vector3.Distance(new Vector3(from.x, 0, from.z), new Vector3(land.x, 0, land.z)); p.BuildVisual(attack.isHeads);
+            p.lobTele = TelegraphIndicator.Show(null, land, Mathf.Max(0.8f, skill.areaRadius), skill.lobTime, new Color(1f, 0.3f, 0.5f, 0.45f));   // 떨어질 자리
+            if (sparks) SparkBurst.Spawn(from, Vector3.up, 12, 3f, new Color(1f, 0.45f, 0.55f));
         }
 
         void OnDestroy() { live.Remove(this); }
@@ -49,8 +101,35 @@ namespace MoominAction
             m = new Mesh { name = "Ring", vertices = v, triangles = tri }; m.RecalculateBounds(); rings[(r0, r1)] = m; return m;
         }
 
+        static Material orbMat, strawMat, leafMat;
+        static Material LitMat(Color c)
+        {
+            var sh = Shader.Find("Universal Render Pipeline/Lit"); if (sh == null) sh = Shader.Find("Standard");
+            var m = new Material(sh) { color = c }; if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c); return m;
+        }
         void BuildVisual(bool heads)
         {
+            if (skill.projectileKind == ProjectileKind.Orb)
+            {   // 회전 탄막: 빛나는 분홍보라 구슬 + 짧은 꼬리(점광원 없음 — 한 번에 수십 발)
+                var o = GameObject.CreatePrimitive(PrimitiveType.Sphere); Destroy(o.GetComponent<Collider>()); o.transform.SetParent(transform, false); o.transform.localScale = Vector3.one * skill.projectileRadius * 2f;
+                if (orbMat == null) orbMat = new Material(Shader.Find("Sprites/Default")) { color = new Color(1f, 0.55f, 1f, 0.95f) };
+                var r = o.GetComponent<Renderer>(); r.sharedMaterial = orbMat; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                var trO = gameObject.AddComponent<TrailRenderer>(); trO.time = 0.25f; trO.startWidth = skill.projectileRadius * 1.6f; trO.endWidth = 0f; trO.material = Trail(); trO.startColor = new Color(0.9f, 0.5f, 1f, 0.6f); trO.endColor = new Color(0.6f, 0.4f, 1f, 0f);
+                return;
+            }
+            if (skill.projectileKind == ProjectileKind.Strawberry)
+            {   // 딸기 폭탄: 빨간 딸기(살짝 길쭉) + 초록 꼭지 3장, 빙글빙글
+                var s = new GameObject("Strawberry"); s.transform.SetParent(transform, false); spin = s.transform; float R0 = Mathf.Max(0.25f, skill.projectileRadius);
+                if (strawMat == null) { strawMat = LitMat(new Color(0.92f, 0.12f, 0.2f)); leafMat = LitMat(new Color(0.25f, 0.7f, 0.25f)); }
+                var b = GameObject.CreatePrimitive(PrimitiveType.Sphere); Destroy(b.GetComponent<Collider>()); b.transform.SetParent(s.transform, false); b.transform.localScale = new Vector3(1f, 1.2f, 1f) * R0 * 2f; b.GetComponent<Renderer>().sharedMaterial = strawMat;
+                for (int k = 0; k < 3; k++)
+                {
+                    var l = GameObject.CreatePrimitive(PrimitiveType.Sphere); Destroy(l.GetComponent<Collider>()); l.transform.SetParent(s.transform, false);
+                    l.transform.localRotation = Quaternion.Euler(0, k * 120f, 0); l.transform.localPosition = Quaternion.Euler(0, k * 120f, 0) * new Vector3(0, R0 * 1.15f, R0 * 0.35f);
+                    l.transform.localScale = new Vector3(0.5f, 0.12f, 0.9f) * R0; l.GetComponent<Renderer>().sharedMaterial = leafMat;
+                }
+                return;
+            }
             if (skill.projectileKind == ProjectileKind.Bubble)
             {   // 물방울: 반투명 하늘색 공 + 흰 반짝임
                 var b = GameObject.CreatePrimitive(PrimitiveType.Sphere); Destroy(b.GetComponent<Collider>()); b.transform.SetParent(transform, false); b.transform.localScale = Vector3.one * skill.projectileRadius * 1.6f; spin = null;
@@ -95,6 +174,15 @@ namespace MoominAction
         {
             if (UIState.Paused) return;
             float dt = Time.deltaTime;
+            if (lob)
+            {
+                if (attack.cancelled) { if (lobTele) lobTele.Hide(); Break(transform.position, Vector3.up); return; }
+                lobT += dt; float u = Mathf.Clamp01(lobT / Mathf.Max(0.2f, skill.lobTime));
+                transform.position = Vector3.Lerp(lobFrom, lobTo, u) + Vector3.up * ProjectilePattern.LobHeight(u, lobDist);
+                if (spin) spin.Rotate(Vector3.right, 540f * dt, Space.Self);
+                if (u >= 1f) Explode();
+                return;
+            }
             if (target != null && target.IsAlive && skill.projectileHoming > 0f)   // 살짝 따라감(피할 수 있을 만큼만)
             {
                 Vector3 want = (target.transform.position + Vector3.up * 0.6f - transform.position).normalized;
@@ -114,7 +202,9 @@ namespace MoominAction
             {
                 var cs = buf[i].GetComponentInParent<CharacterStats>();
                 if (cs == null || cs.team == team || !cs.IsAlive || attack.hitTargets.Contains(cs)) continue;
+                float hp0 = cs.currentHealth;
                 if (owner != null) owner.ApplyHit(attack, cs);
+                if (skill.trapSeconds > 0f && cs.IsAlive && cs.currentHealth < hp0) BubbleTrap.Apply(cs, skill.trapSeconds);   // 버블 감옥
                 Break(transform.position, -vel.normalized); return;
             }
             if (traveled > maxDist || attack.cancelled) Break(transform.position, vel.normalized);
@@ -125,7 +215,8 @@ namespace MoominAction
         {
             for (int i = live.Count - 1; i >= 0; i--)
             {
-                var o = live[i]; if (o == null || o == this || o.team == team) continue;
+                var o = live[i]; if (o == null || o == this || o.team == team || o.lob) continue;
+                if (!skill.canBeClashed || !o.skill.canBeClashed) continue;   // 합 불가 탄막(임금님 회전 탄막 · 버블)은 공중 합도 없음 — 보고 피하기
                 float rr = skill.projectileRadius + o.skill.projectileRadius; if ((o.transform.position - transform.position).sqrMagnitude > rr * rr) continue;
                 int aff = SkillAttributes.Affinity(skill.attribute, o.skill.attribute);
                 int mine = attack.power + (aff > 0 ? SkillAttributes.AdvantageClashBonus : 0), theirs = o.attack.power + (aff < 0 ? SkillAttributes.AdvantageClashBonus : 0);
@@ -137,6 +228,22 @@ namespace MoominAction
                 return mine <= theirs;
             }
             return false;
+        }
+
+        /// <summary>포물선이 떨어진 자리: 반지름 areaRadius 안 상대 팀 모두에게 같은 코인 판정(한 번씩).</summary>
+        void Explode()
+        {
+            if (lobTele) lobTele.Hide(); Vector3 at = lobTo + Vector3.up * 0.3f; float r = Mathf.Max(0.8f, skill.areaRadius);
+            int n = Physics.OverlapSphereNonAlloc(at, r, buf, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                var cs = buf[i].GetComponentInParent<CharacterStats>();
+                if (cs == null || cs.team == team || !cs.IsAlive || attack.hitTargets.Contains(cs)) continue;
+                if (owner != null) owner.ApplyHit(attack, cs);
+            }
+            SparkBurst.Spawn(at, Vector3.up, 36, 6f, new Color(1f, 0.3f, 0.4f)); SparkBurst.Spawn(at, Vector3.up, 18, 4f, new Color(1f, 0.85f, 0.9f));
+            var cam = Camera.main; if (cam != null && Vector3.Distance(cam.transform.position, at) < 14f) ThirdPersonCamera.Shake(0.06f, 0.2f);
+            Destroy(gameObject);
         }
 
         void Break(Vector3 at, Vector3 dir)

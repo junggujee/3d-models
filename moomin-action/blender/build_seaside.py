@@ -55,10 +55,12 @@ def floor_z(p, d):
     z = profile(d) + noise(p.x, p.y) * smooth(2, 14, d) + 0.12 * math.sin(p.x * 0.9 + p.y * 0.6) * smooth(6, 20, d)
     q2 = Vector((p.x, p.y)); a = (q2 - T2).dot(U2); b = (q2 - T2).dot(V2)      # 선착장 앞은 배가 다니게 깊게(골)
     z -= 2.2 * smooth(6, 0, abs(b) - 9) * smooth(4, 24, a) * smooth(140, 90, a)
-    return z
+    rp = math.hypot(a - PALACE_A, b - PALACE_B)                                # 용궁 분지(build_palace.py): 가운데 평평하게 -42m
+    return z + (PALACE_Z - z) * smooth(100, 46, rp)
 
 APO = R * math.cos(math.pi / N)                                                # 변까지 거리
-RINGS = [0, 1.5, 3, 4.5, 6, 8, 10, 12.5, 15, 18, 22, 27, 33, 40, 50, 62, 78, 100, 130, 170, 230, 320, 450, 650, 900]
+PALACE_A, PALACE_B, PALACE_Z = 165.0, 0.0, -42.0                               # 용궁 자리(선착장 좌표) · 분지 바닥
+RINGS = sorted(set([0, 1.5, 3, 4.5, 6, 8, 10, 12.5, 15, 18, 22, 27, 33, 40, 50, 62, 320, 450, 650, 900] + list(range(66, 300, 6))))   # 용궁 분지 둘레(60~300m)는 6m 마다
 def subdiv(k): return 64 if k in (0, N - 1) else (16 if k in (1, N - 2) else 6)   # 꼭짓점 T 양쪽 변이 촘촘
 
 bm = bmesh.new(); uvl = bm.loops.layers.uv.new("UVMap"); rows = []

@@ -184,6 +184,17 @@ static class Tests
         Eq(worstH < 0.02f, true, $"수면 높이 되풀이 오차 < 2cm (최대 {worstH:0.0000}m)"); Eq(maxAbs > 0.2f && maxAbs < 0.7f, true, "물결 높이 범위");
         Eq(Math.Abs(OceanMath.HeightAt(ow, 3f, 4f, 2f, (x, z) => 0f)) <= OceanMath.MaxAmplitude(ow) * 0.35f + 1e-4f, true, "얕은 곳 물결은 35% 이내");
 
+        // ── 여러 발 투사체(고래고래 임금님): 회전 탄막 고리 · 부채꼴 물방울 · 딸기 포물선
+        var ring = ProjectilePattern.Angles(14, 360f, 0f);
+        Eq(ring.Length, 14, "고리 14발"); Eq(ring[1] - ring[0], 360f / 14f, "고리 같은 간격", 1e-4f); Eq(ring[0], 0f, "첫 발 = 목표 쪽", 1e-5f);
+        var ring2 = ProjectilePattern.Angles(14, 360f, 0f, 1, 360f / 28f);
+        Eq(ring2[0], 360f / 28f, "다음 코인은 반 칸 엇갈림(사이로 피할 틈)", 1e-4f);
+        var fan = ProjectilePattern.Angles(3, 50f, 90f);
+        Eq(fan[0], 65f, "부채꼴 왼쪽", 1e-4f); Eq(fan[1], 90f, "부채꼴 가운데 = 목표", 1e-4f); Eq(fan[2], 115f, "부채꼴 오른쪽", 1e-4f);
+        Eq(ProjectilePattern.Angles(1, 0f, 30f)[0], 30f, "한 발", 1e-5f); Eq(ProjectilePattern.Angles(0, 0f, 0f).Length, 1, "0발 → 1발");
+        Eq(ProjectilePattern.LobHeight(0f, 10f), 0f, "포물선 시작 0", 1e-5f); Eq(ProjectilePattern.LobHeight(1f, 10f), 0f, "포물선 끝 0", 1e-5f);
+        Eq(ProjectilePattern.LobHeight(0.5f, 10f), ProjectilePattern.LobPeak(10f), "포물선 가운데 = 꼭대기", 1e-4f); Eq(ProjectilePattern.LobPeak(10f), 5f, "꼭대기 2.5 + 거리×0.25", 1e-4f);
+
         // ── 레벨: 차이 → 코인 위력(3레벨마다 ±1, 최대 ±3), 적 레벨·경험치·칭호
         Eq(LevelMath.CoinBonus(5, 5), 0, "같은 레벨 보정 없음"); Eq(LevelMath.CoinBonus(7, 5), 0, "2레벨 차이는 아직 0"); Eq(LevelMath.CoinBonus(8, 5), 1, "3레벨 높음 +1");
         Eq(LevelMath.CoinBonus(5, 8), -1, "3레벨 낮음 -1"); Eq(LevelMath.CoinBonus(5, 10), -1, "5레벨 낮음도 -1"); Eq(LevelMath.CoinBonus(30, 1), 3, "최대 +3"); Eq(LevelMath.CoinBonus(1, 40), -3, "최소 -3");

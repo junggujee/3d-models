@@ -46,6 +46,7 @@ namespace MoominAction
             if (UIState.Paused || OnBoat) return;
             if (stats != null && !stats.IsAlive) { if (InWater) Exit(false); return; }
             if (!Ocean.Exists) { if (InWater) Exit(false); return; }
+            if (AirDome.Inside(transform.position + Vector3.up * 0.6f)) { if (InWater) { Exit(false); Toast.Show("공기방울 안이다! 숨을 쉴 수 있어"); } Regen(); return; }   // 용궁 돔 안 = 물 없음
             Vector3 p = transform.position; float surf = Ocean.SurfaceAt(p), submerge = surf - p.y;
             if (mode == Mode.None)
             {
@@ -89,6 +90,8 @@ namespace MoominAction
         void DiveSwim(float surf)
         {
             Breath = Mathf.Max(0f, Breath - Time.deltaTime);
+            var pal = Palace.Instance;                                                  // 용궁 위 공기방울 기둥: 그 안에서는 숨이 다시 참(길잡이)
+            if (pal != null) { Vector3 o = transform.position - pal.Center; o.y = 0f; if (o.magnitude < 3.5f && transform.position.y > pal.Center.y + pal.DomeRadius - 2f) Breath = Mathf.Min(breathMax, Breath + breathRegen * 1.5f * Time.deltaTime); }
             if (Breath <= 0f && stats != null)
             {
                 stats.LoseHealth(stats.maxHealth * drownPerSecond * Time.deltaTime, "숨");
@@ -116,7 +119,8 @@ namespace MoominAction
         // ── 들어가고 나오기 ─────────────────────
         void Enter(float surf)
         {
-            mode = Mode.Surface; vel = cc.velocity; vel.y = 0; if (pc != null) pc.ResetFall();
+            mode = surf - transform.position.y > 3f ? Mode.Dive : Mode.Surface;   // 깊은 곳(용궁 돔에서 걸어 나옴 등)이면 바로 물속 헤엄 — 수면까지 순간이동하지 않게
+            vel = cc.velocity; vel.y = 0; if (pc != null) pc.ResetFall();
             if (pc != null) pc.CancelRoll();
             WaterFx.Splash(new Vector3(transform.position.x, surf, transform.position.z), 26, 3.5f, 1.6f);
             if (cc.velocity.y < -3f) ThirdPersonCamera.Shake(0.05f, 0.2f);

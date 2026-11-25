@@ -71,6 +71,20 @@ def whale(l, X, Y):
     for dx, dy, rr in ((0, 0, 7), (10, 8, 5), (-9, 7, 5), (4, -12, 4)):                  # 물방울
         l.put(cov(np.hypot(X - 160 - dx, Y - 88 - dy) - rr), hexc('#A8DAFF'))
 
+def whale_king(l, X, Y):
+    """고래고래 임금님: 고래 옆모습 + 금관(뾰족 5 · 앞 별) + 보라 망토 자락 + 별 반짝이."""
+    cape = np.maximum(np.hypot((X - 112) / 58, (Y - 134) / 34) - 1, -(Y - 112) / 30)
+    l.put(cov(cape * 20 + 2), hexc('#1A0A22')); l.put(cov(cape * 20), hexc('#7A2E8C'))
+    whale(l, X, Y)
+    band = np.maximum(np.abs(Y - 104) - 6, np.abs(X - 166) - 22)
+    spikes = np.min([np.maximum((80 - (3 if k == 2 else 0)) + np.abs(X - (148 + 9 * k)) * 2.6 - Y, Y - 99) for k in range(5)], axis=0)   # 위로 뾰족
+    crown = np.minimum(band, spikes)
+    l.put(cov(crown + 1.8), hexc('#2A1A05')); l.put(cov(crown), hexc('#F2C14E')); l.put(cov(crown + 1.2) * (Y < 103), hexc('#FFE9A0'), .6)
+    for k in range(5): l.put(cov(np.hypot(X - (148 + 9 * k), Y - (78 if k != 2 else 76)) - 3), hexc('#FFE9A0'))
+    st = np.hypot(X - 166, Y - 104); ang = np.arctan2(Y - 104, X - 166); star = st - (4.5 + 2.5 * np.cos(5 * ang)); l.put(cov(star), hexc('#E7D7FF'))
+    for (cx, cy, rr) in ((60, 70, 5), (205, 90, 4), (196, 200, 4.5)):            # 반짝이 별
+        d = np.hypot(X - cx, Y - cy); a2 = np.arctan2(Y - cy, X - cx); l.put(cov(d - (rr * (0.55 + 0.45 * np.cos(4 * a2)))), hexc('#FFF4C8'))
+
 def default(l, X, Y):
     """일반 보스: 금빛 뿔 달린 가면."""
     mask = np.hypot((X - 128) / 46, (Y - 140) / 54) - 1
@@ -79,4 +93,4 @@ def default(l, X, Y):
     for ex in (108, 148): l.put(cov(np.hypot((X - ex) / 12, (Y - 132) / 7) - 1), hexc('#4A0E0E'))
 
 if __name__ == "__main__":
-    frame(); cap(); emblem("Whale", whale); emblem("Default", default)
+    frame(); cap(); emblem("Whale", whale); emblem("WhaleKing", whale_king); emblem("Default", default)

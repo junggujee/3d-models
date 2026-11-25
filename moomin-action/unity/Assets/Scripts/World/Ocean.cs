@@ -51,6 +51,8 @@ namespace MoominAction
         }
 
         // ── 질문 ─────────────────────────────
+        /// <summary>파도에 맞춰 출렁일 물체 더하기(용궁 임금님 부표 등).</summary>
+        public void AddFloat(Transform t) { if (t != null) floats.Add((t, t.position, t.rotation, Random.Range(0f, 6.28f))); }
         public static float SurfaceAt(Vector3 p) => Instance == null ? float.NegativeInfinity : Instance.seaLevel + Instance.WaveHeight(p.x, p.z);
         public static bool Underwater(Vector3 p) => Instance != null && p.y < SurfaceAt(p);
         /// <summary>해수면에서 바닥까지(m). 섬 안(뭍)은 음수, 깊이 그림 밖은 40.</summary>
@@ -182,7 +184,7 @@ namespace MoominAction
                 t.rotation = Quaternion.Euler(-sz * 60f, 0, sx * 60f) * Quaternion.AngleAxis(Mathf.Sin(Time * 0.7f + ph) * 8f, Vector3.up) * br;
             }
             // 물속
-            bool nowUnder = cam != null && cp.y < SurfaceAt(cp) - 0.05f && WaterDepth(cp.x, cp.z) > 0f;
+            bool nowUnder = cam != null && cp.y < SurfaceAt(cp) - 0.05f && WaterDepth(cp.x, cp.z) > 0f && !AirDome.Inside(cp);   // 용궁 공기방울 안은 물속이 아님
             if (nowUnder != under) SetUnderwater(nowUnder);
         }
         Vector4 W(int i) => new Vector4(waves[i].dirX, waves[i].dirZ, waves[i].k, waves[i].omega);

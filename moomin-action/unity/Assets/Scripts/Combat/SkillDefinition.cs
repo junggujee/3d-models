@@ -7,7 +7,7 @@ namespace MoominAction
     /// <summary>스킬 속성(색). 스킬 패널·슬롯·이펙트 색에 쓰임.</summary>
     public enum SkillAttribute { Red, Blue, Yellow, Green, Orange, Purple, Black }
     /// <summary>일러스트를 따로 넣지 않았을 때 코드로 그리는 스케치의 동작 종류.</summary>
-    public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry, Beam, Leap, Spout, Throw }
+    public enum SkillMotif { Slash, Thrust, Smash, Rush, Flurry, Beam, Leap, Spout, Throw, Barrage, Bomb, Bubbles }
     /// <summary>일러스트 주인공 실루엣: 사람(민미·곰 등) / 고래고래.</summary>
     public enum IllustrationSubject { Humanoid, Whale, Slime, Block, Seal }
     /// <summary>광역 모양: 원 = 공격자 중심 반경 areaRadius · 직선 = 앞으로 길이 areaRadius, 폭 areaWidth(빔).</summary>
@@ -15,7 +15,7 @@ namespace MoominAction
     /// <summary>코인 판정 순간의 특수 연출(Effects/SkillVfx).</summary>
     public enum SkillVfx { None, WhaleBeam, Shockwave, WaterSpout }
     /// <summary>원거리 투사체 모양(Combat/Projectile 이 코드로 만듦).</summary>
-    public enum ProjectileKind { Gear, Bubble, LaserDisc }
+    public enum ProjectileKind { Gear, Bubble, LaserDisc, Orb, Strawberry }
 
     public static class SkillAttributes
     {
@@ -71,6 +71,12 @@ namespace MoominAction
         [Header("Ranged (투사체)")] [Tooltip("켜면 코인마다 투사체를 날림. 근접 공격과는 합하지 않고(일방 공격) 다른 원거리 투사체와만 공중에서 합")] public bool isProjectile;
         public ProjectileKind projectileKind = ProjectileKind.Gear; [Tooltip("초당 m")] public float projectileSpeed = 11f; [Tooltip("맞는 판정 반지름(m)")] public float projectileRadius = 0.35f;
         [Tooltip("목표를 따라 꺾는 정도(초당 도) — 0 이면 직선")] public float projectileHoming = 25f;
+        [Header("탄막 · 투척(여러 발)")] [Tooltip("코인 하나에 날리는 수")] public int projectileCount = 1;
+        [Tooltip("퍼짐 각도(도) — 360 이면 둘레 고리(회전 탄막)")] public float projectileSpread = 0f;
+        [Tooltip("코인마다 고리를 돌리는 각도(엇갈려 사이로 피할 틈)")] public float projectileSpin = 0f;
+        [Tooltip("포물선으로 던져 떨어진 자리에서 터짐(areaRadius 광역) — 떨어질 자리에 예고 원")] public bool projectileLob;
+        [Tooltip("포물선 비행 시간(초)")] public float lobTime = 1.1f; [Tooltip("두 번째 발부터 목표 둘레로 흩어지는 반지름(m)")] public float lobScatter = 2.8f;
+        [Tooltip("맞으면 물방울 감옥(초) — 그동안 못 움직임")] public float trapSeconds = 0f;
         [Header("Attack Type")] [FormerlySerializedAs("clashEnabled")] [Tooltip("상대 공격과 겹치면 합")] public bool canBeClashed = true;
         [Header("Defense")] [Tooltip("끄면 가드로 피해를 줄일 수 없음(예전 '방어 불가')")] public bool canBeGuarded = true; [Tooltip("끄면 회피 코인으로 피할 수 없음")] public bool canBeEvaded = true;
 

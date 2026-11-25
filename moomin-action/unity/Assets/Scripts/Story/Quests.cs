@@ -26,6 +26,7 @@ namespace MoominAction
     public static class Quests
     {
         public const string PeanutCraving = "peanut_craving";
+        public const string GrumpyKing = "grumpy_king";
         public static readonly QuestLog Log = new QuestLog();
         static readonly Dictionary<string, QuestDef> defs = new Dictionary<string, QuestDef>();
         /// <summary>수락·완료·가방 변화로 추적 HUD 를 다시 그려야 할 때.</summary>
@@ -39,6 +40,12 @@ namespace MoominAction
             {
                 id = PeanutCraving, title = "땅콩빵이 먹고 싶은 조랭이", giver = "조랭이", summary = "배고픈 조랭이에게 땅콩빵 조각 두 개를 가져다주자. 땅콩빵은 산 쪽에 있고, 때리면 조각이 떨어진다.",
                 itemId = "peanut_piece", itemName = "땅콩빵 조각", itemCount = 2, rewardExp = 120, rewardGold = 50, rewardItems = new[] { ("potion_red", 2) },
+            });
+            Add(new QuestDef
+            {
+                id = GrumpyKing, title = "삐진 고래고래 임금님", giver = "철썩이",
+                summary = "바다 밑 용궁의 고래고래 임금님이 생일 케이크 딸기를 잃어버려 단단히 삐졌다. 용궁 결투장에서 임금님과 겨뤄 기분을 풀어 주고, 친구의 증표를 받아 오자.",
+                itemId = "royal_pearl", itemName = "임금님의 무지개 진주", itemCount = 1, rewardExp = 1500, rewardGold = 600, rewardItems = new[] { ("potion_red", 3), ("potion_blue", 2) },
             });
             Log.Changed += (_, __) => Updated?.Invoke();
         }

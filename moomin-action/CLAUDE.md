@@ -140,3 +140,9 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 모델: `blender/build_seaside.py`(맵 좌표, City 와 같은 FBX 설정 → Resources/World/Seaside.fbx) · `build_boat.py`(Boat.fbx) · `build_joraeng.py --fisher`(FisherHat.fbx + fisher_ 초상화) · 민미 물놀이 클립 `moomin_swim_anims.py`(SwimIdle·Swim·DiveIdle·Dive·BoatSit).
 - 런타임: `World/Seaside.cs`(GameManager 가 NavMesh 전에 Ensure — 충돌·Ocean·선착장 NavMesh(`NavMeshBaker.Extra`)·문·배·어부) · `World/Ocean.cs` + `World/OceanMath.cs`(게르스트너 4개, 순수 C# — **셰이더 `Resources/Shaders/MoominOcean.shader` 와 같은 식**, 바꾸면 둘 다) · `Player/PlayerSwim.cs`(Z 잠수, 숨 25초) · `World/Boat.cs` · `Effects/WaterFx.cs` · `UI/BreathMeter.cs` · `Story/HarborStory.cs`.
 - 헤엄·배 중엔 PlayerController·CombatManager 가 멈춤(`PlayerSwim.Active`). 알림은 `Toast.Show`. 월드맵 방향 글자는 `MapPlaces.MapDelta`(그림 기준 북 — Blender +Y 가 북이 아님).
+
+## 바다 밑 용궁 · 고래고래 임금님 (상세: docs/PALACE_BOSS.md)
+- 용궁 `blender/build_palace.py`(맵 좌표 — 선착장 끝 u 165m, 분지 -42m(`build_seaside.py` PALACE_*), `meshkit.py` 틀 도구, 석상 = Goraegorae.blend 줄인 메시) → Resources/World/Palace.fbx → `World/Palace.cs`(Ensure — GameManager 가 Seaside 다음에: 충돌 · 돔 · NavMesh · 빛 · 해파리/물고기 · 임금님 생성/5분 뒤 다시).
+- 공기방울 돔 `World/AirDome.cs`(안 = 물 없음: PlayerSwim 끝, Ocean 물속 안개 끔, PlayerController 천천히 내려옴) · 막 셰이더 `Resources/Shaders/MoominBubble.shader`(버블 감옥 `BubbleTrap` 도).
+- 보스 `Enemy/WhaleKing.cs`(금관·망토 = `whale_king_parts.py`/`build_whale_king.py` → Resources/Boss, BoneAttach) — 순찰(`EnemyBrain.externalIdle`), 50% 각성 → KING_* 5종(합 불가 탄막: 회전 탄막 고리 · 딸기 포물선 · 버블 감옥, 박치기만 합 가능). 투사체 여러 발/포물선/감옥 = `SkillDefinition.projectileCount/Spread/Spin/Lob/trapSeconds` + `Combat/ProjectilePattern.cs`(순수 C#).
+- 이야기 퀘스트 `Quests.GrumpyKing`(철썩이, `HarborStory.KingQuest`) — 아이템 royal_pearl. 일러스트 동작 Barrage·Bomb·Bubbles(C# ↔ Python 같이).

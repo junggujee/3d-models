@@ -164,6 +164,23 @@ def render(motif, seed, accent, subject="human", prop=0, laser_scene=None):
             W_ = ((fx + .32, .45), .9, -6, .1, .1); _, tip, _, _ = whale(X, Y, *W_[:3], W_[3], W_[4])
             for k in range(34): y = R(.1, .9); x0 = R(0, fx); stroke((x0, y), (x0 - R(.3, .8), y), R(.002, .012), R(.3, .9), R(0, 1) > .75)
             for k in range(16): a = math.radians(R(-80, 80)); stroke(tip, (tip[0] + math.cos(a) * R(.1, .3), tip[1] + math.sin(a) * R(.1, .3)), R(.006, .02), R(.7, 1), R(0, 1) > .6)
+        elif motif == "Barrage":  # 회전 탄막: 고래 둘레로 소용돌이치며 퍼지는 빛 구슬 + 도는 궤적
+            W_ = ((fx + .2, .45), .85, 0, .25, .2); cx, cy = fx + .2, .45
+            for k in range(26): t = k / 26; a = t * 4.2 * math.pi; r = .25 + t * .55; arc((cx + math.cos(a) * r * 1.2, cy + math.sin(a) * r * .8), .028, .028, 0, 360, .009, R(.75, 1), 1, n=10)
+            for k in range(4): arc((cx, cy), .3 + k * .17, .2 + k * .12, R(0, 90), R(250, 360), .004, .6, .3, n=22)
+        elif motif == "Bomb":     # 딸기 폭탄: 숨구멍에서 던진 딸기가 포물선으로 떨어져 퍽 터짐
+            W_ = ((fx + .35, .3), .9, 8, .2, .3); _, _, hole, _ = whale(X, Y, *W_[:3], W_[3], W_[4])
+            for k in range(4):
+                tx, ty = hole[0] - .2 - k * .28, R(.05, .2); px, py = hole
+                for j in range(1, 11):
+                    u = j / 10; nx = hole[0] + (tx - hole[0]) * u; ny = hole[1] + (ty - hole[1]) * u + math.sin(u * math.pi) * .35; stroke((px, py), (nx, ny), .003, .5); px, py = nx, ny
+                arc((tx, ty + .05), .05, .06, 0, 360, .016, 1, 1, n=14); stroke((tx - .03, ty + .11), (tx + .03, ty + .11), .012, .9, taper=False)
+                for j in range(8): a = R(0, 6.28); stroke((tx, ty), (tx + math.cos(a) * .12, ty + math.sin(a) * .08), R(.004, .01), R(.6, 1), 1)
+        elif motif == "Bubbles":  # 버블 감옥: 입에서 나온 커다란 물방울들(반짝임)
+            W_ = ((fx - .1, .4), .9, 4, .45, -.2); _, tip, _, _ = whale(X, Y, *W_[:3], W_[3], W_[4])
+            for k in range(6):
+                r = R(.06, .16); bx = tip[0] + .15 + k * .16 + R(-.03, .03); by = tip[1] + R(-.15, .2)
+                arc((bx, by), r, r, 0, 360, .006, 1, .4, n=20); arc((bx - r * .35, by + r * .35), r * .3, r * .3, 100, 170, .006, 1, 1, n=8)
         elif motif == "Flurry": # 지느러미 주변에 엇갈린 궤적
             W_ = ((fx + .3, .5), .9, 6, .05, -.3); _, _, _, fp = whale(X, Y, *W_[:3], W_[3], W_[4])
             for k in range(7): arc((fp[0] + R(-.05, .25), fp[1] + R(-.1, .05)), R(.12, .3), R(.1, .22), R(0, 360), R(0, 360), R(.006, .022), R(.6, 1), R(0, 1) > .5, n=14)
@@ -272,6 +289,11 @@ if __name__ == "__main__":
     out = Image.new("RGB", (W * 3 + 16, H * 2 + 12), (30, 30, 30))
     for i, (m, nm, ac) in enumerate(WH): out.paste(render(m, 21 + i, ac, "whale"), (4 + (i % 3) * (W + 4), 4 + (i // 3) * (H + 4)))
     out.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "previews", "whale_skill_illustrations.png"))
+    # 고래고래 임금님(용궁 보스) 2페이지 기술 5종(SkillLibrary KING_*): 각성 고래빔 Beam · 박치기 Rush · 회전 탄막 Barrage · 딸기 폭탄 Bomb · 버블 감옥 Bubbles
+    KG = [("Beam", (153, 77, 230)), ("Rush", (51, 115, 242)), ("Barrage", (153, 77, 230)), ("Bomb", (219, 41, 51)), ("Bubbles", (51, 115, 242))]
+    out = Image.new("RGB", (W * 3 + 16, H * 2 + 12), (30, 30, 30))
+    for i, (m, ac) in enumerate(KG): out.paste(render(m, 61 + i, ac, "whale"), (4 + (i % 3) * (W + 4), 4 + (i // 3) * (H + 4)))
+    out.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "previews", "king_skill_illustrations.png"))
 
     # 일반 몬스터 기술 5종: 핑크큐브말랑이(말랑 박치기 Rush · 쭈욱 늘이기 Thrust · 통통 연속 Flurry) · 그린볼런(블럭 박치기 Smash · 톱니 던지기 Throw)
     MON = [("Rush", "slime", (219, 41, 51)), ("Thrust", "slime", (219, 41, 51)), ("Flurry", "slime", (242, 140, 38)), ("Smash", "block", (77, 191, 77)), ("Throw", "block", (77, 191, 77))]

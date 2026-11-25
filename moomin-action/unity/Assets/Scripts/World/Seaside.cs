@@ -118,7 +118,7 @@ namespace MoominAction
             Vector3 at = Mark("Mark_Fisher", Harbor); Vector3 look = Mark("Mark_Arrive", Harbor) - at; look.y = 0;
             var go = Instantiate(npcPrefab, at, look.sqrMagnitude > 0.01f ? Quaternion.LookRotation(look) : Quaternion.identity); go.name = "NPC_철썩이";
             if (!go.TryGetComponent<Npc>(out var npc)) npc = go.AddComponent<Npc>();
-            npc.npcName = "철썩이"; npc.portrait = "fisher"; npc.place = "남쪽 선착장"; npc.story = HarborStory.Fisher; npc.wanderRadius = 1.2f;
+            npc.npcName = "철썩이"; npc.portrait = "fisher"; npc.place = "남쪽 선착장"; npc.story = HarborStory.Fisher; npc.questId = Quests.GrumpyKing; npc.wanderRadius = 1.2f;   // 머리 위 !/? = 「삐진 고래고래 임금님」
             npc.scarfColor = new Color(0.86f, 0.3f, 0.27f); npc.furTint = new Color(0.98f, 0.97f, 0.95f); npc.ApplyLook();   // 초상화(fisher_*)와 같은 빨간 목도리
             NpcAccessory.Attach(go, "Npc/FisherHat", "head");
         }

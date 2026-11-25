@@ -125,8 +125,9 @@ namespace MoominAction
             Cyl(haze, w * 1.9f); Cyl(body, w); Cyl(core, w * (0.38f + 0.08f * Mathf.Sin(t * 60f)));
             flare.localScale = Vector3.one * w * (1.7f + 0.3f * Mathf.Sin(t * 30f) + kick); endPoint.localPosition = new Vector3(0, 0, L);
             // 색: 하늘색 ↔ 청록 ↔ 연보라 ↔ 흰빛으로 계속 바뀜 + 판정 때 흰 번쩍
-            float hue = Mathf.Repeat(0.52f + 0.07f * Mathf.Sin(t * 2.3f) + 0.04f * Mathf.Sin(t * 5.1f), 1f);
-            Color bc = Color.Lerp(Color.HSVToRGB(hue, 0.55f, 1f), Color.white, 0.25f + 0.5f * kick); bc.a = 0.6f * fade; bodyM.color = bc;
+            bool rainbow = skill != null && skill.skillId == "KING_RAINBOW";   // 임금님 각성 고래빔: 무지개 색이 빠르게 흐름
+            float hue = rainbow ? Mathf.Repeat(t * 0.9f, 1f) : Mathf.Repeat(0.52f + 0.07f * Mathf.Sin(t * 2.3f) + 0.04f * Mathf.Sin(t * 5.1f), 1f);
+            Color bc = Color.Lerp(Color.HSVToRGB(hue, rainbow ? 0.85f : 0.55f, 1f), Color.white, (rainbow ? 0.1f : 0.25f) + 0.5f * kick); bc.a = 0.6f * fade; bodyM.color = bc;
             Color hc = Color.HSVToRGB(Mathf.Repeat(hue + 0.04f, 1f), 0.6f, 1f); hc.a = (0.18f + 0.1f * Mathf.Sin(t * 9f)) * fade; hazeM.color = hc;
             coreM.color = new Color(1f, 1f, 1f, 0.95f * fade); flareM.color = new Color(0.8f, 0.95f, 1f, (0.55f + 0.3f * kick) * fade);
             float scrollLen = Mathf.Max(1f, L / 3f); bodyM.mainTextureScale = new Vector2(1f, scrollLen); bodyM.mainTextureOffset = new Vector2(t * 0.3f, -t * 3.2f);

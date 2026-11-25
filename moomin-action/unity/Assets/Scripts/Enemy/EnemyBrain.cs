@@ -14,6 +14,8 @@ namespace MoominAction
         public EnemyAction LastAction { get; private set; }
         /// <summary>집(토벌 구역 가운데)과 끈 길이: 플레이어가 멀어지거나 집에서 leash 넘게 끌려가면 집으로 돌아감(home 이 없으면 없음).</summary>
         [HideInInspector] public Transform home; [HideInInspector] public float leash;
+        /// <summary>싸우지 않을 때(사거리 밖) 멈추지 않음 — 다른 컴포넌트(용궁 임금님의 순찰)가 움직임.</summary>
+        [HideInInspector] public bool externalIdle;
         readonly EnemyDecisionSystem decision = new(); SkillExecutor playerSkills; float nextDecisionTime;
 
         void Awake() { if (!stats) stats = GetComponent<CharacterStats>(); if (!combat) combat = GetComponent<EnemyCombatController>(); }
@@ -30,7 +32,7 @@ namespace MoominAction
                 Vector3 ph = player.position - home.position, sh = transform.position - home.position; ph.y = 0; sh.y = 0;
                 if (distance > aggroRange || ph.magnitude > leash) { if (sh.magnitude > 3f) combat.Approach(home); else combat.Hold(); return; }
             }
-            if (distance > aggroRange) { combat.Hold(); return; }
+            if (distance > aggroRange) { if (!externalIdle) combat.Hold(); return; }
 
             bool playerAttacking = playerSkills != null && playerSkills.IsExecuting && playerSkills.Phase != SkillPhase.Recovery;
             var situation = new EnemySituation
