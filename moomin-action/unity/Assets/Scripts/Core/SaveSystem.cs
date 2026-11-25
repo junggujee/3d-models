@@ -21,6 +21,8 @@ namespace MoominAction
         public PetData pet;
         /// <summary>퀘스트 진행("id=Active" · "id=Completed").</summary>
         public string[] quests;
+        /// <summary>토벌 퀘스트("id=진행:잡은수:완료수").</summary>
+        public string[] hunts;
     }
 
     /// <summary>길들인 하프물범(없으면 tamed = false).</summary>
@@ -131,7 +133,7 @@ namespace MoominAction
             if (p.TryGetComponent<Inventory>(out var inv)) d.inventory = inv.Export();
             var pet = PetSeal.Current;
             if (pet != null) d.pet = new PetData { tamed = true, name = pet.petName, level = pet.level, exp = pet.exp, affection = pet.affection, health = pet.Stats.currentHealth };
-            d.quests = Quests.Export();
+            d.quests = Quests.Export(); d.hunts = Hunts.Export();
             return d;
         }
 
@@ -139,8 +141,8 @@ namespace MoominAction
         public static void ApplyPending(GameManager gm)
         {
             var d = Pending; Pending = null; LoadedPet = null;
-            if (d == null) { RunStats.Reset(); Quests.NewGame(); return; }
-            LoadedPet = d.pet; Quests.Import(d.quests);
+            if (d == null) { RunStats.Reset(); Quests.NewGame(); Hunts.NewGame(); return; }
+            LoadedPet = d.pet; Quests.Import(d.quests); Hunts.Import(d.hunts);
             PlayTime = d.playSeconds;
             RunStats.Kills = d.kills; RunStats.BossKills = d.bossKills; RunStats.ClashWins = d.clashWins; RunStats.ClashLosses = d.clashLosses; RunStats.BestPower = d.bestPower;
             gm.RestoreProgress(d.wave, d.score);

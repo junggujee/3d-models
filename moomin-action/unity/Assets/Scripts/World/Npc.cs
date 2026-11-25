@@ -31,6 +31,8 @@ namespace MoominAction
 
         public bool Talking => talking;
         public QuestDef Quest => Quests.Get(questId);
+        /// <summary>토벌 퀘스트(반복) — questId 가 HuntCatalog 의 id 일 때.</summary>
+        public HuntDef Hunt => HuntCatalog.Get(questId);
 
         void Awake()
         {
@@ -91,8 +93,13 @@ namespace MoominAction
         void LateUpdate()
         {
             if (marker == null) return;
-            var q = Quest; string m = ""; Color c = UI.UITheme.GoldBright;
-            if (q != null)
+            var q = Quest; var h = Hunt; string m = ""; Color c = UI.UITheme.GoldBright;
+            if (h != null)
+            {   // 토벌: 처음 = 금색 "!", 다시 받을 수 있음 = 하늘색 "!", 진행 중 "?"(다 잡으면 밝게)
+                if (!Hunts.Log.IsActive(h.id)) { m = "!"; if (Hunts.Log.Clears(h.id) > 0) c = new Color(0.55f, 0.85f, 1f); }
+                else { m = "?"; c = Hunts.Ready(h) ? UI.UITheme.GoldBright : new Color(0.75f, 0.72f, 0.66f); }
+            }
+            else if (q != null)
             {
                 var st = Quests.Log.State(q.id);
                 if (st == QuestState.NotStarted) m = "!";
@@ -122,7 +129,8 @@ namespace MoominAction
         public void Talk()
         {
             var ui = UI.UIRoot.Instance; if (ui == null) return;
-            var dlg = questId != null && questId.Length > 0 ? JoraengStory.Quest(this) : JoraengStory.Chatter(this, chatIndex++);
+            var hunt = Hunt;
+            var dlg = hunt != null ? HuntStory.Build(this, hunt) : questId != null && questId.Length > 0 ? JoraengStory.Quest(this) : JoraengStory.Chatter(this, chatIndex++);
             if (dlg == null) return;
             talking = true; StopWalk(); Play("Talk");
             if (!ui.StartDialogue(dlg)) { talking = false; resumeTalkAt = -1; Play("Idle"); }

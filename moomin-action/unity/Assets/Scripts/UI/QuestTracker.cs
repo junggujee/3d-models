@@ -12,15 +12,15 @@ namespace MoominAction.UI
     public class QuestTracker
     {
         RectTransform root; readonly List<(RectTransform row, Text title, Text prog, Image dot)> rows = new(); Inventory inv; bool dirty = true;
-        const int Max = 3;
+        const int Max = 5; float nextTick;   // 토벌 방향·거리 글자는 0.5초마다 새로
 
         public void Build(Transform core, Inventory inventory)
         {
             inv = inventory; var tl = new Vector2(0, 1);
-            root = NewRect("QuestTracker", core); Set(root, tl, tl, tl, new Vector2(44, -412), new Vector2(520, 240));
+            root = NewRect("QuestTracker", core); Set(root, tl, tl, tl, new Vector2(44, -412), new Vector2(560, 380));
             for (int i = 0; i < Max; i++)
             {
-                var row = NewRect("Quest" + i, root); Set(row, tl, new Vector2(1, 1), tl, new Vector2(0, -i * 74), new Vector2(0, 70));
+                var row = NewRect("Quest" + i, root); Set(row, tl, new Vector2(1, 1), tl, new Vector2(0, -i * 66), new Vector2(0, 64));
                 var dot = Img(row, "Dot", UITheme.Slot, Color.white, true); Set(dot.rectTransform, tl, tl, new Vector2(.5f, .5f), new Vector2(14, -18), new Vector2(18, 18)); dot.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
                 var t = StyleHeading(Txt(row, "", 26, UITheme.GoldBright, TextAnchor.MiddleLeft)); Set(t.rectTransform, tl, new Vector2(1, 1), tl, new Vector2(34, 0), new Vector2(-34, 36));
                 var p = Txt(row, "", 21, UITheme.Cream, TextAnchor.MiddleLeft); Set(p.rectTransform, tl, new Vector2(1, 1), tl, new Vector2(36, -34), new Vector2(-36, 30));
@@ -34,6 +34,7 @@ namespace MoominAction.UI
         public void Update(bool petCardShown)
         {
             root.anchoredPosition = Vector2.Lerp(root.anchoredPosition, new Vector2(44, petCardShown ? -412 : -312), 0.25f);
+            if (Time.unscaledTime >= nextTick) { nextTick = Time.unscaledTime + 0.5f; if (Hunts.Log.Active().Count > 0) dirty = true; }
             if (!dirty) return; dirty = false;
             var list = Quests.Tracker();
             for (int i = 0; i < Max; i++)

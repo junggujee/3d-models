@@ -84,10 +84,13 @@ namespace MoominAction
         {
             var l = new List<(string, string, bool)>();
             foreach (var id in Log.Active()) { var q = Get(id); if (q == null) continue; bool ready = CanTurnIn(q); l.Add((q.title, ready ? $"{q.giver}에게 돌아가자  ({ProgressLine(q)})" : ProgressLine(q), ready)); }
+            Hunts.AddTrackerLines(l);   // 토벌 퀘스트
             return l;
         }
 
         public static void Refresh() => Updated?.Invoke();
+        /// <summary>큰 알림 띄우기(토벌 퀘스트 등 다른 곳에서).</summary>
+        public static void AnnounceNow(string kind, string title) => Announce?.Invoke(kind, title);
         public static string[] Export() => Log.Export();
         public static void Import(string[] entries) { Log.Import(entries); Updated?.Invoke(); }
         public static void NewGame() { Log.Clear(); Updated?.Invoke(); }

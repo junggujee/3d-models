@@ -28,6 +28,8 @@ namespace MoominAction.UI
         readonly RectTransform[] panel = new RectTransform[3]; readonly RawImage[] front = new RawImage[3], back = new RawImage[3]; readonly Image[] shade = new Image[3];
         readonly List<RectTransform> pins = new(); Texture2D tex, backTex; MapData data; Vector2 size;
         Transform playerTf; Matrix4x4 worldToBlender = Matrix4x4.identity; bool calibrated;
+        // 토벌 구역 표시(HuntZone): 작은 깃발 점 + 이름. 진행 중인 토벌 구역은 금색으로 빛남
+        readonly List<(string zoneId, RectTransform rt, Image dot, Image glow, Text label)> zonePins = new();
 
         public void Build(Transform canvas, Transform playerTransform)
         {
@@ -89,6 +91,7 @@ namespace MoominAction.UI
         {
             if (!Available || state == State.Open || state == State.Opening) return;
             if (!calibrated) Calibrate();
+            RefreshZonePins();
             if (state == State.Closed) t = 0f; else t = OpenTime * (1f - t / CloseTime);   // 접는 도중이면 그 자리에서 다시 펼침
             state = State.Opening; root.gameObject.SetActive(true); UIState.SetPaused(true); Apply(0f);
         }
@@ -126,6 +129,30 @@ namespace MoominAction.UI
                 if (state != State.Open) pins[i].localScale = Vector3.one * pop;
             }
             player.gameObject.SetActive(u > .8f);
+            foreach (var z in zonePins) z.rt.gameObject.SetActive(u > .8f);
+        }
+
+        void RefreshZonePins()
+        {
+            if (data == null || data.ground == null) return;
+            if (zonePins.Count == 0)
+                foreach (var z in MoominAction.HuntZone.All)
+                {
+                    if (z == null) continue; Vector2 uv = BlenderToUv(ToBlender(z.transform.position));
+                    var p = NewRect("Zone_" + z.zoneId, pinLayer); p.anchorMin = p.anchorMax = new Vector2(Mathf.Clamp01(uv.x), Mathf.Clamp01(uv.y)); p.sizeDelta = new Vector2(10, 10); p.anchoredPosition = Vector2.zero;
+                    var glow = Img(p, "Glow", SkillPanelArt.Glow, new Color(1f, .85f, .4f, 0f), false); At(glow.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(90, 90));
+                    var dot = Box(p, "Dot", Color.white); At(dot.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(18, 18)); dot.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
+                    dot.gameObject.AddComponent<Outline>().effectColor = new Color(.2f, .11f, .04f, .9f);
+                    var t = Txt(p, z.zoneName, 20, UITheme.Cream, TextAnchor.MiddleCenter); At(t.rectTransform, new Vector2(.5f, .5f), new Vector2(0, -24), new Vector2(260, 28)); t.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, .9f);
+                    zonePins.Add((z.zoneId, p, dot, glow, t));
+                }
+            foreach (var zp in zonePins)
+            {
+                bool active = false;
+                foreach (var id in Hunts.Log.Active()) { var h = Hunts.Get(id); if (h != null && h.zoneId == zp.zoneId) active = true; }
+                zp.dot.color = active ? UITheme.GoldBright : new Color(.62f, .85f, .55f); zp.glow.color = new Color(1f, .85f, .4f, active ? .6f : 0f);
+                zp.label.color = active ? UITheme.GoldBright : UITheme.Cream;
+            }
         }
 
         /// <summary>폭 하나를 접는 선 기준으로 회전. 90° 넘으면 뒷면이 보이고, 기울수록 그늘.</summary>

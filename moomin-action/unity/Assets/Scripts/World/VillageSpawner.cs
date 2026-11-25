@@ -13,6 +13,10 @@ namespace MoominAction
     {
         public GameObject npcPrefab;
 
+        /// <summary>
+        /// 토벌 퀘스트(반복)를 주는 주민: 몽글이(말랑이) · 포실이(곰)은 광장, 꼬물이(그림자, 작은 아이) · 똘똘이(그린볼런, 땅콩 농부)도 광장에.
+        /// 대사는 Story/HuntCatalog, 대화는 Story/HuntStory.
+        /// </summary>
         void Start()
         {
             if (npcPrefab == null) return;
@@ -23,6 +27,7 @@ namespace MoominAction
 
             Vector3 plaza = MapPlaces.TryWorldPosition("plaza", out var pz) ? pz : start + fwd * 14f;
             var a = Spawn(plaza + new Vector3(2.5f, 0, 1f), start, "몽글이", new Color(0.33f, 0.52f, 0.82f), new Color(0.97f, 0.97f, 1f));
+            if (a != null) a.questId = HuntCatalog.PinkCube;
             if (a != null) a.chatter = new[]
             {
                 "troubled|No|요즘 마을 밖에 핑크색 말랑이가 통통 튀어 다녀요. 몸통박치기가 꽤 아프니까 조심하세요!",
@@ -30,12 +35,22 @@ namespace MoominAction
                 "happy|Laugh|여행자님 털이 복슬복슬하네요! 우리 조랭하프족만큼은 아니지만요. 헤헤.",
             };
             var b = Spawn(plaza + new Vector3(-2f, 0, -1.5f), start, "포실이", new Color(0.93f, 0.74f, 0.3f), new Color(1f, 0.96f, 0.9f));
+            if (b != null) b.questId = HuntCatalog.Bear;
             if (b != null) b.chatter = new[]
             {
                 "sad|Sad|성 뒤쪽 산은 너무 높아서 우리 조랭하프족은 못 올라가요. 지느러미가 짧거든요…",
                 "happy|Laugh|하프물범은 땅콩빵 조각을 정말 좋아해요. 세 번 주면 친구가 된대요!",
                 "surprised|Surprised|어머, 방금 조랭이가 배에서 꼬르륵 소리를 냈어요. 마을 어귀에 있을 거예요!",
             };
+            SpawnHunters(plaza, start);
+        }
+
+        void SpawnHunters(Vector3 plaza, Vector3 start)
+        {
+            var c = Spawn(plaza + new Vector3(0.5f, 0, 3.4f), start, "꼬물이", new Color(0.95f, 0.62f, 0.78f), new Color(1f, 0.97f, 0.97f));
+            if (c != null) { c.questId = HuntCatalog.Shadow; c.transform.localScale *= 0.78f; c.wanderRadius = 1.5f; c.walkSpeed = 0.7f; }   // 작은 아이
+            var d = Spawn(plaza + new Vector3(-4.8f, 0, 2.0f), start, "똘똘이", new Color(0.42f, 0.66f, 0.3f), new Color(0.98f, 0.95f, 0.86f));
+            if (d != null) { d.questId = HuntCatalog.Green; d.wanderRadius = 2f; }
         }
 
         Npc Spawn(Vector3 p, Vector3 lookAt, string name, Color scarf, Color fur)

@@ -36,6 +36,12 @@ namespace MoominAction
         [Tooltip("쓰러뜨리면 플레이어가 얻는 경험치(레벨 1 기준 — 레벨·레벨 차이로 바뀜)")] public int expReward = 40;
         [Tooltip("종류별 레벨 보정(곰 +1 · 그린볼런 +1 · 고래 +2)")] public int levelOffset;
         [Header("Boss Bar")] [Tooltip("화면 아래 보스바로 표시")] public bool showBossBar; [Tooltip("보스바 문장(Resources/UI/Bars/BossEmblem_이름)")] public string bossEmblem = "Default";
+        [Tooltip("종류(프리팹 이름: PinkCube·GreenBlock·ShadowBlob·SleepyBear — 토벌 퀘스트가 셈). 비우면 오브젝트 이름에서")] public string kind;
+        /// <summary>이 적을 만든 토벌 구역(HuntZone) — 없으면 빈 값.</summary>
+        [HideInInspector] public string zoneId;
+        public string Kind { get { if (string.IsNullOrEmpty(kind)) kind = name.Replace("(Clone)", "").Trim(); return kind; } }
+        /// <summary>적이 쓰러질 때(토벌 퀘스트 집계 — Hunts.Hook).</summary>
+        public static event System.Action<EnemyCombatController> AnyKilled;
         [Header("Wave")] [Tooltip("이 웨이브부터 등장")] public int minWave = 1; [Tooltip("한 웨이브에 최대 몇 마리(0 = 제한 없음)")] public int maxPerWave = 0;
         DefenseController defense; SkillPhase lastPhase; public Transform Target => target;
         CharacterStats stats; Transform target; Vector3 knock, dodgeDir, baseScale; float vy, staggerUntil, dodgeEnd, nextDodge, nextGuard, busyUntil, deadT = -1, nextRepath, nextWarp; bool navigating;
@@ -110,6 +116,7 @@ namespace MoominAction
             RunStats.Kills++; if (isBoss || showBossBar) RunStats.BossKills++;
             if (GameManager.Instance != null) GameManager.Instance.AddScore(score);
             if (Experience.Instance != null) Experience.Instance.Gain(LevelMath.ExpReward(expReward, stats.level, Experience.Instance.level)); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
+            AnyKilled?.Invoke(this);
         }
 
         void Update()

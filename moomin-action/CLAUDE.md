@@ -129,3 +129,8 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 불꽃·빛 가루는 `SparkBurst.Spawn` 하나(장면당 ParticleSystem 하나에 Emit) — 연출마다 ParticleSystem 만들지 말 것. 투사체·줍기 구슬 재질은 정적 캐시.
 - `Inventory.Add` 는 **남은 개수**를 돌려줌(0 = 다 들어감). 가방이 차면 남은 건 `ItemPickup.Spawn` 으로 떨어뜨림. 장면의 줍기 아이템은 `ItemPickup.All`.
 - 레이저 스킬(LASER_*) 일러스트는 네온 덧칠(`SkillIllustration.LaserScene`/`neon` = `illustration_preview.laser_patterns`) — 두 곳 숫자를 같이. LASER_Q = 광륜 투척(`ProjectileKind.LaserDisc`).
+
+## 토벌 퀘스트 (반복, 상세: docs/NPC_QUEST.md)
+- 정의·기록·수식 `Story/HuntLog.cs`(순수 C# — HuntDef/HuntCatalog/HuntLog/HuntMath, status_tests) · 집계/보상 `Story/Hunts.cs`(`EnemyCombatController.AnyKilled`, GameManager Hook/Unhook) · 대화 `Story/HuntStory.cs` · 구역 `World/HuntZone.cs` + `HuntZoneSpawner.cs`(enemyPrefabs 에서 이름으로) · 저장 `SaveData.hunts`.
+- 4개: 몽글이 말랑이×5 · 꼬물이 그림자×6 · 포실이 곰×3 · 똘똘이 그린볼런×4. 보상 레벨 비례 + 첫 완료 ×1.5. NPC 는 `questId` 가 HuntCatalog id 면 토벌 대화(Npc.Hunt).
+- 구역 몬스터 = `zoneId`·`kind` 가 붙고 `EnemyBrain.home/leash` 로 구역에 묶임. 새 퀘스트는 HuntCatalog 에 한 덩어리 + 주민 questId.

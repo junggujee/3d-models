@@ -63,7 +63,7 @@ namespace MoominAction.UI
             hp.Died += gameOver.Show;
             SaveSystem.Saved += OnSaved;
             pet = new PetHUD(); pet.Build(core.transform, hudRoot.transform); PetSeal.Notice += OnPetNotice;
-            quests = new QuestTracker(); quests.Build(core.transform, inv); Quests.Announce += OnQuestAnnounce;
+            quests = new QuestTracker(); quests.Build(core.transform, inv); Quests.Announce += OnQuestAnnounce; Hunts.Progressed += OnHuntProgress;
             var pex = ui.player.GetComponent<SkillExecutor>(); if (pex != null) pex.SkillStarted += sk => { if (sk != null && sk.requiresDuelHeat) Banner(sk.skillName, new Color(1f, .55f, .5f), 2.2f, "결투 고조 해방"); };   // 궁극 컷인
         }
 
@@ -87,7 +87,8 @@ namespace MoominAction.UI
 
         void OnSaved(int slot) => Toast_Text(slot == SaveFormat.AutoSlot ? "자동 저장했다" : SaveFormat.SlotName(slot) + "에 저장했다");
         void OnPetNotice(string m) => Toast_Text(m);
-        public void Dispose() { combat?.Dispose(); quests?.Dispose(); SaveSystem.Saved -= OnSaved; PetSeal.Notice -= OnPetNotice; Quests.Announce -= OnQuestAnnounce; }
+        void OnHuntProgress(HuntDef h, int n) { if (n < h.need) Toast_Text($"{h.monsterName} 토벌  {n}/{h.need}"); }   // 다 잡으면 큰 알림(Hunts)
+        public void Dispose() { combat?.Dispose(); quests?.Dispose(); SaveSystem.Saved -= OnSaved; PetSeal.Notice -= OnPetNotice; Quests.Announce -= OnQuestAnnounce; Hunts.Progressed -= OnHuntProgress; }
 
         public void Update()
         {

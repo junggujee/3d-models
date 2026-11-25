@@ -12,6 +12,8 @@ namespace MoominAction
         public Transform player; public CharacterStats stats, playerStats; public EnemyCombatController combat;
         public EnemyPersonality personality = EnemyPersonality.Grunt; public float decisionInterval = 0.4f, aggroRange = 25f;
         public EnemyAction LastAction { get; private set; }
+        /// <summary>집(토벌 구역 가운데)과 끈 길이: 플레이어가 멀어지거나 집에서 leash 넘게 끌려가면 집으로 돌아감(home 이 없으면 없음).</summary>
+        [HideInInspector] public Transform home; [HideInInspector] public float leash;
         readonly EnemyDecisionSystem decision = new(); SkillExecutor playerSkills; float nextDecisionTime;
 
         void Awake() { if (!stats) stats = GetComponent<CharacterStats>(); if (!combat) combat = GetComponent<EnemyCombatController>(); }
@@ -23,6 +25,11 @@ namespace MoominAction
             if (Time.time < nextDecisionTime || combat.Busy) return;
             nextDecisionTime = Time.time + decisionInterval;
             float distance = Vector3.Distance(transform.position, player.position);
+            if (home != null && leash > 0f)
+            {
+                Vector3 ph = player.position - home.position, sh = transform.position - home.position; ph.y = 0; sh.y = 0;
+                if (distance > aggroRange || ph.magnitude > leash) { if (sh.magnitude > 3f) combat.Approach(home); else combat.Hold(); return; }
+            }
             if (distance > aggroRange) { combat.Hold(); return; }
 
             bool playerAttacking = playerSkills != null && playerSkills.IsExecuting && playerSkills.Phase != SkillPhase.Recovery;

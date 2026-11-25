@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using MoominAction;
 
@@ -132,6 +133,40 @@ static class Tests
         Eq(QuestText.Progress("땅콩빵 조각", 1, 2), "땅콩빵 조각 1/2", "진행 글자"); Eq(QuestText.Progress("땅콩빵 조각", 5, 2), "땅콩빵 조각 2/2", "넘치면 2/2"); Eq(QuestText.Progress("x", -3, 2), "x 0/2", "음수 → 0");
         Eq(QuestText.Enough(2, 2), true, "2개면 건넬 수 있음"); Eq(QuestText.Enough(1, 2), false, "1개는 부족"); Eq(QuestText.Enough(0, 0), true, "필요 없음");
         Eq(QuestText.Rewards(120, 50, new[] { ("빨간 물약", 2) }), "경험치 120 · 금화 50 · 빨간 물약 ×2", "보상 줄"); Eq(QuestText.Rewards(0, 0, new[] { ("열쇠", 1), ("", 3) }), "열쇠", "하나짜리·빈 이름");
+
+        // ── 토벌 퀘스트(반복): 수락 → 잡기 → 완료 → 다시
+        var hl = new HuntLog(); int hc = 0; hl.Changed += _ => hc++;
+        Eq(hl.AddKill("hunt_x", 3), false, "수락 전엔 안 셈"); Eq(hl.Accept("hunt_x"), true, "토벌 수락"); Eq(hl.Accept("hunt_x"), false, "진행 중 두 번 수락 안 됨");
+        Eq(hl.Ready("hunt_x", 3), false, "0/3 은 아직"); hl.AddKill("hunt_x", 3); hl.AddKill("hunt_x", 3); Eq(hl.TurnIn("hunt_x", 3), false, "2/3 완료 안 됨");
+        Eq(hl.AddKill("hunt_x", 3), true, "3번째"); Eq(hl.AddKill("hunt_x", 3), false, "다 잡으면 더 안 셈"); Eq(hl.Count("hunt_x"), 3, "3마리");
+        Eq(hl.TurnIn("hunt_x", 3), true, "완료"); Eq(hl.Clears("hunt_x"), 1, "완료 1번"); Eq(hl.IsActive("hunt_x"), false, "완료 후 다시 받을 수 있음"); Eq(hl.Count("hunt_x"), 0, "수 비움");
+        Eq(hl.Accept("hunt_x"), true, "반복 수락"); hl.AddKill("hunt_x", 3); Eq(hl.Abandon("hunt_x"), true, "포기"); Eq(hl.Clears("hunt_x"), 1, "포기해도 완료 수 그대로");
+        Eq(hc, 8, "바뀜 알림 8번(수락·잡기3·완료·수락·잡기·포기)");
+        hl.Accept("hunt_x"); hl.AddKill("hunt_x", 3); hl.Accept("hunt_y");
+        Eq(string.Join(",", hl.Export()), "hunt_x=1:1:1,hunt_y=1:0:0", "토벌 저장 글자");
+        var hl2 = new HuntLog(); hl2.Import(new[] { "hunt_x=1:1:1", "hunt_z=0:5:2", "bad", "=1:0:0", "q=2:0:0", "r=1:-1:0", "s=1:0", null });
+        Eq(hl2.Count("hunt_x"), 1, "불러오기: 수"); Eq(hl2.Clears("hunt_x"), 1, "불러오기: 완료 수"); Eq(hl2.IsActive("hunt_z"), false, "멈춘 건 진행 아님");
+        Eq(hl2.Count("hunt_z"), 0, "진행 아니면 수 0"); Eq(hl2.Clears("hunt_z"), 2, "완료 수만"); Eq(hl2.Export().Length, 2, "이상한 항목 버림");
+        Eq(HuntMath.Exp(100, 1, 0), 150L, "첫 완료 ×1.5"); Eq(HuntMath.Exp(100, 1, 3), 100L, "반복 ×1"); Eq(HuntMath.Exp(100, 11, 1), 220L, "레벨 11 → ×2.2");
+        Eq(HuntMath.Gold(50, 1, 0), 75, "금화 첫 ×1.5"); Eq(HuntMath.Gold(50, 11, 2), 80, "금화 레벨 11 → ×1.6");
+        Eq(HuntMath.ZoneLevel(3, 1, -1), 3, "구역 최소 레벨"); Eq(HuntMath.ZoneLevel(1, 10, 1), 10, "내 레벨 따라감"); Eq(HuntMath.ZoneLevel(1, 1, -1), 1, "최소 1");
+        Eq(HuntMath.Compass(0, 10), "북", "북"); Eq(HuntMath.Compass(-10, -10), "남서", "남서"); Eq(HuntMath.Compass(10, 0), "동", "동"); Eq(HuntMath.Compass(0.1f, 0.1f), "", "아주 가까우면 없음");
+        Eq(HuntMath.Progress("곰", 5, 3), "곰 3/3", "토벌 진행 글자 넘침");
+        var faces = new HashSet<string> { "normal", "happy", "sad", "surprised", "troubled" };
+        var anims = new HashSet<string> { "Talk", "Wave", "Yes", "No", "Laugh", "Sad", "Surprised", "QuestAccept", "QuestComplete" };
+        Eq(HuntCatalog.All.Count >= 4, true, "토벌 퀘스트 4개 이상"); var zones = new HashSet<string>();
+        foreach (var h in HuntCatalog.All)
+        {
+            Eq(h.need > 0 && h.baseExp > 0 && h.baseGold > 0 && h.maxAlive > 0, true, h.id + " 수치"); Eq(zones.Add(h.zoneId), true, h.id + " 구역 겹치지 않음");
+            Eq(h.intro.Length >= 2 && h.accept.Length >= 1 && h.repeats.Length >= 1, true, h.id + " 대사 있음");
+            var lines = new List<string>(h.intro); lines.AddRange(h.accept); lines.AddRange(h.repeats); lines.AddRange(new[] { h.decline, h.waiting, h.hint, h.ready, h.thanks, h.reward });
+            foreach (var line in lines)
+            {
+                var (f, an, t) = HuntMath.Split(line); string filled = HuntMath.Fill(t, h, 1);
+                if (!faces.Contains(f) || !anims.Contains(an) || filled.Contains("{") || filled.Contains("(이)") || filled.Length == 0) Eq(line, "올바른 표정|동작|글", h.id + " 대사 형식");
+            }
+            Eq(HuntMath.Fill(h.waiting, h, 2).Contains("2/" + h.need), true, h.id + " 진행 대사에 숫자");
+        }
 
         // ── 레벨: 차이 → 코인 위력(3레벨마다 ±1, 최대 ±3), 적 레벨·경험치·칭호
         Eq(LevelMath.CoinBonus(5, 5), 0, "같은 레벨 보정 없음"); Eq(LevelMath.CoinBonus(7, 5), 0, "2레벨 차이는 아직 0"); Eq(LevelMath.CoinBonus(8, 5), 1, "3레벨 높음 +1");
