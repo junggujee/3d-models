@@ -19,6 +19,8 @@ namespace MoominAction
         public static readonly List<Npc> All = new();
         public string npcName = "조랭이", portrait = "joraeng", place = "조랭하프 마을";
         public string questId;
+        /// <summary>정해진 대화(항구 어부 등) — 있으면 퀘스트·잡담 대신 이것.</summary>
+        public System.Func<Npc, Dialogue> story;
         [Tooltip("잡담: \"표정|동작|대사\" (표정 normal·happy·sad·surprised·troubled, 동작 Talk·Yes·No·Laugh·Sad·Surprised·Wave)")]
         public string[] chatter = new string[0];
         public bool scarf = true; public Color scarfColor = new Color(0.86f, 0.3f, 0.27f); public Color furTint = Color.white;
@@ -130,7 +132,7 @@ namespace MoominAction
         {
             var ui = UI.UIRoot.Instance; if (ui == null) return;
             var hunt = Hunt;
-            var dlg = hunt != null ? HuntStory.Build(this, hunt) : questId != null && questId.Length > 0 ? JoraengStory.Quest(this) : JoraengStory.Chatter(this, chatIndex++);
+            var dlg = story != null ? story(this) : hunt != null ? HuntStory.Build(this, hunt) : questId != null && questId.Length > 0 ? JoraengStory.Quest(this) : JoraengStory.Chatter(this, chatIndex++);
             if (dlg == null) return;
             talking = true; StopWalk(); Play("Talk");
             if (!ui.StartDialogue(dlg)) { talking = false; resumeTalkAt = -1; Play("Idle"); }

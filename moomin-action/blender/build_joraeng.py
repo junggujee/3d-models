@@ -216,9 +216,40 @@ if "--preview" in sys.argv:
     for nm, fr in (("Laugh", 20), ("Sad", 30), ("Surprised", 8), ("QuestAccept", 20), ("No", 12), ("QuestComplete", 34), ("Wave", 17)):
         preview(os.path.join(PRE, f"joraeng_{nm.lower()}.png"), Vector((0.9, -2.5, 0.85)), c, arm_ob=arm, action=A[nm], frame=fr, size=480)
 
-glb, fbx = export_all("Joraeng", OUT, [arm, npc, scarf])
-os.makedirs(UNITY, exist_ok=True); shutil.copy(fbx, os.path.join(UNITY, "Joraeng.fbx"))
-print("EXPORTED", fbx, "verts:", len(npc.data.vertices), len(scarf.data.vertices))
+FISHER = "--fisher" in sys.argv   # 항구 어부(노란 어부 모자) — 모자 FBX + fisher_<표정> 초상화만 만듦(Joraeng.fbx 는 그대로)
+if not FISHER:
+    glb, fbx = export_all("Joraeng", OUT, [arm, npc, scarf])
+    os.makedirs(UNITY, exist_ok=True); shutil.copy(fbx, os.path.join(UNITY, "Joraeng.fbx"))
+else:
+    # 노란 어부 모자(사우스웨스터): 정수리를 덮는 둥근 머리 부분 + 뒤가 길게 처지는 챙 + 갈색 띠 + 앞에 흰 물고기 표시.
+    # 모델 공간(기본 자세) 그대로 내보냄 → Unity NpcAccessory 가 head 뼈 bindpose 로 붙임(민미 장비와 같은 방식).
+    HAT = M_("Fisher_HatYellow", (0.98, 0.76, 0.12), rough=0.55); BAND = M_("Fisher_HatBand", (0.36, 0.2, 0.09), rough=0.8); FISHM = M_("Fisher_HatFish", (0.97, 0.97, 0.95), rough=0.5)
+    hb = bmesh.new(); CZ, CR = 0.9, (0.305, 0.275, 0.14)
+    bmesh.ops.create_uvsphere(hb, u_segments=32, v_segments=16, radius=1.0)
+    for v in hb.verts: v.co = Vector((v.co.x * CR[0], v.co.y * CR[1], CZ + max(v.co.z, -0.5) * CR[2]))   # 아래쪽은 잘라 평평하게(머리 안)
+    for f in hb.faces: f.smooth = True; f.material_index = 0
+    rows = []; NB = 40                                                                  # 챙: 안쪽 타원(z 0.84) → 바깥(앞 0.38 · 옆 0.42 · 뒤 0.47, 뒤로 갈수록 처짐)
+    for k in range(NB):
+        a_ = 2 * math.pi * k / NB; cx, cy = math.cos(a_), math.sin(a_); back = max(0.0, cy)          # +Y = 뒤
+        ro = 0.42 + 0.05 * back - 0.04 * max(0.0, -cy); zo = 0.8 - 0.08 * back
+        inner = Vector((0.285 * cx, 0.255 * cy, 0.84)); outer = Vector((ro * cx, ro * 0.95 * cy, zo))
+        rows.append([hb.verts.new(inner), hb.verts.new(outer), hb.verts.new(outer - Vector((0, 0, 0.022))), hb.verts.new(inner - Vector((0, 0, 0.022)))])
+    for k in range(NB):
+        r0, r1 = rows[k], rows[(k + 1) % NB]
+        for j in range(4):
+            f = hb.faces.new((r0[j], r1[j], r1[(j + 1) % 4], r0[(j + 1) % 4])); f.material_index = 0; f.smooth = True
+    band, _ = tube([Vector((0.297 * math.cos(2 * math.pi * k / 40), 0.268 * math.sin(2 * math.pi * k / 40), 0.862)) for k in range(41)], lambda t: 0.018, sides=6, mat_idx=1)
+    me_ = bpy.data.meshes.new("b"); band.to_mesh(me_); band.free(); hb.from_mesh(me_); bpy.data.meshes.remove(me_)
+    for c_, r_ in ((Vector((0.0, -0.276, 0.915)), (0.06, 0.012, 0.028)), (Vector((0.07, -0.265, 0.915)), (0.022, 0.012, 0.028))):   # 흰 물고기(몸 + 꼬리)
+        fb = ell(c_, r_, None, 2, 12, 8); me_ = bpy.data.meshes.new("f"); fb.to_mesh(me_); fb.free(); hb.from_mesh(me_); bpy.data.meshes.remove(me_)
+    bmesh.ops.recalc_face_normals(hb, faces=hb.faces[:])
+    hat = to_object("FisherHat", hb, [HAT, BAND, FISHM])
+    bpy.ops.object.select_all(action="DESELECT"); hat.select_set(True)
+    NPCDIR = os.path.join(ROOT, "unity", "Assets", "Resources", "Npc"); os.makedirs(NPCDIR, exist_ok=True)
+    bpy.ops.export_scene.fbx(filepath=os.path.join(NPCDIR, "FisherHat.fbx"), use_selection=True, object_types={"MESH"}, apply_scale_options="FBX_SCALE_ALL", axis_forward="-Z", axis_up="Y")
+    print("EXPORTED hat", os.path.join(NPCDIR, "FisherHat.fbx"))
+    hv = hat.vertex_groups.new(name="head"); hv.add(list(range(len(hat.data.vertices))), 1.0, "REPLACE"); bind(hat, arm)   # 초상화에서는 머리를 따라 움직이게
+if not FISHER: print("EXPORTED", fbx, "verts:", len(npc.data.vertices), len(scarf.data.vertices))
 
 # ── 대화창 초상화 원본: Workbench(평면 채색 + 외곽선 + 굴곡 음영) → tools/portrait_art.py 가 일러스트풍으로 마무리
 sc = bpy.context.scene
@@ -272,5 +303,5 @@ for key_, (act_name, fr, show) in EXPR.items():
     arm.animation_data.action = A[act_name]; sc.frame_set(fr)
     for nm, o in extras.items(): o.hide_render = not ((nm.startswith("shine") and key_ != "happy") or nm in show)
     for flat, tag in ((True, "flat"), (False, "shade")):
-        mode(flat); sc.render.filepath = os.path.join(RAW, f"joraeng_{key_}_{tag}.png"); bpy.ops.render.render(write_still=True)
+        mode(flat); sc.render.filepath = os.path.join(RAW, f"{'fisher' if FISHER else 'joraeng'}_{key_}_{tag}.png"); bpy.ops.render.render(write_still=True)
     print("✔ portrait raw", key_)

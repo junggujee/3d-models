@@ -12,6 +12,9 @@ namespace MoominAction
     {
         public float size = 420f; public int agentTypeID = 0;   // size: 성벽 안 전체(약 360m)
         NavMeshDataInstance instance; public bool Built { get; private set; }
+        /// <summary>성벽 밖 따로 구울 곳(선착장 — Seaside 가 넣음).</summary>
+        public static readonly List<Bounds> Extra = new List<Bounds>();
+        readonly List<NavMeshDataInstance> extras = new List<NavMeshDataInstance>();
 
         public void Build()
         {
@@ -23,8 +26,15 @@ namespace MoominAction
             sources.RemoveAll(s => s.component != null && (s.component.GetComponentInParent<CharacterStats>() != null || s.component.GetComponentInParent<ItemPickup>() != null));
             var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(agentTypeID), sources, bounds, Vector3.zero, Quaternion.identity);
             if (data != null) { instance = NavMesh.AddNavMeshData(data); Built = true; }
+            foreach (var b in Extra)
+            {   // 따로 굽는 곳(선착장): 같은 방식, 그 상자 안만
+                var src = new List<NavMeshBuildSource>(); NavMeshBuilder.CollectSources(b, mask, NavMeshCollectGeometry.PhysicsColliders, 0, new List<NavMeshBuildMarkup>(), src);
+                src.RemoveAll(s => s.component != null && (s.component.GetComponentInParent<CharacterStats>() != null || s.component.GetComponentInParent<ItemPickup>() != null || s.component.GetComponentInParent<Boat>() != null));
+                var d2 = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(agentTypeID), src, b, Vector3.zero, Quaternion.identity);
+                if (d2 != null) extras.Add(NavMesh.AddNavMeshData(d2));
+            }
             Debug.Log($"[NavMeshBaker] NavMesh 생성 {(Built ? "완료" : "실패")} — 소스 {sources.Count}개");
         }
-        void OnDestroy() { if (instance.valid) instance.Remove(); }
+        void OnDestroy() { if (instance.valid) instance.Remove(); foreach (var e in extras) if (e.valid) e.Remove(); extras.Clear(); Extra.Clear(); }
     }
 }

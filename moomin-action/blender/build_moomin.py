@@ -187,5 +187,10 @@ if "--preview" in sys.argv:
     for nm, fr in (("moomin_attack", 11), ("moomin_walk", 8)):
         preview(os.path.join(PRE, nm + ".png"), T(3.4, 1.4, 4.8), c, arm_ob=arm, action=ACTS[nm.split("_")[1].capitalize() if nm != "moomin_attack" else "Attack1"], frame=fr)
 
+if "--swim-preview" in sys.argv:                                                  # 물놀이 자세(옆에서)
+    os.makedirs(PRE, exist_ok=True); c = T(0, 0.75, 0)
+    for nm, fr in (("Swim", 8), ("SwimIdle", 10), ("Dive", 20), ("DiveIdle", 12), ("BoatSit", 1)):
+        preview(os.path.join(PRE, f"moomin_{nm.lower()}.png"), T(6.5, 1.0, 2.2), c, size=420, arm_ob=arm, action=ACTS[nm], frame=fr)
+
 glb, fbx = export_all("Moomin", OUT, [arm, body])
 print("EXPORTED", glb, fbx, "tris:", sum(len(p.vertices) for p in [body.data]))

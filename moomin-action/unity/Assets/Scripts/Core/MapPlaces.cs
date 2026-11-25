@@ -12,7 +12,8 @@ namespace MoominAction
     public static class MapPlaces
     {
         [Serializable] class Landmark { public string id, name; public float[] blender; }
-        [Serializable] class MapData { public float[] spawnBlender; public Landmark[] landmarks; }
+        [Serializable] class Ground { public float[] origin, perX, perY; }
+        [Serializable] class MapData { public float[] spawnBlender; public Landmark[] landmarks; public Ground ground; public int[] image; }
         static MapData data; static bool loaded; static Matrix4x4 w2b = Matrix4x4.identity, b2w = Matrix4x4.identity; static int calibratedScene = -1;
 
         static MapData Data
@@ -70,9 +71,22 @@ namespace MoominAction
             return false;
         }
 
+        /// <summary>
+        /// 두 게임 좌표 사이 방향을 <b>월드맵 그림 기준</b>(오른쪽 = 동, 위 = 북)으로: (동쪽 성분, 북쪽 성분) 픽셀 단위.
+        /// 맵 그림은 마을 축이 가로가 되게 돌려 그렸으므로 Blender +Y 가 북쪽이 아님 — 방향 글자(토벌 구역 등)는 이것으로.
+        /// </summary>
+        public static Vector2 MapDelta(Vector3 fromWorld, Vector3 toWorld)
+        {
+            Calibrate(); var a = w2b.MultiplyPoint3x4(fromWorld); var b = w2b.MultiplyPoint3x4(toWorld); float dx = b.x - a.x, dy = b.y - a.y; var d = Data;
+            if (d == null || d.ground == null || d.ground.perX == null || d.ground.perY == null) return new Vector2(dx, dy);
+            float w = d.image != null && d.image.Length >= 2 ? d.image[0] : 2048f, h = d.image != null && d.image.Length >= 2 ? d.image[1] : 1280f;
+            return new Vector2((d.ground.perX[0] * dx + d.ground.perY[0] * dy) * w, (d.ground.perX[1] * dx + d.ground.perY[1] * dy) * h);
+        }
+
         /// <summary>가장 가까운 주요 장소 이름(저장 슬롯 표시용). 데이터가 없으면 "도시".</summary>
         public static string NearestName(Vector3 world)
         {
+            if (Seaside.InHarbor(world)) return "남쪽 선착장";
             var d = Data; if (d == null || d.landmarks == null || d.landmarks.Length == 0) return "도시";
             Calibrate(); var p = w2b.MultiplyPoint3x4(world); string best = "도시"; float bd = float.MaxValue;
             foreach (var lm in d.landmarks)

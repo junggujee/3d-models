@@ -134,3 +134,9 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 정의·기록·수식 `Story/HuntLog.cs`(순수 C# — HuntDef/HuntCatalog/HuntLog/HuntMath, status_tests) · 집계/보상 `Story/Hunts.cs`(`EnemyCombatController.AnyKilled`, GameManager Hook/Unhook) · 대화 `Story/HuntStory.cs` · 구역 `World/HuntZone.cs` + `HuntZoneSpawner.cs`(enemyPrefabs 에서 이름으로) · 저장 `SaveData.hunts`.
 - 4개: 몽글이 말랑이×5 · 꼬물이 그림자×6 · 포실이 곰×3 · 똘똘이 그린볼런×4. 보상 레벨 비례 + 첫 완료 ×1.5. NPC 는 `questId` 가 HuntCatalog id 면 토벌 대화(Npc.Hunt).
 - 구역 몬스터 = `zoneId`·`kind` 가 붙고 `EnemyBrain.home/leash` 로 구역에 묶임. 새 퀘스트는 HuntCatalog 에 한 덩어리 + 주민 questId.
+
+## 바다 · 선착장 · 헤엄 · 통통배 (상세: docs/SEA.md)
+- 맵은 성벽 + 산맥에 둘러싸인 정24각형 원판(C(-50,28.3), 꼭짓점 586m) → 바다는 원판 밖 전체, 선착장은 지도 남쪽 끝 꼭짓점. 마을 ↔ 선착장은 바닷길 문(`World/SeaGate.cs`, `SceneFader.Cover`)으로만. 해수면 z = -0.8.
+- 모델: `blender/build_seaside.py`(맵 좌표, City 와 같은 FBX 설정 → Resources/World/Seaside.fbx) · `build_boat.py`(Boat.fbx) · `build_joraeng.py --fisher`(FisherHat.fbx + fisher_ 초상화) · 민미 물놀이 클립 `moomin_swim_anims.py`(SwimIdle·Swim·DiveIdle·Dive·BoatSit).
+- 런타임: `World/Seaside.cs`(GameManager 가 NavMesh 전에 Ensure — 충돌·Ocean·선착장 NavMesh(`NavMeshBaker.Extra`)·문·배·어부) · `World/Ocean.cs` + `World/OceanMath.cs`(게르스트너 4개, 순수 C# — **셰이더 `Resources/Shaders/MoominOcean.shader` 와 같은 식**, 바꾸면 둘 다) · `Player/PlayerSwim.cs`(Z 잠수, 숨 25초) · `World/Boat.cs` · `Effects/WaterFx.cs` · `UI/BreathMeter.cs` · `Story/HarborStory.cs`.
+- 헤엄·배 중엔 PlayerController·CombatManager 가 멈춤(`PlayerSwim.Active`). 알림은 `Toast.Show`. 월드맵 방향 글자는 `MapPlaces.MapDelta`(그림 기준 북 — Blender +Y 가 북이 아님).

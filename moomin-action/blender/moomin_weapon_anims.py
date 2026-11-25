@@ -133,4 +133,6 @@ def build(arm, new_action, key, finish_action, K):
                                                      "spin": [(1, 0), (12, 0), (22, 2 * math.pi), (40, 2 * math.pi)], "lean": [(1, LG["lean"]), (8, 0.25), (14, -0.3), (22, -0.2), (26, 0.52), (32, 0.46), (40, 0)],
                                                      "llp": [(1, -0.35), (8, -0.6), (14, 0.3), (22, -0.6), (26, -0.45), (40, 0)], "rlp": [(1, 0.3), (8, -0.6), (14, 0.3), (22, -0.6), (26, -0.45), (40, 0)],
                                                      "hp": [(1, 0.1), (14, -0.3), (26, 0.3), (40, 0)], "tl": [(1, 0), (14, -0.8), (26, 1.0), (40, 0)]}))
+    import moomin_swim_anims                                                    # 물놀이(SwimIdle · Swim · DiveIdle · Dive · BoatSit)
+    A.update(moomin_swim_anims.build(clip))
     return A

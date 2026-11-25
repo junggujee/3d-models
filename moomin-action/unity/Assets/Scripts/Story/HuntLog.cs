@@ -47,12 +47,12 @@ namespace MoominAction
                 },
                 accept = new[]
                 {
-                    "happy|QuestAccept|와아! 역시 털복숭이 여행자님! 말랑말랑 풀밭은 마을에서 남서쪽으로 조금만 가면 있어요.",
+                    "happy|QuestAccept|와아! 역시 털복숭이 여행자님! 말랑말랑 풀밭은 마을에서 서쪽으로 조금만 가면 있어요.",
                     "normal|Yes|분홍 젤리가 통통 튀는 게 보이면 거기예요! 몸통박치기는 생각보다 아프니까 조심하세요!",
                 },
                 decline = "sad|Sad|흑… 오늘은 목도리 없이 지내야겠네요. 마음 바뀌면 꼭 와 주세요!",
                 waiting = "troubled|No|말랑이들이 아직 빨래 위에서 통통거려요… (지금 {n}/{need}마리)",
-                hint = "normal|Talk|{zone}은 남서쪽이에요. 몸을 쭈욱 늘이는 공격은 옆으로 피하세요!",
+                hint = "normal|Talk|{zone}은 서쪽이에요. 몸을 쭈욱 늘이는 공격은 옆으로 피하세요!",
                 ready = "surprised|Surprised|어?! 풀밭이 조용해졌어요! 여행자님이 해내셨군요!",
                 thanks = "happy|Laugh|목도리가 무사해요! 딸기젤리 냄새는… 음, 이것도 나름 괜찮네요. 헤헤.",
                 reward = "normal|Yes|이건 빨래 지켜 준 값이에요. 받아 주세요!",
@@ -77,12 +77,12 @@ namespace MoominAction
                 },
                 accept = new[]
                 {
-                    "happy|QuestAccept|진짜요?! 여행자님 최고! 어둑어둑 뒷골목은 북동쪽, 동쪽 마을 가는 길이에요!",
+                    "happy|QuestAccept|진짜요?! 여행자님 최고! 어둑어둑 뒷골목은 동쪽, 동쪽 마을 가는 길이에요!",
                     "normal|Yes|꼬물이는 여기서 이불 뒤집어쓰고 응원할게요. 힘내라, 힘내라!",
                 },
                 decline = "sad|Sad|그, 그럼… 오늘 밤도 불 켜고 자야겠다… 히잉.",
                 waiting = "troubled|No|아직 창문 똑똑 소리가 나요… (지금 {n}/{need}마리)",
-                hint = "normal|Talk|그림자는 약하지만 몰려다녀요. {zone}은 북동쪽이에요!",
+                hint = "normal|Talk|그림자는 약하지만 몰려다녀요. {zone}은 동쪽이에요!",
                 ready = "surprised|Surprised|어? 어어? 창문 소리가 안 나요! 여행자님이 다 쫓아낸 거예요?!",
                 thanks = "happy|Laugh|꼬물이 이제 하나도 안 무서워요! …아니, 쬐끔은 무서워요. 그래도 괜찮아요!",
                 reward = "normal|Yes|이거 꼬물이 저금통에서 꺼냈어요. 여행자님 주는 거예요!",
@@ -107,12 +107,12 @@ namespace MoominAction
                 },
                 accept = new[]
                 {
-                    "happy|QuestAccept|정말요? 고마워요! 꾸벅꾸벅 숲은 마을 북쪽, 나무가 많은 곳이에요.",
+                    "happy|QuestAccept|정말요? 고마워요! 꾸벅꾸벅 숲은 마을 북동쪽, 나무가 많은 곳이에요.",
                     "troubled|No|곰들이 졸린 척하다가 갑자기 앞발을 휘두르니까 꼭 조심하세요! 하아암…",
                 },
                 decline = "sad|Sad|괜찮아요… 귀마개 두 겹이면 버틸 수 있을 거예요. 아마도요…",
                 waiting = "troubled|No|드르렁… 아직도 들려요… (지금 {n}/{need}마리)",
-                hint = "normal|Talk|{zone}은 북쪽이에요. 곰은 튼튼하니까 체력을 잘 보면서 싸우세요!",
+                hint = "normal|Talk|{zone}은 북동쪽이에요. 곰은 튼튼하니까 체력을 잘 보면서 싸우세요!",
                 ready = "surprised|Surprised|어머… 조용해요. 새소리가 들려요! 여행자님이 해내셨군요!",
                 thanks = "happy|Laugh|해먹도 돌아왔어요! 이제 실컷 낮잠… 아, 보상부터 드려야죠. 헤헤.",
                 reward = "normal|Yes|푹 잘 수 있게 해 준 고마움이에요. 받아 주세요!",
@@ -137,12 +137,12 @@ namespace MoominAction
                 },
                 accept = new[]
                 {
-                    "happy|QuestAccept|고마워요! 와글와글 돌무더기는 서쪽, 큰 바위들 쪽이에요.",
+                    "happy|QuestAccept|고마워요! 와글와글 돌무더기는 북서쪽, 큰 바위들 쪽이에요.",
                     "normal|Yes|날아오는 톱니는 원거리 공격으로 맞받아치거나 옆으로 피하세요. 그냥 맞으면 아파요!",
                 },
                 decline = "sad|Sad|그럼 저는 새싹들한테 투구라도 씌워 줘야겠네요… 도토리 껍질로요…",
                 waiting = "troubled|No|아직도 톱니가 휙휙 날아와요… (지금 {n}/{need}마리)",
-                hint = "normal|Talk|{zone}는 서쪽이에요. 그린볼런은 느리니까 옆으로 돌아서 치세요!",
+                hint = "normal|Talk|{zone}는 북서쪽이에요. 그린볼런은 느리니까 옆으로 돌아서 치세요!",
                 ready = "surprised|Surprised|어? 톱니 소리가 멈췄어요! 여행자님, 혹시…?",
                 thanks = "happy|Laugh|새싹들이 다시 쑥쑥 자라요! 올가을엔 땅콩빵을 산더미만큼 구울 수 있겠어요!",
                 reward = "normal|Yes|땅콩 팔아서 모은 금화예요. 땅콩빵 나오면 제일 먼저 드릴게요!",

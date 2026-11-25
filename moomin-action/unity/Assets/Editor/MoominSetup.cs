@@ -27,7 +27,7 @@ namespace MoominAction.EditorTools
             var clips = imp.defaultClipAnimations;
             foreach (var c in clips)
             {
-                c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "ShieldGuard" or "DualGuard" or "LaserGuard"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true;
+                c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "ShieldGuard" or "DualGuard" or "LaserGuard" or "SwimIdle" or "Swim" or "DiveIdle" or "Dive" or "BoatSit"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true;
                 // 공격 클립의 타격 프레임(Blender: Attack1/2 = 24프레임 중 11, Attack3 = 30프레임 중 14)에 명세 v2 6-2 의 애니메이션 이벤트 배치
                 float hit = c.name switch { "Attack1" => 10f / 23f, "Attack2" => 10f / 23f, "Attack3" => 13f / 29f, _ => -1f };
                 if (WeaponHitFrames.TryGetValue(c.name, out var wf)) hit = (wf.hit - 1f) / (wf.len - 1f);   // 베개 방패·회전 쌍검 클립(blender/moomin_weapon_anims.py 와 같은 프레임)
@@ -106,6 +106,13 @@ namespace MoominAction.EditorTools
             foreach (var g in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/City" }))
                 if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(g)) is TextureImporter ti)
                 { ti.mipmapEnabled = true; ti.maxTextureSize = 2048; ti.textureCompression = TextureImporterCompression.CompressedHQ; ti.anisoLevel = 4; ti.wrapMode = TextureWrapMode.Repeat; ti.SaveAndReimport(); }
+            // 바다·선착장·통통배·어부 모자(Resources): 바닥·충돌 메시는 런타임 MeshCollider 용으로 읽기 가능
+            foreach (var path in new[] { "Assets/Resources/World/Seaside.fbx", "Assets/Resources/World/Boat.fbx", "Assets/Resources/Npc/FisherHat.fbx" })
+                if (AssetImporter.GetAtPath(path) is ModelImporter seaImp)
+                {
+                    seaImp.preserveHierarchy = true; seaImp.importAnimation = false; seaImp.importCameras = false; seaImp.importLights = false; seaImp.isReadable = true;
+                    seaImp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard; seaImp.meshOptimizationFlags = MeshOptimizationFlags.Everything; seaImp.SaveAndReimport();
+                }
             foreach (var n in new[] { "StarSparkSword.fbx", "ShadowBlob.fbx" }) { var m = AssetImporter.GetAtPath(Models + n) as ModelImporter; if (m != null) { m.materialImportMode = ModelImporterMaterialImportMode.ImportStandard; m.SaveAndReimport(); } }
         }
 
@@ -192,7 +199,7 @@ namespace MoominAction.EditorTools
             ac.CreateBlendTreeInController("Locomotion", out BlendTree tree); tree.blendParameter = "Speed";
             tree.AddChild(Clip("Idle"), 0f); tree.AddChild(Clip("Walk"), 0.5f); tree.AddChild(Clip("Run"), 1f);
             var sm = ac.layers[0].stateMachine;
-            foreach (var n in new[] { "Roll", "Guard", "Attack1", "Attack2", "Attack3", "Hit", "Death", "ShieldGuard", "ShieldBash", "ShieldSwing", "ShieldSlam", "ShieldLeap", "DualGuard", "DualSlash1", "DualSlash2", "DualCross", "DualDash", "DualWhirl", "DualGrind", "DualFinale", "LaserGuard", "LaserSlash1", "LaserSlash2", "LaserCross", "LaserDash", "LaserWhirl", "LaserGrind", "LaserFinale" }) { var s = sm.AddState(n); s.motion = Clip(n); if (n.StartsWith("Attack") || n == "Hit" || n == "Roll" || (WeaponHitFrames.ContainsKey(n))) { var t = s.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f; } }
+            foreach (var n in new[] { "Roll", "Guard", "Attack1", "Attack2", "Attack3", "Hit", "Death", "ShieldGuard", "ShieldBash", "ShieldSwing", "ShieldSlam", "ShieldLeap", "DualGuard", "DualSlash1", "DualSlash2", "DualCross", "DualDash", "DualWhirl", "DualGrind", "DualFinale", "LaserGuard", "LaserSlash1", "LaserSlash2", "LaserCross", "LaserDash", "LaserWhirl", "LaserGrind", "LaserFinale", "SwimIdle", "Swim", "DiveIdle", "Dive", "BoatSit" }) { var s = sm.AddState(n); s.motion = Clip(n); if (n.StartsWith("Attack") || n == "Hit" || n == "Roll" || (WeaponHitFrames.ContainsKey(n))) { var t = s.AddExitTransition(); t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f; } }
             AssetDatabase.SaveAssets();
         }
 
@@ -237,7 +244,7 @@ namespace MoominAction.EditorTools
             var ex = player.AddComponent<SkillExecutor>(); ex.useAnimationEvents = true; ex.animator = anim;
             var cm = player.AddComponent<CombatManager>();
             cm.basic1 = SkillAsset("BASIC_1"); cm.basic2 = SkillAsset("BASIC_2"); cm.basic3 = SkillAsset("BASIC_3"); cm.skill1 = SkillAsset("SKILL_001"); cm.skill2 = SkillAsset("SKILL_002"); cm.ultimate = SkillAsset("SKILL_003"); SkillAsset("SKILL_004");   // 충격파(광역 테스트) 에셋도 생성
-            player.AddComponent<Inventory>(); player.AddComponent<LockOnSystem>(); player.AddComponent<PlayerController>();
+            player.AddComponent<Inventory>(); player.AddComponent<LockOnSystem>(); player.AddComponent<PlayerController>(); player.AddComponent<PlayerSwim>();   // 헤엄·잠수
             var hand = Find(player.transform, "hand.R");
             if (hand != null)
             {

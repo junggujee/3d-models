@@ -13,11 +13,11 @@ namespace MoominAction
         [Header("회피(구르기)")] public float rollSpeed = 7.8f, rollDuration = 0.66f, rollCost = 18f, iFrameStart = 0.05f, iFrameEnd = 0.40f, rollCooldown = 0.12f, sprintDrain = 9f;
         public Animator animator; public Transform cam;
         public bool Rolling { get; private set; }
-        CharacterController cc; CharacterStats health; DefenseController defense; Stamina stamina; CombatManager cm; SkillExecutor skills; LockOnSystem lockOn; Vector3 vel, rollDir; float speed01, rollT, nextRoll; Vector2 lastInput;
+        CharacterController cc; CharacterStats health; DefenseController defense; Stamina stamina; CombatManager cm; SkillExecutor skills; LockOnSystem lockOn; internal PlayerSwim swim; Vector3 vel, rollDir; float speed01, rollT, nextRoll; Vector2 lastInput;
 
         void Awake()
         {
-            cc = GetComponent<CharacterController>(); health = GetComponent<CharacterStats>(); defense = GetComponent<DefenseController>(); stamina = GetComponent<Stamina>(); cm = GetComponent<CombatManager>(); skills = GetComponent<SkillExecutor>(); lockOn = GetComponent<LockOnSystem>();
+            cc = GetComponent<CharacterController>(); health = GetComponent<CharacterStats>(); defense = GetComponent<DefenseController>(); stamina = GetComponent<Stamina>(); cm = GetComponent<CombatManager>(); skills = GetComponent<SkillExecutor>(); lockOn = GetComponent<LockOnSystem>(); if (swim == null) swim = GetComponent<PlayerSwim>();
             health.invulnerableTime = 0.05f;   // 적의 코인 연타가 각각 들어가도록 짧게
             if (!animator) animator = GetComponentInChildren<Animator>(); if (!cam && Camera.main) cam = Camera.main.transform;
         }
@@ -32,6 +32,7 @@ namespace MoominAction
         void Update()
         {
             if (UIState.Paused) return;
+            if (swim != null && swim.Active) { if (Rolling) EndRoll(); return; }   // 헤엄·잠수·배 타기는 PlayerSwim / Boat 가 움직임
             Vector2 mv = Locked ? Vector2.zero : InputAdapter.Move(); lastInput = mv; Vector3 dir = InputDir(mv);
             if (Rolling) { UpdateRoll(); return; }
             if (!Locked && InputAdapter.DodgePressed() && (cm == null || cm.CanDodge) && Time.time >= nextRoll && stamina.Spend(rollCost)) { StartRoll(dir); return; }
@@ -74,6 +75,8 @@ namespace MoominAction
         }
         void EndRoll() { Rolling = false; if (defense != null) defense.EndEvade(); nextRoll = Time.time + rollCooldown; }
 
+        /// <summary>떨어지던 속도 지우기(순간이동 · 물에서 나올 때).</summary>
+        public void ResetFall() { vel = Vector3.zero; }
         public void Knockback(Vector3 force) { cc.Move(new Vector3(force.x, 0, force.z) * 0.15f); }
         public void CancelRoll() { if (Rolling) EndRoll(); }
     }

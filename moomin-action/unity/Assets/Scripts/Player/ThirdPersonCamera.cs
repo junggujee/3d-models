@@ -11,6 +11,21 @@ namespace MoominAction
         /// <summary>화면 흔들림(합 충돌·승리). 실제 시간 기준이라 히트스톱 중에도 흔들림.</summary>
         public static void Shake(float amplitude, float seconds) { if (amplitude >= shakeAmp * (shakeDur > 0 ? shakeT / shakeDur : 0f)) { shakeAmp = amplitude; shakeT = shakeDur = seconds; } }
         void Start() { if (target) { yaw = target.eulerAngles.y; lockOn = target.GetComponent<LockOnSystem>(); } UIState.Reset(); Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
+        /// <summary>순간이동 뒤: 대상 뒤로 바로 옮김(부드럽게 따라가지 않고).</summary>
+        public void SnapBehind()
+        {
+            if (!target) return; yaw = target.eulerAngles.y;
+            Quaternion rot = Quaternion.Euler(pitch, yaw, 0); transform.SetPositionAndRotation(target.position + Vector3.up * height + rot * Vector3.back * distance, rot);
+        }
+        Transform savedTarget; float savedDistance, savedHeight;
+        /// <summary>다른 것을 따라가기(통통배) — Restore 로 되돌림.</summary>
+        public void Follow(Transform t, float dist, float h)
+        {
+            if (savedTarget == null) { savedTarget = target; savedDistance = distance; savedHeight = height; }
+            target = t; distance = dist; height = h;
+        }
+        public void Restore() { if (savedTarget != null) { target = savedTarget; distance = savedDistance; height = savedHeight; savedTarget = null; } }
+
         void LateUpdate()
         {
             if (!target) return;

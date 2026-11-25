@@ -42,6 +42,8 @@ namespace MoominAction
         {
             if (!player) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.GetComponent<CharacterStats>(); }
             RunStats.Hook(); StunFx.Hook(); Hunts.Hook(); SaveSystem.ApplyPending(this);
+            Seaside.Ensure();   // 남쪽 바다·선착장(충돌·바다·선착장 NavMesh 자리) — NavMesh 굽기 전에
+            if (player && !player.TryGetComponent<PlayerSwim>(out _)) player.gameObject.AddComponent<PlayerSwim>();   // 헤엄·잠수(예전 프리팹에도)
             var baker = GetComponent<NavMeshBaker>(); if (baker == null) baker = gameObject.AddComponent<NavMeshBaker>(); baker.Build();
             if (player) player.Died += () => IsOver = true;
             #if UNITY_2023_1_OR_NEWER
@@ -71,7 +73,11 @@ namespace MoominAction
                 waveActive = false; if (player) player.inCombat = false; WaveCleared?.Invoke(Wave); nextWave = Time.time + wavePause;
                 if (autoSave && SaveSystem.CanSave(out _)) SaveSystem.Save(SaveFormat.AutoSlot);
             }
-            if (!waveActive && Time.time >= nextWave && enemyPrefab && player) SpawnWave();
+            if (!waveActive && Time.time >= nextWave && enemyPrefab && player)
+            {
+                if (Seaside.InHarbor(player.transform.position)) nextWave = Time.time + 2f;   // 선착장에서는 쉬어 감(웨이브 멈춤)
+                else SpawnWave();
+            }
         }
 
         /// <summary>

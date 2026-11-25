@@ -43,6 +43,11 @@ namespace MoominAction
         public static bool DropPressed() => K(Key.X);
         public static bool SortPressed() => K(Key.R);
         public static bool TabNext() => K(Key.PageDown) || K(Key.RightBracket); public static bool TabPrev() => K(Key.PageUp) || K(Key.LeftBracket);
+        /// <summary>잠수 켜고 끄기(Z · 패드 A).</summary>
+        public static bool DiveTogglePressed() => K(Key.Z) || (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame);
+        /// <summary>물속에서 위로(Space · 패드 십자 위) / 아래로(왼쪽 Ctrl · 패드 십자 아래).</summary>
+        public static bool SwimUpHeld() => KH(Key.Space) || (Gamepad.current != null && Gamepad.current.dpad.up.isPressed);
+        public static bool SwimDownHeld() => KH(Key.LeftCtrl) || (Gamepad.current != null && Gamepad.current.dpad.down.isPressed);
 #else
         static bool K(KeyCode k) => Input.GetKeyDown(k);
         public static Vector2 Move() => Vector2.ClampMagnitude(new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")), 1f);
@@ -68,6 +73,9 @@ namespace MoominAction
         public static bool DropPressed() => K(KeyCode.X);
         public static bool SortPressed() => K(KeyCode.R);
         public static bool TabNext() => K(KeyCode.PageDown) || K(KeyCode.RightBracket); public static bool TabPrev() => K(KeyCode.PageUp) || K(KeyCode.LeftBracket);
+        public static bool DiveTogglePressed() => K(KeyCode.Z);
+        public static bool SwimUpHeld() => Input.GetKey(KeyCode.Space);
+        public static bool SwimDownHeld() => Input.GetKey(KeyCode.LeftControl);
 #endif
     }
 }

@@ -83,8 +83,8 @@ namespace MoominAction
             if (z == null || gm == null || gm.player == null) return h.zoneName;
             Vector3 p = gm.player.transform.position, c = z.transform.position; Vector3 flat = c - p; flat.y = 0;
             float d = flat.magnitude; if (d <= z.radius) return h.zoneName + " 안";
-            var w2b = MapPlaces.WorldToBlender; Vector3 bp = w2b.MultiplyPoint3x4(p), bc = w2b.MultiplyPoint3x4(c);
-            string dir = HuntMath.Compass(bc.x - bp.x, bc.y - bp.y);
+            var md = MapPlaces.MapDelta(p, c);   // 월드맵 그림 기준(위 = 북)
+            string dir = HuntMath.Compass(md.x, md.y);
             return $"{h.zoneName} {dir} {Mathf.RoundToInt(d)}m";
         }
 

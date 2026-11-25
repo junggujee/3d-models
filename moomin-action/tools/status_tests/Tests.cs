@@ -168,6 +168,22 @@ static class Tests
             Eq(HuntMath.Fill(h.waiting, h, 2).Contains("2/" + h.need), true, h.id + " 진행 대사에 숫자");
         }
 
+        // ── 바다 물결(게르스트너, 셰이더와 같은 식)
+        var ow = OceanMath.Waves(30f);
+        Eq(OceanMath.MaxAmplitude(ow) < 0.7f, true, "파도 높이 합 < 0.7m(해수면 -0.8 → 뭍 0 을 넘지 않음)");
+        Eq(OceanMath.Make(90f, 10f, 0.1f).dirX, 1f, "90° = +X 방향", 1e-5f); Eq(OceanMath.Make(0f, 10f, 0.1f).dirZ, 1f, "0° = +Z 방향", 1e-5f);
+        { var w1 = OceanMath.Make(0f, 20f, 0.1f); Eq(w1.omega, (float)Math.Sqrt(9.81 * w1.k), "분산 관계 ω = √(g·k)", 1e-4f); Eq(w1.amp, 0.1f * 20f / (2f * (float)Math.PI), "진폭 = 가파름 / k", 1e-4f); }
+        Eq(OceanMath.AmpScale(0f), 0.35f, "얕은 곳 35%", 1e-5f); Eq(OceanMath.AmpScale(6f), 1f, "6m 이상 100%", 1e-5f); Eq(OceanMath.AmpScale(-2f), 0.35f, "뭍 35%", 1e-5f);
+        float worstH = 0f, maxAbs = 0f; var rnd = new Random(5);
+        for (int n = 0; n < 200; n++)
+        {   // 알갱이를 앞으로 옮긴 자리에서 HeightAt 으로 거꾸로 찾은 높이 = 그 알갱이 높이
+            float x0 = (float)rnd.NextDouble() * 200f - 100f, z0 = (float)rnd.NextDouble() * 200f - 100f, t0 = (float)rnd.NextDouble() * 50f;
+            OceanMath.Displace(ow, x0, z0, t0, 1f, out var ddx, out var ddy, out var ddz);
+            worstH = Math.Max(worstH, Math.Abs(OceanMath.HeightAt(ow, x0 + ddx, z0 + ddz, t0) - ddy)); maxAbs = Math.Max(maxAbs, Math.Abs(ddy));
+        }
+        Eq(worstH < 0.02f, true, $"수면 높이 되풀이 오차 < 2cm (최대 {worstH:0.0000}m)"); Eq(maxAbs > 0.2f && maxAbs < 0.7f, true, "물결 높이 범위");
+        Eq(Math.Abs(OceanMath.HeightAt(ow, 3f, 4f, 2f, (x, z) => 0f)) <= OceanMath.MaxAmplitude(ow) * 0.35f + 1e-4f, true, "얕은 곳 물결은 35% 이내");
+
         // ── 레벨: 차이 → 코인 위력(3레벨마다 ±1, 최대 ±3), 적 레벨·경험치·칭호
         Eq(LevelMath.CoinBonus(5, 5), 0, "같은 레벨 보정 없음"); Eq(LevelMath.CoinBonus(7, 5), 0, "2레벨 차이는 아직 0"); Eq(LevelMath.CoinBonus(8, 5), 1, "3레벨 높음 +1");
         Eq(LevelMath.CoinBonus(5, 8), -1, "3레벨 낮음 -1"); Eq(LevelMath.CoinBonus(5, 10), -1, "5레벨 낮음도 -1"); Eq(LevelMath.CoinBonus(30, 1), 3, "최대 +3"); Eq(LevelMath.CoinBonus(1, 40), -3, "최소 -3");

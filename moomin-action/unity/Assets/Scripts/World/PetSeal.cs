@@ -248,6 +248,8 @@ namespace MoominAction
         // ── 도우미
         void MoveTo(Vector3 p, float speed) { if (agent == null || !agent.enabled || !agent.isOnNavMesh) return; agent.speed = speed; agent.isStopped = false; agent.SetDestination(p); if (playing == "Sleep") Play("Locomotion"); idleSince = Time.time; }
         void Stop() { if (agent != null && agent.enabled && agent.isOnNavMesh) { agent.isStopped = true; agent.ResetPath(); } }
+        /// <summary>주인 곁으로 순간이동(바닷길 문).</summary>
+        public void WarpNear(Vector3 p) => Warp(p);
         void Warp(Vector3 p) { if (NavMesh.SamplePosition(p, out var h, 4f, NavMesh.AllAreas)) { if (agent != null && agent.enabled) agent.Warp(h.position); else transform.position = h.position; } }
         void FaceTo(Vector3 p) { Vector3 to = p - transform.position; to.y = 0; if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), 12f * Time.deltaTime); }
         void FaceTarget() { if (intercepting && interceptFrom != null) FaceTo(interceptFrom.transform.position); }

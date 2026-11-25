@@ -31,6 +31,18 @@ namespace MoominAction
         /// <summary>장면이 열릴 때 검은 화면에서 밝아지기만(타이틀 첫 등장).</summary>
         public static void FadeIn(float seconds = 1.6f) { var f = Get(); if (f.busy) return; f.StartCoroutine(f.In(seconds)); }
 
+        /// <summary>같은 장면 안에서 순간이동할 때: 어두워짐 → mid(옮기기) → 밝아짐(바닷길 문).</summary>
+        public static void Cover(System.Action mid, float outTime = 0.45f, float inTime = 0.6f) { var f = Get(); if (f.busy) return; f.StartCoroutine(f.CoverRun(mid, outTime, inTime)); }
+        IEnumerator CoverRun(System.Action mid, float outTime, float inTime)
+        {
+            busy = true; black.raycastTarget = true;
+            for (float t = 0; t < outTime; t += Time.unscaledDeltaTime) { black.color = new Color(0, 0, 0, t / outTime); yield return null; }
+            black.color = Color.black;
+            try { mid?.Invoke(); } catch (System.Exception e) { Debug.LogException(e); }
+            yield return null; yield return null;
+            yield return In(inTime);
+        }
+
         IEnumerator Run(string scene)
         {
             busy = true; black.raycastTarget = true;

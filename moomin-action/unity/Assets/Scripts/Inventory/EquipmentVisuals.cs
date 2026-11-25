@@ -55,25 +55,48 @@ namespace MoominAction
         GameObject Attach(ItemDef d, string path, string boneName)
         {
             var prefab = Resources.Load<GameObject>(path); if (prefab == null) { Debug.LogWarning($"[장비] 모델 없음: Resources/{path}"); return null; }
-            // 뼈와 그 뼈의 bindpose 를 가진 스킨 메시 찾기
-            Transform bone = null; Matrix4x4 bind = Matrix4x4.identity; Transform meshSpace = null;
-            foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            var go = BoneAttach.Attach(gameObject, prefab, boneName, "Equip_" + d.id + "_" + prefab.name);
+            if (go != null) GlowMaterials(go);
+            return go;
+        }
+    }
+
+    /// <summary>
+    /// 모델 공간(기본 자세)에서 만든 물건을 뼈에 붙이기(장비 · NPC 모자 공용).
+    /// 스킨 메시의 bindpose(기본 자세에서 '메시 공간 → 뼈 공간')를 그대로 쓰면 지금 어떤 자세든 정확한 자리.
+    /// </summary>
+    public static class BoneAttach
+    {
+        public static GameObject Attach(GameObject owner, GameObject prefab, string boneName, string name)
+        {
+            if (owner == null || prefab == null) return null;
+            Transform bone = null; Matrix4x4 bind = Matrix4x4.identity;
+            foreach (var smr in owner.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 var bones = smr.bones; var binds = smr.sharedMesh != null ? smr.sharedMesh.bindposes : null; if (binds == null) continue;
-                for (int i = 0; i < bones.Length && i < binds.Length; i++) if (bones[i] != null && bones[i].name == boneName) { bone = bones[i]; bind = binds[i]; meshSpace = smr.transform; break; }
+                for (int i = 0; i < bones.Length && i < binds.Length; i++) if (bones[i] != null && bones[i].name == boneName) { bone = bones[i]; bind = binds[i]; break; }
                 if (bone != null) break;
             }
-            var go = Instantiate(prefab); go.name = "Equip_" + d.id + "_" + prefab.name;
-            foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = gameObject.layer;   // 장비 화면 카메라(플레이어 레이어)에 같이 보이게
-            foreach (var c in go.GetComponentsInChildren<Collider>(true)) Destroy(c);
-            GlowMaterials(go);
-            if (bone == null) { Debug.LogWarning($"[장비] 뼈 '{boneName}' 를 찾지 못해 몸에 그대로 붙임"); go.transform.SetParent(transform, false); return go; }
-            // 장비 메시(자식)의 '장비 루트 → 메시' 변환 H. 원하는 것: 메시 월드 = 뼈 월드 × bindpose  ⇒  장비 루트(뼈 기준) = bindpose × H⁻¹
+            var go = Object.Instantiate(prefab); go.name = name;
+            foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = owner.layer;   // 장비 화면 카메라(플레이어 레이어)에 같이 보이게
+            foreach (var c in go.GetComponentsInChildren<Collider>(true)) Object.Destroy(c);
+            if (bone == null) { Debug.LogWarning($"[붙이기] 뼈 '{boneName}' 를 찾지 못해 몸에 그대로 붙임"); go.transform.SetParent(owner.transform, false); return go; }
+            // 메시(자식)의 '루트 → 메시' 변환 H. 원하는 것: 메시 월드 = 뼈 월드 × bindpose  ⇒  루트(뼈 기준) = bindpose × H⁻¹
             var mf = go.GetComponentInChildren<MeshFilter>(); Matrix4x4 H = mf != null ? go.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix : Matrix4x4.identity;
             Matrix4x4 local = bind * H.inverse;
             go.transform.SetParent(bone, false);
             go.transform.localPosition = local.GetColumn(3); go.transform.localRotation = local.rotation; go.transform.localScale = local.lossyScale;
             return go;
+        }
+    }
+
+    /// <summary>NPC 소품(어부 모자 등)을 뼈에 붙임.</summary>
+    public static class NpcAccessory
+    {
+        public static GameObject Attach(GameObject npc, string resourcePath, string boneName)
+        {
+            var prefab = Resources.Load<GameObject>(resourcePath); if (prefab == null) { Debug.LogWarning($"[NPC] 소품 없음: Resources/{resourcePath}"); return null; }
+            return BoneAttach.Attach(npc, prefab, boneName, "Accessory_" + prefab.name);
         }
     }
 }

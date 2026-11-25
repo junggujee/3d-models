@@ -14,7 +14,7 @@ namespace MoominAction.UI
         UIRoot ui; GameObject hudRoot, coreRoot; CombatHUD combat; CharacterStats hp; Stamina st; Inventory inv;
         Gauge stBar; VitalBars vitals; Text objective, scoreText, goldText, weaponText;
         Image[] qIcon = new Image[4]; Text[] qCount = new Text[4]; Image flash;
-        Text banner, bannerSub; Image bannerLine; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver; PetHUD pet; QuestTracker quests; LevelUpPopup levelUp;
+        Text banner, bannerSub; Image bannerLine; float bannerT, bannerDur; Color bannerCol; GameOverScreen gameOver; PetHUD pet; QuestTracker quests; LevelUpPopup levelUp; BreathMeter breath;
         class Toast { public RectTransform rt; public Text text; public Image icon; public CanvasGroup cg; public float t; }
         readonly List<Toast> toasts = new(); readonly List<Toast> pool = new(); Transform toastParent;
 
@@ -62,7 +62,7 @@ namespace MoominAction.UI
             gameOver = new GameOverScreen(); gameOver.Build(hudRoot.transform, hp);   // 쓰러짐 띠 → 결과 화면(맨 위에 그려지게 마지막에)
             hp.Died += gameOver.Show;
             SaveSystem.Saved += OnSaved;
-            pet = new PetHUD(); pet.Build(core.transform, hudRoot.transform); PetSeal.Notice += OnPetNotice;
+            pet = new PetHUD(); pet.Build(core.transform, hudRoot.transform); PetSeal.Notice += OnPetNotice; MoominAction.Toast.Shown += Toast_Text; breath = new BreathMeter(); breath.Build(core.transform, ui.player);
             quests = new QuestTracker(); quests.Build(core.transform, inv); Quests.Announce += OnQuestAnnounce; Hunts.Progressed += OnHuntProgress;
             var pex = ui.player.GetComponent<SkillExecutor>(); if (pex != null) pex.SkillStarted += sk => { if (sk != null && sk.requiresDuelHeat) Banner(sk.skillName, new Color(1f, .55f, .5f), 2.2f, "결투 고조 해방"); };   // 궁극 컷인
         }
@@ -88,7 +88,7 @@ namespace MoominAction.UI
         void OnSaved(int slot) => Toast_Text(slot == SaveFormat.AutoSlot ? "자동 저장했다" : SaveFormat.SlotName(slot) + "에 저장했다");
         void OnPetNotice(string m) => Toast_Text(m);
         void OnHuntProgress(HuntDef h, int n) { if (n < h.need) Toast_Text($"{h.monsterName} 토벌  {n}/{h.need}"); }   // 다 잡으면 큰 알림(Hunts)
-        public void Dispose() { combat?.Dispose(); quests?.Dispose(); SaveSystem.Saved -= OnSaved; PetSeal.Notice -= OnPetNotice; Quests.Announce -= OnQuestAnnounce; Hunts.Progressed -= OnHuntProgress; }
+        public void Dispose() { combat?.Dispose(); quests?.Dispose(); SaveSystem.Saved -= OnSaved; PetSeal.Notice -= OnPetNotice; MoominAction.Toast.Shown -= Toast_Text; Quests.Announce -= OnQuestAnnounce; Hunts.Progressed -= OnHuntProgress; }
 
         public void Update()
         {
@@ -109,7 +109,7 @@ namespace MoominAction.UI
             if (bannerT > 0) { bannerT -= dt; float k = bannerT / bannerDur, a = Mathf.Clamp01(Mathf.Min(k * 3f, (1f - k) * 5f)); banner.color = new Color(bannerCol.r, bannerCol.g, bannerCol.b, a); bannerSub.color = new Color(UITheme.Gold.r, UITheme.Gold.g, UITheme.Gold.b, a); bannerLine.color = new Color(1, 1, 1, a); }
             else { banner.color = new Color(0, 0, 0, 0); bannerSub.color = banner.color; bannerLine.color = banner.color; }
             flash.color = new Color(.6f, 0, 0, Mathf.MoveTowards(flash.color.a, 0, 0.9f * dt));
-            gameOver.Update(dt); pet.Update(dt); quests.Update(PetSeal.Current != null); levelUp.Update(dt);
+            gameOver.Update(dt); pet.Update(dt); quests.Update(PetSeal.Current != null); levelUp.Update(dt); breath?.Update(dt);
         }
     }
 }
