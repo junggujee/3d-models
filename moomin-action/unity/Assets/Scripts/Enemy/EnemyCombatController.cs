@@ -46,6 +46,8 @@ namespace MoominAction
         DefenseController defense; SkillPhase lastPhase; public Transform Target => target;
         CharacterStats stats; Transform target; Vector3 knock, dodgeDir, baseScale; float vy, staggerUntil, dodgeEnd, nextDodge, nextGuard, busyUntil, deadT = -1, nextRepath, nextWarp; bool navigating;
         TelegraphIndicator tele;
+        /// <summary>기본 바닥 예고를 쓰지 않을 스킬(그 스킬이 예고를 직접 그릴 때 — 맨두의 100만톤).</summary>
+        [HideInInspector] public System.Func<SkillDefinition, bool> customTelegraph;
 
         void OnEnable() { All.Add(this); } void OnDisable() { All.Remove(this); }
         void Awake()
@@ -92,6 +94,7 @@ namespace MoominAction
         void OnSkillStarted(SkillDefinition s)
         {
             if (s.windup <= 0f) return; HideTelegraph(); Play(string.IsNullOrEmpty(s.windupAnimation) ? "Windup" : s.windupAnimation, 0.1f);
+            if (customTelegraph != null && customTelegraph(s)) return;   // 예고를 스킬 임자가 직접 그림
             if (s.vfx == SkillVfx.WhaleBeam) WhaleChargeFx.Play(transform, s.windup);   // 고래빔 기 모으기
             Color tc = !s.canBeGuarded ? new Color(0.65f, 0.2f, 1f, 0.45f) : !s.canBeClashed ? new Color(0.2f, 0.55f, 1f, 0.45f) : new Color(1f, 0.15f, 0.1f, 0.4f);   // 보라 = 방어 불가 · 파랑 = 합 불가 · 빨강 = 일반 · 초록 직선 = 원거리
             if (s.isProjectile && s.projectileLob) return;   // 딸기 폭탄: 떨어질 자리마다 던질 때 예고(Projectile)

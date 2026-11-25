@@ -145,17 +145,36 @@ namespace MoominAction
             foreach (var id in new[] { "WHALE_RAM", "WHALE_BEAM", "WHALE_JUMP", "WHALE_FLIPPER", "WHALE_TAIL", "WHALE_SPOUT" }) if (map.TryGetValue(id, out var wsk)) wsk.subject = IllustrationSubject.Whale;   // 일러스트 = 고래 실루엣
             St("WHALE_RAM", StatusType.Tremor, 2, 1); St("WHALE_BEAM", StatusType.Sinking, 2, 2, 1, 1); St("WHALE_JUMP", StatusType.Tremor, 3, 1, 1, 1);
             St("WHALE_FLIPPER", StatusType.PowerDown, 1, 1); St("WHALE_SPOUT", StatusType.Sinking, 1, 2);
-            // ── 맨두(왕실근위대 엘리트 하프물범, 성문 지기) — 타격 = 클립 11프레임(0.33초) · 굴러가기 14프레임(0.43초)
-            Add(S("MANDU_BUMP", "근위대 배치기", 12, 5, 1, 1.0f, 3.5f, 0, 0.8f, 0.33f, 0.7f, new[] { "Attack1" }, 2.6f, 100, 9f, windup: 0.55f, lunge: 6f,
-                  desc: "통통한 배로 힘껏 들이받는다. \"물러서라맨두!\" 합 가능."));
-            Add(S("MANDU_SLAP", "지느러미 찰싹 연타", 7, 3, 3, 0.8f, 5f, 0, 0.45f, 0.33f, 0.6f, new[] { "Attack2" }, 2.4f, 120, 4f, windup: 0.4f, lunge: 1.5f,
-                  desc: "앞지느러미로 찰싹찰싹찰싹 세 번. 맞으면 위력 감소."));
-            Add(S("MANDU_ROLL", "근위대 굴러가기", 15, 5, 1, 1.15f, 8f, 0, 0.8f, 0.43f, 1.0f, new[] { "Attack3" }, 3.2f, 90, 12f, windup: 0.8f, lunge: 11f,
-                  desc: "몸을 한 바퀴 데굴데굴 굴려 돌진한다. 진동을 남긴다. 합 가능."));
-            if (map.TryGetValue("MANDU_ROLL", out var mr)) { mr.lungeDelay = 0.15f; mr.lungeTime = 0.45f; }
-            Look("MANDU_BUMP", SkillAttribute.Blue, SkillMotif.Rush); Look("MANDU_SLAP", SkillAttribute.Yellow, SkillMotif.Flurry); Look("MANDU_ROLL", SkillAttribute.Purple, SkillMotif.Smash);
-            foreach (var id in new[] { "MANDU_BUMP", "MANDU_SLAP", "MANDU_ROLL" }) if (map.TryGetValue(id, out var mk)) mk.subject = IllustrationSubject.Seal;
-            St("MANDU_BUMP", StatusType.Tremor, 1, 1); St("MANDU_SLAP", StatusType.PowerDown, 1, 1); St("MANDU_ROLL", StatusType.Tremor, 3, 1, 1, 1);
+            // ── 맨두(왕실근위대 엘리트 하프물범, 성문 지기) — 속성 노랑 · 타입 진동 · 무기 파란 야구방망이
+            //    클립 타격 프레임: Bat1/Bat2 11(0.37초) · Bat3 13(0.43) · HomeRun 23(0.77) · Charge 14(0.47) · Chomp 20(0.67) · MillionTon 62(2.07) · Attack1 11(0.37)
+            string[] BEAT = { "Bat1", "Bat2", "Bat3" }, HRUN = { "HomeRun" }, CHRG = { "Charge" }, CHOMP = { "Chomp" }, MTON = { "MillionTon" };
+            Add(S("MANDU_BEAT", "몽둥이 찜질", 11, 5, 3, 1.0f, 7f, 0, 0.62f, 0.37f, 0.5f, BEAT, 2.9f, 120, 6f, windup: 0.5f, lunge: 2.5f,
+                  desc: "방망이로 찰싹찰싹 세 번 찜질한다. 합에서 이기면 신이 나서 코인을 세 번 더 쓴다(마지막 타격 반복 — 진동이 쌓인다). \"맞아라맨두!\""));
+            Add(S("MANDU_HOMERUN", "홈런!!", 26, 9, 1, 1.35f, 12f, 0, 0.8f, 0.77f, 0.8f, HRUN, 3.2f, 100, 16f, windup: 0.75f, lunge: 5f,
+                  desc: "크게 뒤로 당겼다가 온 힘을 실어 풀스윙. 쌓인 진동을 터뜨린다. 한 방이 무겁다. \"홈런이다맨두!!\""));
+            Add(S("MANDU_BUMP", "근위대 배치기", 12, 4, 1, 1.0f, 4f, 0, 0.8f, 0.37f, 0.6f, A1, 2.5f, 100, 9f, windup: 0.3f, lunge: 5f,
+                  desc: "통통한 배로 들이받는다. 맨두맨두로 막아 낸 뒤 바로 되받아치는 반격 기술. \"물러서라맨두!\""));
+            Add(S("MANDU_CHARGE", "맨두돌진", 16, 6, 1, 1.1f, 9f, 0, 0.8f, 0.47f, 0.7f, CHRG, 3.0f, 80, 14f, windup: 0.6f, lunge: 13f,
+                  desc: "방망이를 앞세우고 데굴데굴 굴러 돌진한다. 멀리 있어도 단숨에 닿는다."));
+            Add(S("MANDU_CHOMP", "냠냠쫍쫍", 20, 7, 1, 1.2f, 16f, 0, 0.8f, 0.67f, 1.2f, CHOMP, 2.6f, 160, 11f, windup: 0.5f, unblockable: true,
+                  desc: "갑자기 거대해져서 온몸으로 민미를 폭 감싸 버린다. 한참 오물거리다가 퉤 뱉어내고 원래 크기로 돌아온다. 막을 수 없다."));
+            Add(S("MANDU_MILLION", "100만톤 맨두", 42, 14, 1, 1.6f, 45f, 0, 1f, 2.07f, 2.9f, MTON, 7.5f, 360, 20f, windup: 1.0f, unblockable: true,
+                  desc: "필살기 — 체력이 25% 아래로 떨어지면 쓴다. 자기 키의 다섯 배로 뛰어올랐다가 민미의 머리 위로 떨어진다. 바닥이 부서지고 쌓인 진동이 한꺼번에 터진다. 빨간 원 밖으로 피하자."));
+            Add(S("MANDU_MANDU", "맨두맨두", 14, 5, 1, 1.0f, 6f, 0, 0.8f, 0.3f, 0.4f, A1, 2.2f, 120, 4f,
+                  desc: "합 방어 기술 — 방망이를 가로로 세워 받아낸다. 민미의 공격 위력이 맨두의 방어 위력보다 낮으면 그대로 근위대 배치기로 되받아친다."));
+            if (map.TryGetValue("MANDU_CHARGE", out var mc)) { mc.lungeDelay = 0.12f; mc.lungeTime = 0.5f; }
+            if (map.TryGetValue("MANDU_MILLION", out var mm)) { mm.windupAnimation = "TonCharge"; mm.isAreaAttack = true; mm.areaRadius = 7.5f; mm.vfx = SkillVfx.Shockwave; mm.canBeEvaded = true; }
+            if (map.TryGetValue("MANDU_HOMERUN", out var mh)) mh.vfx = SkillVfx.Shockwave;
+            foreach (var id in new[] { "MANDU_BEAT", "MANDU_HOMERUN", "MANDU_BUMP", "MANDU_CHARGE", "MANDU_CHOMP", "MANDU_MILLION", "MANDU_MANDU" })
+                if (map.TryGetValue(id, out var mk)) { mk.subject = IllustrationSubject.Seal; mk.attribute = SkillAttribute.Yellow; }
+            Look("MANDU_BEAT", SkillAttribute.Yellow, SkillMotif.Flurry); Look("MANDU_HOMERUN", SkillAttribute.Yellow, SkillMotif.Smash);
+            Look("MANDU_BUMP", SkillAttribute.Yellow, SkillMotif.Rush); Look("MANDU_CHARGE", SkillAttribute.Yellow, SkillMotif.Rush);
+            Look("MANDU_CHOMP", SkillAttribute.Yellow, SkillMotif.Bubbles); Look("MANDU_MILLION", SkillAttribute.Yellow, SkillMotif.Leap);
+            Look("MANDU_MANDU", SkillAttribute.Yellow, SkillMotif.Thrust);
+            // 타입 = 진동: 맞을 때마다 진동이 쌓이고, 홈런·100만톤이 그 진동을 터뜨림
+            St("MANDU_BEAT", StatusType.Tremor, 3, 2, 2, 1); St("MANDU_HOMERUN", StatusType.Tremor, 5, 2, 3, 1); St("MANDU_BUMP", StatusType.Tremor, 2, 1);
+            St("MANDU_CHARGE", StatusType.Tremor, 3, 2, 2, 1); St("MANDU_CHOMP", StatusType.Tremor, 4, 3, 3, 2); St("MANDU_MILLION", StatusType.Tremor, 8, 4, 6, 3);
+            Energy("MANDU_HOMERUN", 0, 6, true); Energy("MANDU_MILLION", 0, 10, true);
             // ── 고래고래 임금님(용궁 보스) 2페이지(각성) 기술 — 사용자 그림: 고래빔(각성) · 박치기 · 회전 탄막 · 딸기 폭탄 · 버블 감옥
             //    탄막·원거리(회전 탄막 · 딸기 폭탄 · 버블 감옥 · 각성 고래빔)는 합 불가 광역: 날아오는 걸 보고 피하기. 박치기만 합 가능(근접)
             Add(S("KING_RAM", "박치기", 14, 5, 2, 1.0f, 5f, 0, 0.85f, 0.37f, 0.9f, new[] { "Attack1", "Attack1" }, 3.8f, 90, 12f, windup: 0.65f, lunge: 13f,

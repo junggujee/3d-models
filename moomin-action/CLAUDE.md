@@ -152,3 +152,5 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 모델 `blender/build_mandu.py` → `Models/Mandu.fbx`(+ `--portrait` 초상화). 프리팹 Mandu 는 minWave 999 라 웨이브엔 안 나옴
 - `World/CastleGuard.cs`(CastleGate + ManduGuard): 근무(팀 Player, F 대화) ↔ 전투(보스바, "억지로 들어간다"). 통과 = Quests.Log "castle_gate"
 - `Story/ManduStory.cs` 대사는 말끝마다 "~맨두". 꿀바른 땅콩빵(`honey_peanut_bread`)을 바치면 통과
+- 전투: 속성 노랑 · 타입 진동 · 파란 야구방망이(평소 옆구리, 전투 때 손에). 몽둥이 찜질/홈런!!/맨두맨두(합 방어 → 배치기 반격)/냠냠쫍쫍/맨두돌진 + 필살기 100만톤 맨두(체력 25%)
+- 쓰러뜨리면 레이저 블레이더 재료(`mandu_core`·`bat_alloy`) 드롭. 패배 모션 = 방망이를 놓치고 납작하게 뻗음

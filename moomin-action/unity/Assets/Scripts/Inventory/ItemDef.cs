@@ -41,6 +41,11 @@ namespace MoominAction
             Add(new ItemDef { id = "dust_fire", name = "불꽃 가루", type = ItemType.Material, icon = IconKind.Dust, color = new Color(1f, 0.55f, 0.1f), value = 12, description = "스파크 검에서 튀어 나온 불꽃이 굳은 가루. 대장장이가 좋아한다." });
             Add(new ItemDef { id = "shard_star", name = "별조각", type = ItemType.Material, icon = IconKind.Shard, color = new Color(1f, 0.9f, 0.4f), value = 40, description = "밤하늘에서 떨어진 작은 조각. 검을 담금질하는 데 쓰인다." });
             Add(new ItemDef { id = "feather_silver", name = "은빛 깃털", type = ItemType.Material, icon = IconKind.Feather, color = new Color(0.78f, 0.84f, 0.92f), value = 55, description = "달빛 아래서만 보이는 희귀한 깃털." });
+            // ── 레이저 블레이더 제작 재료(성문 지기 맨두를 쓰러뜨리면 나옴)
+            Add(new ItemDef { id = "mandu_core", name = "맨두의 진동 코어", type = ItemType.Material, grade = "S", icon = IconKind.Artifact, color = new Color(0.95f, 0.8f, 0.2f), maxStack = 5, value = 500,
+                description = "맨두를 쓰러뜨리면 모자 속에서 데구루루 굴러 나오는 노란 결정. 쥐고 있으면 손이 찌릿찌릿 떨린다. 레이저 블레이더의 심장이 된다." });
+            Add(new ItemDef { id = "bat_alloy", name = "파란 방망이 조각", type = ItemType.Material, grade = "A", icon = IconKind.Shard, color = new Color(0.25f, 0.6f, 0.95f), maxStack = 20, value = 90,
+                description = "맨두의 파란 야구방망이에서 떨어져 나온 조각. 가볍고 단단해서 광선검의 자루로 쓰기 좋다. 레이저 블레이더 제작 재료." });
             Add(new ItemDef { id = "peanut_bread", name = "땅콩빵", type = ItemType.Material, icon = IconKind.Peanut, color = new Color(0.86f, 0.66f, 0.38f), maxStack = 10, value = 60,
                 description = "땅콩빵 조각 9개를 꾹꾹 뭉쳐 구운 동그란 땅콩빵. 고소한 냄새가 솔솔." });
             Add(new ItemDef { id = "honey", name = "꿀", type = ItemType.Material, icon = IconKind.Potion, color = new Color(1f, 0.75f, 0.2f), maxStack = 10, value = 40,

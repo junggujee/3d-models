@@ -31,6 +31,10 @@ namespace MoominAction
         public bool Held;
         public bool CanCancel => !isExecuting || Phase == SkillPhase.Recovery;   // 회복 구간은 회피·다음 공격으로 취소 가능
         public int CurrentCoin => currentCoin;
+        /// <summary>이번 스킬이 실제로 쓸 코인 수 = 스킬의 코인 + 덤으로 받은 코인(맨두의 몽둥이 찜질).</summary>
+        public int TotalCoins => CurrentSkill != null ? CurrentSkill.coinCount + extraCoins : 0;
+        /// <summary>코인 재사용: 남은 코인을 n 개 늘림(마지막 공격 동작을 반복). 합에서 이겼을 때 등.</summary>
+        public void GrantExtraCoins(int n) { if (isExecuting && n > 0) extraCoins += n; }
         public float PhaseTime => t - stageStart;
         /// <summary>첫 타격까지 남은 시간(예고 중이면 남은 예고 + hitTime, 아니면 0) — 펫이 맞받아칠 때 맞춤.</summary>
         public float TimeToFirstHit => isExecuting && Phase == SkillPhase.Windup && CurrentSkill != null ? Mathf.Max(0, CurrentSkill.windup - t) + CurrentSkill.HitTime(0) : 0f;
@@ -39,7 +43,7 @@ namespace MoominAction
         public event Action<SkillDefinition> SkillStarted; public event Action<AttackContext> CoinAttacked; public event Action<SkillDefinition, bool> SkillFinished; public event Action<SkillDefinition, string> SkillRefused;
 
         readonly Dictionary<SkillDefinition, float> readyAt = new();
-        bool isExecuting, coinDoneThisStage, hitboxHeld; int currentCoin; float t, stageStart, recoveryEnd;
+        bool isExecuting, coinDoneThisStage, hitboxHeld; int currentCoin, extraCoins; float t, stageStart, recoveryEnd;
 
         void Awake()
         {
@@ -64,7 +68,7 @@ namespace MoominAction
             if (isExecuting) Finish(false);
             if (skill.energyCost > 0) energy.Spend(skill.energyCost, skill.skillName);
             stats.ChangeSanity(-skill.sanityCost, skill.skillName);
-            CurrentSkill = LastSkill = skill; currentCoin = 0; t = 0; results.Clear(); CurrentAttack = null; isExecuting = true; hitboxHeld = false;
+            CurrentSkill = LastSkill = skill; currentCoin = 0; extraCoins = 0; t = 0; results.Clear(); CurrentAttack = null; isExecuting = true; hitboxHeld = false;
             if (skill.cooldown > 0) readyAt[skill] = Time.time + skill.cooldown;
             Phase = skill.windup > 0 ? SkillPhase.Windup : SkillPhase.Attacking; if (Phase == SkillPhase.Attacking) BeginStage();
             SkillStarted?.Invoke(skill); return true;
@@ -74,7 +78,11 @@ namespace MoominAction
         {
             stageStart = t; coinDoneThisStage = false;
             var anims = CurrentSkill.attackAnimations;
-            if (animator && anims != null && anims.Length > 0) { string st = anims[currentCoin % anims.Length]; if (animator.HasState(0, Animator.StringToHash(st))) animator.CrossFadeInFixedTime(st, 0.06f); }
+            if (animator && anims != null && anims.Length > 0)
+            {
+                string st = anims[(currentCoin < CurrentSkill.coinCount ? currentCoin : CurrentSkill.coinCount - 1) % anims.Length];   // 덤 코인은 마지막 공격을 반복
+                if (animator.HasState(0, Animator.StringToHash(st))) animator.CrossFadeInFixedTime(st, 0.06f);
+            }
         }
 
         void Update()
@@ -91,7 +99,7 @@ namespace MoominAction
                 if (!isExecuting || Held) return;                                                                          // 합이 시작됐으면 여기서 멈춤
                 if (coinDoneThisStage && local >= Mathf.Max(s.attackInterval, s.HitTime(currentCoin - 1) + s.activeWindow))
                 {
-                    if (currentCoin < s.coinCount) BeginStage();
+                    if (currentCoin < TotalCoins) BeginStage();
                     else { Phase = SkillPhase.Recovery; recoveryEnd = t + s.recovery; }
                 }
                 return;
@@ -103,7 +111,7 @@ namespace MoominAction
         /// <summary>타격 프레임: 코인 판정 → 위력 계산 → AttackContext 생성 → CombatResolver 로 충돌 검사.</summary>
         public void OnCoinAttack()
         {
-            if (Held || !isExecuting || Phase != SkillPhase.Attacking || coinDoneThisStage || currentCoin >= CurrentSkill.coinCount) return;
+            if (Held || !isExecuting || Phase != SkillPhase.Attacking || coinDoneThisStage || currentCoin >= TotalCoins) return;
             if (t - stageStart < CurrentSkill.HitTime(currentCoin) - eventGrace) return;   // 이전 클립의 늦은 이벤트 무시
             var s = CurrentSkill; var r = coinSystem.Toss(stats, currentCoin);
             var ctx = new AttackContext(0, r.heads) { skill = s, owner = this, coinIndex = currentCoin, activeUntil = Time.time + s.activeWindow };
@@ -116,7 +124,7 @@ namespace MoominAction
             if (status != null) status.OnCoinUsed(ctx);   // 출혈: 공격 코인을 쓸 때(같은 ctx.id 로는 한 번만)
             if (!stats.IsAlive) { Interrupt(); return; }   // 출혈로 쓰러짐
             resolver.ResolveAttack(ctx, s);
-            if (isExecuting && currentCoin >= s.coinCount) ApplyAllHeadsEffect(s);
+            if (isExecuting && currentCoin >= TotalCoins) ApplyAllHeadsEffect(s);
         }
         /// <summary>레벨 비교 상대: 적은 쫓는 대상, 플레이어는 조준 대상, 없으면 12m 안 가장 가까운 다른 팀.</summary>
         static readonly Collider[] oppBuf = new Collider[32];
@@ -136,7 +144,7 @@ namespace MoominAction
         public void OpenHitbox() { hitboxHeld = true; if (CurrentAttack != null && !CurrentAttack.cancelled) CurrentAttack.activeUntil = Time.time + CurrentSkill.activeWindow * 3f; }
         public void CloseHitbox() { hitboxHeld = false; if (CurrentAttack != null) CurrentAttack.activeUntil = Mathf.Min(CurrentAttack.activeUntil, Time.time); }
         /// <summary>마지막 공격 뒤 이벤트. 코인이 남아 있으면 무시(각 공격 클립 끝에 있어도 안전).</summary>
-        public void OnSkillFinished() { if (!Held && isExecuting && currentCoin >= CurrentSkill.coinCount && Phase != SkillPhase.Windup) Finish(true); }
+        public void OnSkillFinished() { if (!Held && isExecuting && currentCoin >= TotalCoins && Phase != SkillPhase.Windup) Finish(true); }
 
         void ApplyAllHeadsEffect(SkillDefinition s)
         {

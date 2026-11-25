@@ -195,8 +195,9 @@ namespace MoominAction.EditorTools
                 MakeController(n + ".fbx", Anims + n + ".controller", new[] { "Windup", "Attack1", "Attack2", "Guard", "Dodge", "Hit", "Death" }, new[] { "Attack1", "Attack2", "Dodge", "Hit" });
             }
             if (AssetImporter.GetAtPath(Models + "Mandu.fbx") != null)   // 성문 지기 맨두: 전투 + 대화 몸짓(경례·끄덕·도리도리·웃기)
-                MakeController("Mandu.fbx", Anims + "Mandu.controller", new[] { "Windup", "Attack1", "Attack2", "Attack3", "Guard", "Dodge", "Hit", "Death", "Talk", "Yes", "No", "Salute", "Laugh" },
-                               new[] { "Attack1", "Attack2", "Attack3", "Dodge", "Hit", "Yes", "No", "Salute", "Laugh" });
+                MakeController("Mandu.fbx", Anims + "Mandu.controller",
+                               new[] { "Windup", "TonCharge", "Attack1", "Attack2", "Attack3", "Bat1", "Bat2", "Bat3", "HomeRun", "Charge", "Chomp", "MillionTon", "Guard", "Dodge", "Hit", "Death", "Talk", "Yes", "No", "Salute", "Laugh" },
+                               new[] { "Attack1", "Attack2", "Attack3", "Bat1", "Bat2", "Bat3", "HomeRun", "Charge", "Chomp", "MillionTon", "Dodge", "Hit", "Yes", "No", "Salute", "Laugh" });
             if (AssetImporter.GetAtPath(Models + "Seal.fbx") != null)   // 펫: 전투 상태 + 먹기·기뻐하기·자기(Death = 기절)
                 MakeController("Seal.fbx", Anims + "Seal.controller", new[] { "Windup", "Attack1", "Attack2", "Guard", "Dodge", "Hit", "Death", "Happy", "Eat", "Sleep" }, new[] { "Attack1", "Attack2", "Dodge", "Hit", "Happy", "Eat" });
         }
@@ -330,14 +331,17 @@ namespace MoominAction.EditorTools
                                      new[] { "BLOCK_GEAR", "BLOCK_RAM" });
             if (green != null) { ApplyMaterial(green, "Block_Green", PlasticMaterial("GreenBlock_Plastic", new Color(0.08f, 0.5f, 0.06f), 0.82f)); ApplyMaterial(green, "Block_Gear", PlasticMaterial("GreenBlock_Gear", new Color(0.12f, 0.58f, 0.09f), 0.85f)); Save(green, "GreenBlock"); }
             // ── 성문 지기 맨두(왕실근위대 엘리트 하프물범) — 웨이브·토벌엔 안 나옴(minWave 999). World/CastleGuard.cs 가 성문 앞에 세움
-            var mandu = BuildMonster("Mandu", "맨두", SkillAttribute.Blue, 520f, 260f, 3.4f, 0.48f, 1.1f, 260, 120, 999, 0, playerMask,
-                                     new[] { "MANDU_BUMP", "MANDU_SLAP", "MANDU_ROLL" });
+            var mandu = BuildMonster("Mandu", "맨두", SkillAttribute.Yellow, 900f, 320f, 3.8f, 0.62f, 1.3f, 320, 150, 999, 0, playerMask,
+                                     new[] { "MANDU_BEAT", "MANDU_HOMERUN", "MANDU_CHARGE", "MANDU_CHOMP" });
             if (mandu != null)
             {
                 ApplyMaterial(mandu, "Mandu_Fur", NormalMapped("Mandu_Fur", new Color(0.95f, 0.95f, 0.96f), "Fur_Normal", 9f, 0.14f, 1.0f));
                 ApplyMaterial(mandu, "Mandu_Seam", NormalMapped("Mandu_Seam", new Color(0.84f, 0.84f, 0.86f), "Fur_Normal", 9f, 0.08f, 0.8f));
                 var mgold = new Material(Shader.Find("Standard")) { name = "Mandu_Gold", color = new Color(0.95f, 0.75f, 0.25f) }; mgold.SetFloat("_Metallic", 0.8f); mgold.SetFloat("_Glossiness", 0.7f); ApplyMaterial(mandu, "Mandu_Gold", SaveMat(mgold, "Mandu_Gold"));
                 var meye = new Material(Shader.Find("Standard")) { name = "Mandu_Eye", color = new Color(0.03f, 0.03f, 0.04f) }; meye.SetFloat("_Glossiness", 0.92f); ApplyMaterial(mandu, "Mandu_Eye", SaveMat(meye, "Mandu_Eye"));
+                var mbat = new Material(Shader.Find("Standard")) { name = "Mandu_BatBlue", color = new Color(0.1f, 0.5f, 0.92f) }; mbat.SetFloat("_Glossiness", 0.68f); ApplyMaterial(mandu, "Mandu_BatBlue", SaveMat(mbat, "Mandu_BatBlue"));
+                var mgr = new Material(Shader.Find("Standard")) { name = "Mandu_BatGrip", color = new Color(0.05f, 0.05f, 0.06f) }; mgr.SetFloat("_Glossiness", 0.75f); ApplyMaterial(mandu, "Mandu_BatGrip", SaveMat(mgr, "Mandu_BatGrip"));
+                var mrg = new Material(Shader.Find("Standard")) { name = "Mandu_BatRing", color = new Color(0.88f, 0.9f, 0.94f) }; mrg.SetFloat("_Metallic", 0.95f); mrg.SetFloat("_Glossiness", 0.88f); ApplyMaterial(mandu, "Mandu_BatRing", SaveMat(mrg, "Mandu_BatRing"));
                 mandu.GetComponent<EnemyBrain>().personality = EnemyPersonality.Boss;
                 Save(mandu, "Mandu");
             }
