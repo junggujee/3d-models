@@ -145,6 +145,17 @@ namespace MoominAction
             foreach (var id in new[] { "WHALE_RAM", "WHALE_BEAM", "WHALE_JUMP", "WHALE_FLIPPER", "WHALE_TAIL", "WHALE_SPOUT" }) if (map.TryGetValue(id, out var wsk)) wsk.subject = IllustrationSubject.Whale;   // 일러스트 = 고래 실루엣
             St("WHALE_RAM", StatusType.Tremor, 2, 1); St("WHALE_BEAM", StatusType.Sinking, 2, 2, 1, 1); St("WHALE_JUMP", StatusType.Tremor, 3, 1, 1, 1);
             St("WHALE_FLIPPER", StatusType.PowerDown, 1, 1); St("WHALE_SPOUT", StatusType.Sinking, 1, 2);
+            // ── 맨두(왕실근위대 엘리트 하프물범, 성문 지기) — 타격 = 클립 11프레임(0.33초) · 굴러가기 14프레임(0.43초)
+            Add(S("MANDU_BUMP", "근위대 배치기", 12, 5, 1, 1.0f, 3.5f, 0, 0.8f, 0.33f, 0.7f, new[] { "Attack1" }, 2.6f, 100, 9f, windup: 0.55f, lunge: 6f,
+                  desc: "통통한 배로 힘껏 들이받는다. \"물러서라맨두!\" 합 가능."));
+            Add(S("MANDU_SLAP", "지느러미 찰싹 연타", 7, 3, 3, 0.8f, 5f, 0, 0.45f, 0.33f, 0.6f, new[] { "Attack2" }, 2.4f, 120, 4f, windup: 0.4f, lunge: 1.5f,
+                  desc: "앞지느러미로 찰싹찰싹찰싹 세 번. 맞으면 위력 감소."));
+            Add(S("MANDU_ROLL", "근위대 굴러가기", 15, 5, 1, 1.15f, 8f, 0, 0.8f, 0.43f, 1.0f, new[] { "Attack3" }, 3.2f, 90, 12f, windup: 0.8f, lunge: 11f,
+                  desc: "몸을 한 바퀴 데굴데굴 굴려 돌진한다. 진동을 남긴다. 합 가능."));
+            if (map.TryGetValue("MANDU_ROLL", out var mr)) { mr.lungeDelay = 0.15f; mr.lungeTime = 0.45f; }
+            Look("MANDU_BUMP", SkillAttribute.Blue, SkillMotif.Rush); Look("MANDU_SLAP", SkillAttribute.Yellow, SkillMotif.Flurry); Look("MANDU_ROLL", SkillAttribute.Purple, SkillMotif.Smash);
+            foreach (var id in new[] { "MANDU_BUMP", "MANDU_SLAP", "MANDU_ROLL" }) if (map.TryGetValue(id, out var mk)) mk.subject = IllustrationSubject.Seal;
+            St("MANDU_BUMP", StatusType.Tremor, 1, 1); St("MANDU_SLAP", StatusType.PowerDown, 1, 1); St("MANDU_ROLL", StatusType.Tremor, 3, 1, 1, 1);
             // ── 고래고래 임금님(용궁 보스) 2페이지(각성) 기술 — 사용자 그림: 고래빔(각성) · 박치기 · 회전 탄막 · 딸기 폭탄 · 버블 감옥
             //    탄막·원거리(회전 탄막 · 딸기 폭탄 · 버블 감옥 · 각성 고래빔)는 합 불가 광역: 날아오는 걸 보고 피하기. 박치기만 합 가능(근접)
             Add(S("KING_RAM", "박치기", 14, 5, 2, 1.0f, 5f, 0, 0.85f, 0.37f, 0.9f, new[] { "Attack1", "Attack1" }, 3.8f, 90, 12f, windup: 0.65f, lunge: 13f,

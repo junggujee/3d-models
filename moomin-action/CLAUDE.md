@@ -147,3 +147,8 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 보스 `Enemy/WhaleKing.cs`(금관·망토 = `whale_king_parts.py`/`build_whale_king.py` → Resources/Boss, BoneAttach) — 순찰(`EnemyBrain.externalIdle`), 50% 각성 → KING_* 5종(합 불가 탄막: 회전 탄막 고리 · 딸기 포물선 · 버블 감옥, 박치기만 합 가능). 투사체 여러 발/포물선/감옥 = `SkillDefinition.projectileCount/Spread/Spin/Lob/trapSeconds` + `Combat/ProjectilePattern.cs`(순수 C#).
 - 이야기 퀘스트 `Quests.GrumpyKing`(철썩이, `HarborStory.KingQuest`) — 아이템 royal_pearl. 일러스트 동작 Barrage·Bomb·Bubbles(C# ↔ Python 같이).
 - 퀘스트 완료 뒤 = 생일 파티: `blender/build_party.py`(Party.fbx: 3단 딸기 케이크 · 풍선 Balloon_* · 깃발 · 선물) → `Palace.SetParty`(손님 5 + `PartyGuest`) · `WhaleKing.EnterParty`(팀 Player, 보스바 끔, 케이크 둘레 순찰, F 대화 `Story/KingStory.cs` → "재대결!" = `StartRematch`, 이기면 8초 뒤 다시 파티). 임금님 초상화 `build_whale_king.py --portrait` → king_normal.
+
+## 성문 지기 맨두 (상세: docs/MANDU.md)
+- 모델 `blender/build_mandu.py` → `Models/Mandu.fbx`(+ `--portrait` 초상화). 프리팹 Mandu 는 minWave 999 라 웨이브엔 안 나옴
+- `World/CastleGuard.cs`(CastleGate + ManduGuard): 근무(팀 Player, F 대화) ↔ 전투(보스바, "억지로 들어간다"). 통과 = Quests.Log "castle_gate"
+- `Story/ManduStory.cs` 대사는 말끝마다 "~맨두". 꿀바른 땅콩빵(`honey_peanut_bread`)을 바치면 통과

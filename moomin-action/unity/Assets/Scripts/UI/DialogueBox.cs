@@ -112,6 +112,7 @@ namespace MoominAction.UI
             SetFace(line.face);
             full = line.text ?? ""; visibleLen = VisibleLength(full); typed = 0f; typing = visibleLen > 0; body.text = typing ? "" : full;
             if (dlg.npc != null && !string.IsNullOrEmpty(line.anim)) dlg.npc.Play(line.anim);
+            if (dlg.playAnim != null && !string.IsNullOrEmpty(line.anim)) dlg.playAnim(line.anim);
             line.onShow?.Invoke();
             if (!typing) OnTyped();
         }
@@ -127,6 +128,7 @@ namespace MoominAction.UI
             string key = who + "_" + face; if (faces.TryGetValue(key, out var s)) return s;
             var tex = Resources.Load<Texture2D>("UI/Portraits/" + key);
             if (tex != null) { tex.wrapMode = TextureWrapMode.Clamp; s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(.5f, 0), 100f); }
+            if (s == null && face != "normal") s = Face(who, "normal");   // 그 표정 그림이 없으면 기본 얼굴
             faces[key] = s; return s;
         }
 

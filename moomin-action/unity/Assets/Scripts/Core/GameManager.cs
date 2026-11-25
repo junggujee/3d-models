@@ -46,6 +46,7 @@ namespace MoominAction
             Palace.Ensure();    // 바다 밑 용궁(공기방울 돔 · 결투장 · 고래고래 임금님)
             if (player && !player.TryGetComponent<PlayerSwim>(out _)) player.gameObject.AddComponent<PlayerSwim>();   // 헤엄·잠수(예전 프리팹에도)
             var baker = GetComponent<NavMeshBaker>(); if (baker == null) baker = gameObject.AddComponent<NavMeshBaker>(); baker.Build();
+            CastleGate.Ensure(this);   // 성문 지기 맨두(NavMesh 구운 뒤 — 성 둘레 단 위)
             if (player) player.Died += () => IsOver = true;
             #if UNITY_2023_1_OR_NEWER
             bool hasUi = FindFirstObjectByType<UI.UIRoot>() != null;

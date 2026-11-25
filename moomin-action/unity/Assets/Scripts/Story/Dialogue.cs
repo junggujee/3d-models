@@ -28,6 +28,8 @@ namespace MoominAction
         public Action onEnd;
         /// <summary>대사에 맞춰 동작할 NPC(없으면 null).</summary>
         public Npc npc;
+        /// <summary>Npc 가 아닌 말하는 이(맨두 등)의 몸짓 — 줄마다 anim 이름으로 불림.</summary>
+        public System.Action<string> playAnim;
 
         public DialogueLine Say(string face, string anim, string text) { var l = new DialogueLine { face = face, anim = anim, text = text }; lines.Add(l); return l; }
         public int IndexOf(string label) { if (string.IsNullOrEmpty(label)) return -1; for (int i = 0; i < lines.Count; i++) if (lines[i].label == label) return i; return -1; }

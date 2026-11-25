@@ -74,6 +74,14 @@ namespace MoominAction.EditorTools
                 foreach (var c in sclips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "Sleep"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
                 si.clipAnimations = sclips; si.SaveAndReimport();
             }
+            // 성문 지기 맨두(루프 = Idle·Walk·Run·Guard·Talk)
+            if (AssetImporter.GetAtPath(Models + "Mandu.fbx") is ModelImporter mdi)
+            {
+                mdi.animationType = ModelImporterAnimationType.Generic; mdi.importAnimation = true; mdi.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                var mclips = mdi.defaultClipAnimations;
+                foreach (var c in mclips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "Talk"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
+                mdi.clipAnimations = mclips; mdi.SaveAndReimport();
+            }
             // NPC 조랭하프족(루프 = Idle·Walk·Talk)
             if (AssetImporter.GetAtPath(Models + "Joraeng.fbx") is ModelImporter ji)
             {
@@ -186,6 +194,9 @@ namespace MoominAction.EditorTools
                 if (AssetImporter.GetAtPath(Models + n + ".fbx") == null) { Debug.LogWarning($"Assets/Models/{n}.fbx 가 없습니다."); continue; }
                 MakeController(n + ".fbx", Anims + n + ".controller", new[] { "Windup", "Attack1", "Attack2", "Guard", "Dodge", "Hit", "Death" }, new[] { "Attack1", "Attack2", "Dodge", "Hit" });
             }
+            if (AssetImporter.GetAtPath(Models + "Mandu.fbx") != null)   // 성문 지기 맨두: 전투 + 대화 몸짓(경례·끄덕·도리도리·웃기)
+                MakeController("Mandu.fbx", Anims + "Mandu.controller", new[] { "Windup", "Attack1", "Attack2", "Attack3", "Guard", "Dodge", "Hit", "Death", "Talk", "Yes", "No", "Salute", "Laugh" },
+                               new[] { "Attack1", "Attack2", "Attack3", "Dodge", "Hit", "Yes", "No", "Salute", "Laugh" });
             if (AssetImporter.GetAtPath(Models + "Seal.fbx") != null)   // 펫: 전투 상태 + 먹기·기뻐하기·자기(Death = 기절)
                 MakeController("Seal.fbx", Anims + "Seal.controller", new[] { "Windup", "Attack1", "Attack2", "Guard", "Dodge", "Hit", "Death", "Happy", "Eat", "Sleep" }, new[] { "Attack1", "Attack2", "Dodge", "Hit", "Happy", "Eat" });
         }
@@ -318,6 +329,18 @@ namespace MoominAction.EditorTools
             var green = BuildMonster("GreenBlock", "그린볼런", SkillAttribute.Green, 85f, 140f, 1.5f, 0.36f, 0.66f, 60, 18, 2, 2, playerMask,
                                      new[] { "BLOCK_GEAR", "BLOCK_RAM" });
             if (green != null) { ApplyMaterial(green, "Block_Green", PlasticMaterial("GreenBlock_Plastic", new Color(0.08f, 0.5f, 0.06f), 0.82f)); ApplyMaterial(green, "Block_Gear", PlasticMaterial("GreenBlock_Gear", new Color(0.12f, 0.58f, 0.09f), 0.85f)); Save(green, "GreenBlock"); }
+            // ── 성문 지기 맨두(왕실근위대 엘리트 하프물범) — 웨이브·토벌엔 안 나옴(minWave 999). World/CastleGuard.cs 가 성문 앞에 세움
+            var mandu = BuildMonster("Mandu", "맨두", SkillAttribute.Blue, 520f, 260f, 3.4f, 0.48f, 1.1f, 260, 120, 999, 0, playerMask,
+                                     new[] { "MANDU_BUMP", "MANDU_SLAP", "MANDU_ROLL" });
+            if (mandu != null)
+            {
+                ApplyMaterial(mandu, "Mandu_Fur", NormalMapped("Mandu_Fur", new Color(0.95f, 0.95f, 0.96f), "Fur_Normal", 9f, 0.14f, 1.0f));
+                ApplyMaterial(mandu, "Mandu_Seam", NormalMapped("Mandu_Seam", new Color(0.84f, 0.84f, 0.86f), "Fur_Normal", 9f, 0.08f, 0.8f));
+                var mgold = new Material(Shader.Find("Standard")) { name = "Mandu_Gold", color = new Color(0.95f, 0.75f, 0.25f) }; mgold.SetFloat("_Metallic", 0.8f); mgold.SetFloat("_Glossiness", 0.7f); ApplyMaterial(mandu, "Mandu_Gold", SaveMat(mgold, "Mandu_Gold"));
+                var meye = new Material(Shader.Find("Standard")) { name = "Mandu_Eye", color = new Color(0.03f, 0.03f, 0.04f) }; meye.SetFloat("_Glossiness", 0.92f); ApplyMaterial(mandu, "Mandu_Eye", SaveMat(meye, "Mandu_Eye"));
+                mandu.GetComponent<EnemyBrain>().personality = EnemyPersonality.Boss;
+                Save(mandu, "Mandu");
+            }
             // ── 자원: 땅콩빵(부수면 땅콩빵 조각) — 적 레이어 · 팀 Enemy 라 플레이어 공격이 맞음, 조준·웨이브에는 안 들어감
             var peanutModel = AssetDatabase.LoadAssetAtPath<GameObject>(Models + "PeanutBread.fbx");
             if (peanutModel != null)
@@ -501,7 +524,7 @@ namespace MoominAction.EditorTools
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
             gm.peanutPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "PeanutBread.prefab"); gm.sealPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Seal.prefab");   // 자연: 땅콩빵 · 야생 하프물범
             gm.npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Joraeng.prefab");   // 마을: 조랭이(퀘스트) · 몽글이 · 포실이
-            foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
+            foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock", "Mandu" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");
             RegisterScenes();
         }

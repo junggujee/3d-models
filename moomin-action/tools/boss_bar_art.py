@@ -85,6 +85,26 @@ def whale_king(l, X, Y):
     for (cx, cy, rr) in ((60, 70, 5), (205, 90, 4), (196, 200, 4.5)):            # 반짝이 별
         d = np.hypot(X - cx, Y - cy); a2 = np.arctan2(Y - cy, X - cx); l.put(cov(d - (rr * (0.55 + 0.45 * np.cos(4 * a2)))), hexc('#FFF4C8'))
 
+def mandu(l, X, Y):
+    """맨두: 하얀 동그란 물범 얼굴(정면) + 빨간 근위대 모자(금띠 · 별 · 흰 깃털) + 콧수염."""
+    face = np.hypot((X - 128) / 70, (Y - 150) / 58) - 1
+    l.put(cov(face * 30 + 2), hexc('#1A1E2A')); l.put(cov(face * 30), hexc('#F4F5F8')[None, None] * np.clip(1.15 - ((Y - 100) / 120)[..., None] * .3, .8, 1.2))
+    cap = np.maximum(np.hypot((X - 128) / 52, (Y - 104) / 40) - 1, Y - 108)
+    l.put(cov(cap * 20 + 2), hexc('#2A0505')); l.put(cov(cap * 20), hexc('#D23A3A'))
+    l.put(cov(np.maximum(np.abs(Y - 102) - 4, np.abs(X - 128) - 50)), hexc('#F2C14E'))
+    l.put(cov(np.maximum(np.hypot((X - 128) / 58, (Y - 112) / 9) - 1, 108 - Y) * 10), hexc('#1A1A22'))   # 챙
+    plume = np.hypot((X - 150) / 9, (Y - 50) / 20) - 1; l.put(cov(plume * 9 + 1.5), hexc('#8A8A99')); l.put(cov(plume * 9), hexc('#FFFFFF'))
+    st = np.hypot(X - 128, Y - 82); ang = np.arctan2(Y - 82, X - 128); l.put(cov(st - (7 + 4 * np.cos(5 * (ang + math.pi / 2)))), hexc('#FFE9A0'))
+    for ex in (100, 156):
+        l.put(cov(np.hypot(X - ex, Y - 146) - 8), hexc('#0A0A10')); l.put(cov(np.hypot(X - ex + 2.5, Y - 149) - 2.6), hexc('#FFFFFF'))
+        l.put(cov(np.maximum(np.abs(Y - 130 + (np.abs(X - ex)) * 0.15) - 1.8, np.abs(X - ex) - 9)), hexc('#2A2A30'))   # 눈썹
+    nose = np.maximum(np.maximum(Y - 168, 158 - Y - (8 - np.abs(X - 128))), np.abs(X - 128) - 8); l.put(cov(nose), hexc('#3A3A44'))
+    for sx in (-1, 1):
+        for k in range(3):
+            x0 = 128 + sx * 22; y0 = 172 + k * 6
+            d = np.where((X - x0) * sx > 0, np.abs(Y - y0 - (X - x0) * sx * (k - 1) * 0.12) - 1.2, 9); d = np.maximum(d, (X - x0) * sx - 44)
+            l.put(cov(d), hexc('#6A6A74'))
+
 def default(l, X, Y):
     """일반 보스: 금빛 뿔 달린 가면."""
     mask = np.hypot((X - 128) / 46, (Y - 140) / 54) - 1
@@ -93,4 +113,4 @@ def default(l, X, Y):
     for ex in (108, 148): l.put(cov(np.hypot((X - ex) / 12, (Y - 132) / 7) - 1), hexc('#4A0E0E'))
 
 if __name__ == "__main__":
-    frame(); cap(); emblem("Whale", whale); emblem("WhaleKing", whale_king); emblem("Default", default)
+    frame(); cap(); emblem("Whale", whale); emblem("WhaleKing", whale_king); emblem("Mandu", mandu); emblem("Default", default)

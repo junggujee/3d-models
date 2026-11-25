@@ -41,6 +41,12 @@ namespace MoominAction
             Add(new ItemDef { id = "dust_fire", name = "불꽃 가루", type = ItemType.Material, icon = IconKind.Dust, color = new Color(1f, 0.55f, 0.1f), value = 12, description = "스파크 검에서 튀어 나온 불꽃이 굳은 가루. 대장장이가 좋아한다." });
             Add(new ItemDef { id = "shard_star", name = "별조각", type = ItemType.Material, icon = IconKind.Shard, color = new Color(1f, 0.9f, 0.4f), value = 40, description = "밤하늘에서 떨어진 작은 조각. 검을 담금질하는 데 쓰인다." });
             Add(new ItemDef { id = "feather_silver", name = "은빛 깃털", type = ItemType.Material, icon = IconKind.Feather, color = new Color(0.78f, 0.84f, 0.92f), value = 55, description = "달빛 아래서만 보이는 희귀한 깃털." });
+            Add(new ItemDef { id = "peanut_bread", name = "땅콩빵", type = ItemType.Material, icon = IconKind.Peanut, color = new Color(0.86f, 0.66f, 0.38f), maxStack = 10, value = 60,
+                description = "땅콩빵 조각 9개를 꾹꾹 뭉쳐 구운 동그란 땅콩빵. 고소한 냄새가 솔솔." });
+            Add(new ItemDef { id = "honey", name = "꿀", type = ItemType.Material, icon = IconKind.Potion, color = new Color(1f, 0.75f, 0.2f), maxStack = 10, value = 40,
+                description = "금빛으로 반짝이는 끈적한 꿀. 어디선가 퀘스트로 얻을 수 있다." });
+            Add(new ItemDef { id = "honey_peanut_bread", name = "꿀바른 땅콩빵", type = ItemType.Key, icon = IconKind.Peanut, color = new Color(1f, 0.78f, 0.3f), maxStack = 1, value = 0,
+                description = "땅콩빵에 꿀을 듬뿍 바른 특별한 빵. 성문 지기 맨두가 가장 좋아한다는 소문이 있다맨두." });
             Add(new ItemDef { id = "royal_pearl", name = "임금님의 무지개 진주", type = ItemType.Key, icon = IconKind.Shard, color = new Color(0.9f, 0.82f, 1f), maxStack = 1, value = 0,
                 description = "용궁의 고래고래 임금님이 '친구가 된 기념'이라며 준 진주. 빛에 비추면 무지개가 일렁인다. 어부 철썩이에게 보여 주자." });
             Add(new ItemDef { id = "key_old", name = "낡은 열쇠", type = ItemType.Key, icon = IconKind.Key, color = new Color(0.75f, 0.6f, 0.25f), maxStack = 1, value = 0, description = "어느 문을 여는 열쇠인지는 아무도 기억하지 못한다." });
