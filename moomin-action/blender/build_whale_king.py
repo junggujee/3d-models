@@ -35,3 +35,23 @@ if "--preview" in sys.argv:
     for nm, loc in (("whale_king", Vector((-3.6, -3.4, 1.9))), ("whale_king_back", Vector((3.4, 3.2, 2.6)))):
         cam.location = loc; tgt = Vector((0, -0.4, 0.55)); cam.rotation_euler = (tgt - loc).to_track_quat("-Z", "Y").to_euler()
         sc.render.filepath = os.path.join(PRE, nm + ".png"); bpy.ops.render.render(write_still=True); print("✔", nm)
+if "--portrait" in sys.argv:
+    # 대화창 초상화(임금님): 머리 쪽 3/4 앞모습 · 투명 배경 · Freestyle 외곽선 → Resources/UI/Portraits/king_normal.png
+    for o in (crown, cape): o.hide_render = False
+    sc = bpy.context.scene
+    for o in list(sc.objects):
+        if o.type in ("CAMERA", "LIGHT"): bpy.data.objects.remove(o)
+    w = bpy.data.worlds.new("PW"); w.use_nodes = True; w.node_tree.nodes["Background"].inputs[1].default_value = 0.6; sc.world = w
+    for loc, e in ((Vector((-1.6, -2.4, 2.0)), 160), (Vector((1.8, 0.8, 1.6)), 90)):
+        L = bpy.data.objects.new("L", bpy.data.lights.new("L", "AREA")); L.data.energy = e; L.data.size = 1.6; L.location = loc; sc.collection.objects.link(L)
+        L.rotation_euler = (Vector((0, -0.6, 0.6)) - loc).to_track_quat("-Z", "Y").to_euler()
+    cam = bpy.data.objects.new("PC", bpy.data.cameras.new("PC")); sc.collection.objects.link(cam); sc.camera = cam; cam.data.lens = 50
+    tgt = Vector((0, -0.75, 0.62)); cam.location = tgt + Vector((-1.25, -2.3, 0.35)); cam.rotation_euler = (tgt - cam.location).to_track_quat("-Z", "Y").to_euler()
+    sc.render.engine = "CYCLES"; sc.cycles.samples = 48; sc.cycles.device = "CPU"; sc.cycles.use_denoising = True; sc.render.film_transparent = True
+    sc.render.resolution_x, sc.render.resolution_y = 600, 720; sc.render.image_settings.color_mode = "RGBA"; sc.view_settings.view_transform = "Standard"
+    sc.render.use_freestyle = True; sc.render.line_thickness_mode = "ABSOLUTE"; sc.render.line_thickness = 2.2
+    fs = bpy.context.view_layer.freestyle_settings; ls = fs.linesets[0] if len(fs.linesets) else fs.linesets.new("L")
+    ls.select_by_visibility = True; ls.select_silhouette = True; ls.select_border = True; ls.select_crease = False
+    ls.linestyle = ls.linestyle or bpy.data.linestyles.new("Ink"); ls.linestyle.color = (0.12, 0.08, 0.2); ls.linestyle.thickness = 2.4
+    PDIR = os.path.join(ROOT, "unity", "Assets", "Resources", "UI", "Portraits"); os.makedirs(PDIR, exist_ok=True)
+    sc.render.filepath = os.path.join(PDIR, "king_normal.png"); bpy.ops.render.render(write_still=True); print("✔ king portrait")

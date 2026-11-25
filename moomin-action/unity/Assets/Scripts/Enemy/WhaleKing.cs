@@ -21,7 +21,10 @@ namespace MoominAction
         public const float AggroRange = 26f;
 
         EnemyCombatController ec; EnemyBrain brain; CharacterStats stats; Palace palace; Transform player; readonly List<Renderer> crownGlow = new();
-        int patrolIndex; float nextPatrol, nextLine; bool awakened, introduced, defeated;
+        int patrolIndex; float nextPatrol, nextLine; bool awakened, introduced, defeated, talking, rematch;
+        /// <summary>생일 파티 중(퀘스트를 끝낸 뒤): 싸우지 않고 케이크 둘레를 돌아다니며, F 로 대화 · 재대결.</summary>
+        public bool Peaceful { get; private set; }
+        int hostileLayer = -1;
 
         void Awake() { Current = this; ec = GetComponent<EnemyCombatController>(); brain = GetComponent<EnemyBrain>(); stats = GetComponent<CharacterStats>(); }
         void OnDestroy() { if (Current == this) Current = null; }
@@ -36,6 +39,7 @@ namespace MoominAction
             if (brain != null) { brain.personality = EnemyPersonality.Boss; brain.externalIdle = true; brain.home = null; brain.aggroRange = 0f; }
             Attach("Boss/KingCrown", "head"); Attach("Boss/KingCape", "body");
             stats.Died += OnDied;
+            if (Quests.Log.IsDone(Quests.GrumpyKing)) EnterParty();
         }
 
         void Attach(string path, string bone)
@@ -56,10 +60,56 @@ namespace MoominAction
             return l;
         }
 
+        /// <summary>
+        /// 파티 모드: 팀을 플레이어 편으로(공격·조준·펫 보조 공격 대상이 아님) · 보스바 끔 · 싸우지 않음 · 케이크 둘레 순찰(결투장 8곳).
+        /// </summary>
+        public void EnterParty()
+        {
+            Peaceful = true; rematch = false; awakened = false; introduced = false; talking = false;
+            stats.team = Team.Player; ec.showBossBar = false; stats.epithet = "생일을 맞은 용궁의 임금님";
+            ec.skills = Build(Phase1, 1.15f); ec.basicSkill = ec.skills[0];
+            if (brain != null) brain.aggroRange = 0f;
+            stats.ResetStats();
+        }
+        /// <summary>대화에서 "재대결!" — 대화창이 닫히면 바로 결투(체력 가득, 1페이지부터).</summary>
+        public void RequestRematch() { pendingRematch = true; }
+        bool pendingRematch; Transform[] partyPts;
+        void StartRematch()
+        {
+            pendingRematch = false; Peaceful = false; rematch = true; awakened = false; introduced = true; talking = false;
+            stats.team = Team.Enemy; ec.showBossBar = true; stats.epithet = "생일 결투 중인 임금님"; stats.ResetStats();
+            ec.skills = Build(Phase1, 1.15f); ec.basicSkill = ec.skills[0];
+            Quests.AnnounceNow("재대결!", "고래고래 임금님"); Toast.Show("고래고래 임금님: 생일 특별 결투다! 끼룩끼룩!");
+            nextLine = Time.time + 6f;
+        }
+
+        void PartyUpdate()
+        {
+            if (pendingRematch && !UIState.Paused) { StartRematch(); return; }
+            if (talking) { if (!UIState.Paused) talking = false; else return; }
+            float d = Vector3.Distance(player.position, transform.position);
+            if (d < 6.5f && AirDome.Inside(player.position))
+            {
+                ec.Hold(); Vector3 to = player.position - transform.position; to.y = 0;
+                if (to.sqrMagnitude > 0.1f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), 3f * Time.deltaTime);
+                Interaction.Offer(this, d, "F   고래고래 임금님과 이야기", Talk);
+                return;
+            }
+            Patrol(8);
+        }
+        void Talk()
+        {
+            var ui = UI.UIRoot.Instance; if (ui == null) return;
+            if (ui.StartDialogue(KingStory.Party(this))) { talking = true; ec.Hold(); }
+        }
+
         void Update()
         {
-            if (UIState.Paused || defeated || !stats.IsAlive) return;
+            if (UIState.Paused && !talking) return;
+            if (defeated || !stats.IsAlive) return;
             if (player == null) { var pl = GameObject.FindGameObjectWithTag("Player"); if (pl == null) return; player = pl.transform; }
+            if (Peaceful) { PartyUpdate(); return; }
+            if (UIState.Paused) return;
             bool inside = AirDome.Inside(player.position); float d = Vector3.Distance(player.position, transform.position);
             bool engage = inside && d < AggroRange;
             if (brain != null) brain.aggroRange = engage ? AggroRange + 4f : 0f;
@@ -70,9 +120,10 @@ namespace MoominAction
         }
 
         float nextApproach;
-        void Patrol()
+        void Patrol(int limit = 0)
         {
             var pts = palace != null ? palace.Patrol : null; if (pts == null || pts.Length == 0 || ec.Busy) return;
+            if (limit > 0 && pts.Length > limit) { if (partyPts == null) { partyPts = new Transform[limit]; System.Array.Copy(pts, partyPts, limit); } pts = partyPts; }   // 파티: 케이크 둘레만
             if (patrolIndex >= pts.Length) patrolIndex = 0;
             Vector3 to = pts[patrolIndex].position - transform.position; to.y = 0;
             if (to.magnitude < 2.6f || Time.time >= nextPatrol) { patrolIndex = NextPoint(patrolIndex, pts.Length); nextPatrol = Time.time + 14f; nextApproach = 0f; }
@@ -116,7 +167,13 @@ namespace MoominAction
 
         void OnDied()
         {
-            defeated = true; if (palace != null) palace.KingDefeated();
+            defeated = true; if (palace != null) palace.KingDefeated(rematch || Quests.Log.IsDone(Quests.GrumpyKing));
+            if (rematch || Quests.Log.IsDone(Quests.GrumpyKing))
+            {   // 재대결: 진주 없이, 잠시 뒤 다시 파티로
+                Toast.Show("고래고래 임금님: 끼룩… 또 졌다! 역시 내 친구야! 케이크 먹으러 가자!");
+                Quests.AnnounceNow("재대결 승리!", "다시 생일 파티로");
+                return;
+            }
             Toast.Show("고래고래 임금님: 끼룩… 졌다… 너 정말 세구나!");
             var gm = GameManager.Instance; Inventory inv = null; if (gm != null && gm.player != null) gm.player.TryGetComponent(out inv);
             bool needPearl = inv != null && inv.Count("royal_pearl") == 0 && Quests.Log.State(Quests.GrumpyKing) != QuestState.Completed;

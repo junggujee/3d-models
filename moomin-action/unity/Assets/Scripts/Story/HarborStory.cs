@@ -25,6 +25,9 @@ namespace MoominAction
                     d.Say("troubled", "No", $"임금님이 각성하면 딸기 폭탄이랑 버블 감옥을 쓴대. 떨어질 자리에 분홍 원이 생기면 얼른 밖으로!\n<color=#8A5A1E>퀘스트 — {q.title}</color>").Then("menu");
                     d.Say("sad", "Sad", "그래… 마음이 바뀌면 말해 줘. 임금님이 계속 끼룩끼룩 울고 있대.").Label("kq_no").Then("menu");
                     break;
+                case QuestState.Completed:
+                    d.Say("happy", "Laugh", "용궁에서 임금님 생일 파티가 한창이래! 커다란 딸기 케이크도 있고, 조랭하프 친구들도 다 모였어. 나도 이따 배 타고 갈 거야!");
+                    break;
                 case QuestState.Active:
                     if (!Quests.CanTurnIn(q)) { d.Say("troubled", "No", "임금님은 아직도 삐져 있대… 노란 왕관 부표 아래, 용궁 결투장으로 가 봐!"); break; }
                     d.Say("surprised", "Surprised", "그 반짝이는 건… 무지개 진주?! 임금님이 준 거야?")

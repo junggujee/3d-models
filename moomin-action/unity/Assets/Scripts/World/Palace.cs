@@ -116,13 +116,70 @@ namespace MoominAction
             var go = Instantiate(prefab, at + Vector3.up * 0.1f, f.sqrMagnitude > 0.01f ? Quaternion.LookRotation(f) : Quaternion.identity); go.name = "WhaleKing";
             var k = go.AddComponent<WhaleKing>(); int pl = Experience.Instance != null ? Experience.Instance.level : 1; k.Setup(this, Mathf.Max(12, pl + 2));
         }
-        public void KingDefeated() { respawnAt = Time.time + RespawnSeconds; }
+        public void KingDefeated(bool party = false) { respawnAt = Time.time + (party ? 8f : RespawnSeconds); respawnParty = party; }
+        bool respawnParty;
+
+        // ── 생일 파티(퀘스트 「삐진 고래고래 임금님」을 끝내면) ─────────────
+        GameObject party; readonly List<GameObject> guests = new(); readonly List<(Transform t, Vector3 basePos, float ph)> balloons = new(); bool partyOn; float nextConfetti;
+        static readonly (string name, Color scarf, string[] lines)[] Guests =
+        {
+            ("뽀글이", new Color(0.45f, 0.75f, 1f), new[] { "happy|Laugh|임금님 생일 축하해요~! 공기방울 장식은 제가 다 불었어요!", "happy|Yes|딸기 케이크 냄새… 너무 좋아요. 아직 먹으면 안 되겠죠?" }),
+            ("반짝이", new Color(1f, 0.82f, 0.3f), new[] { "happy|Laugh|저는 수정 등불을 반짝반짝 닦았어요! 생일 파티는 반짝여야죠!", "surprised|Surprised|임금님이 재대결 이야기만 나오면 눈이 반짝해요. 진짜 좋아하나 봐요!" }),
+            ("퐁당이", new Color(0.55f, 0.9f, 0.65f), new[] { "happy|Wave|퐁당! 물속 파티는 처음이에요. 공기방울 안이라 숨도 잘 쉬어져요!", "happy|Laugh|선물 상자 중에 제 거는 분홍 리본이에요. 비밀이에요!" }),
+            ("말랑이", new Color(1f, 0.55f, 0.75f), new[] { "happy|Laugh|생일 노래 연습 많이 했어요! 끼룩끼룩~ 아니 랄랄라~", "sad|Sad|맨 위 큰 딸기는 임금님 거래요… 히잉." }),
+            ("철썩이", new Color(0.86f, 0.3f, 0.27f), new[] { "happy|Laugh|어이, 털복숭이 친구! 나도 배 타고 왔지. 바다가 이렇게 즐거운 건 처음이야!", "happy|Yes|케이크는 땅콩빵 가게에 특별히 부탁했어. 딸기가 마흔 개라고!" }),
+        };
+
+        void SetParty(bool on)
+        {
+            partyOn = on;
+            if (on && party == null)
+            {
+                var prefab = Resources.Load<GameObject>("World/Party");
+                if (prefab == null) { Debug.Log("[용궁] Resources/World/Party.fbx 없음 — blender/build_party.py"); return; }
+                party = Instantiate(prefab); party.name = "Party"; party.transform.SetParent(transform.parent, false);
+                foreach (var t in party.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t.name.StartsWith("Balloon_")) balloons.Add((t, t.position, Random.Range(0f, 6.28f)));
+                    if (!t.name.StartsWith("Party_Collision")) continue;
+                    var mf = t.GetComponent<MeshFilter>(); var mc = t.gameObject.AddComponent<MeshCollider>(); if (mf != null) mc.sharedMesh = mf.sharedMesh;
+                    var r = t.GetComponent<MeshRenderer>(); if (r != null) r.enabled = false;
+                    var ob = t.gameObject.AddComponent<UnityEngine.AI.NavMeshObstacle>(); ob.carving = true; ob.shape = UnityEngine.AI.NavMeshObstacleShape.Capsule; ob.radius = 2.4f; ob.height = 2f;
+                }
+                Seaside.GlowLamps(party); Physics.SyncTransforms();
+                SpawnGuests();
+            }
+            if (party != null) party.SetActive(on);
+            foreach (var g in guests) if (g != null) g.SetActive(on);
+        }
+        void SpawnGuests()
+        {
+            var gm = GameManager.Instance; if (gm == null || gm.npcPrefab == null) return;
+            var cake = Mark("Mark_Cake", Center); int i = 0;
+            foreach (var t in party.GetComponentsInChildren<Transform>(true))
+            {
+                if (!t.name.StartsWith("Mark_Guest_") || i >= Guests.Length) continue;
+                var (name, scarf, lines) = Guests[i++]; Vector3 look = cake - t.position; look.y = 0;
+                var go = Instantiate(gm.npcPrefab, t.position, look.sqrMagnitude > 0.01f ? Quaternion.LookRotation(look) : Quaternion.identity); go.name = "Guest_" + name;
+                if (!go.TryGetComponent<Npc>(out var npc)) npc = go.AddComponent<Npc>();
+                npc.npcName = name; npc.place = "임금님의 생일 파티"; npc.scarfColor = scarf; npc.chatter = lines; npc.wanderRadius = 0.6f; npc.ApplyLook();
+                if (name == "철썩이") { npc.portrait = "fisher"; NpcAccessory.Attach(go, "Npc/FisherHat", "head"); }
+                go.AddComponent<PartyGuest>(); guests.Add(go);
+            }
+        }
 
         void Update()
         {
             if (UIState.Paused) return;
             if (player == null) { var p = GameObject.FindGameObjectWithTag("Player"); if (p != null) player = p.transform; }
-            if (respawnAt > 0f && Time.time >= respawnAt && (player == null || !AirDome.Inside(player.position))) { respawnAt = -1f; SpawnKing(); }
+            if (respawnAt > 0f && Time.time >= respawnAt && (respawnParty || player == null || !AirDome.Inside(player.position))) { respawnAt = -1f; SpawnKing(); }
+            bool wantParty = Quests.Log.IsDone(Quests.GrumpyKing);
+            if (wantParty != partyOn)
+            {
+                SetParty(wantParty);
+                if (wantParty && WhaleKing.Current != null && !WhaleKing.Current.Peaceful) WhaleKing.Current.EnterParty();
+                if (wantParty && respawnAt > 0f) { respawnAt = Time.time + 1f; respawnParty = true; }   // 파티 시작: 임금님 바로 다시
+            }
             var cam = Camera.main; if (cam == null) return; Vector3 cp = cam.transform.position;
             if ((cp - Center).sqrMagnitude > 160f * 160f) return;                      // 멀면 꾸밈 움직임 생략
             float t = Time.time;
@@ -131,6 +188,16 @@ namespace MoominAction
                 var (tr, bp, ph, sc) = jellies[i]; if (tr == null) continue;
                 tr.position = bp + new Vector3(Mathf.Sin(t * 0.3f + ph) * 1.2f, Mathf.Sin(t * 0.8f + ph) * 1.4f, Mathf.Cos(t * 0.25f + ph) * 1.2f);
                 tr.localScale = sc * (1f + 0.08f * Mathf.Sin(t * 2.2f + ph));   // 둥실 + 오므렸다 폈다
+            }
+            for (int i = 0; i < balloons.Count && partyOn; i++)
+            {
+                var (b, bp, ph) = balloons[i]; if (b == null) continue;
+                b.position = bp + new Vector3(Mathf.Sin(t * 0.7f + ph) * 0.15f, Mathf.Sin(t * 1.1f + ph) * 0.25f, Mathf.Cos(t * 0.6f + ph) * 0.15f);
+            }
+            if (partyOn && t >= nextConfetti && player != null && AirDome.Inside(player.position))
+            {   // 색종이 펑!
+                nextConfetti = t + Random.Range(2.5f, 4.5f); var c = Mark("Mark_Cake", Center) + Vector3.up * 4f + Random.insideUnitSphere * 3f;
+                for (int k = 0; k < 4; k++) SparkBurst.Spawn(c, Vector3.up, 14, 4f, Color.HSVToRGB(Random.value, 0.5f, 1f));
             }
             for (int i = 0; i < schools.Count; i++) { var (tr, sp) = schools[i]; if (tr != null) tr.RotateAround(Center, Vector3.up, sp * Time.deltaTime); }
             foreach (var s in shafts) { if (s == null) continue; Vector3 d = s.position - cp; d.y = 0; if (d.sqrMagnitude > 0.01f) s.rotation = Quaternion.LookRotation(d) * Quaternion.Euler(0, 0, 8f); }
