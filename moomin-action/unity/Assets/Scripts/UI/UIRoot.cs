@@ -14,6 +14,9 @@ namespace MoominAction.UI
     {
         public static UIRoot Instance { get; private set; }
         public CharacterStats player; Canvas canvas; HUD hud; Inventory inventory;
+        /// <summary>페이지를 바로 만들어 쓸 때(대장간 등).</summary>
+        public Transform Canvas => canvas != null ? canvas.transform : transform;
+        public CharacterStats Player => player;
         public DialogueBox dialoguePage;
         public WorldMapView worldMap; public PauseMenu pausePage; public SettingsMenu settingsPage; public CharacterSheet sheet; public CodexPage codexPage; public InfoPage controlsPage; public SaveSlotPage savePage, loadPage;
         readonly Stack<MenuPage> stack = new(); MenuPage Current => stack.Count > 0 ? stack.Peek() : null;

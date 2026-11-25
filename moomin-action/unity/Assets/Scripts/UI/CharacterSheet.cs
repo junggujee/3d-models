@@ -319,9 +319,10 @@ namespace MoominAction.UI
                 dName.text = selSlot >= 0 ? SlotDefs[selSlot].label + " 칸 · 비어 있음" : "—"; dType.text = selSlot >= 0 ? "아래 가방에서 낄 장비를 고르세요" : "칸을 고르면 자세히 보입니다";
                 dStars.text = dKeyLabel.text = dKey.text = dFx.text = dDesc.text = ""; dAction.gameObject.SetActive(false); dHint.text = HintText(); return;
             }
-            dName.text = d.name; dType.text = d.TypeLabel + (count > 1 ? $"  ·  {count}개" : "");
+            int enh = inv != null ? inv.Enhance(d.id) : 0;                       // 대장간 강화 단계(+N)
+            dName.text = ForgeMath.Prefix(enh) + d.name; dType.text = d.TypeLabel + (count > 1 ? $"  ·  {count}개" : "");
             dStars.text = Stars(d.grade);
-            if (d.type == ItemType.Weapon) { dKeyLabel.text = "공격력 배율"; dKey.text = "×" + d.damageMultiplier.ToString("0.00"); }
+            if (d.type == ItemType.Weapon) { dKeyLabel.text = "공격력 배율"; dKey.text = "×" + (d.damageMultiplier * ForgeMath.DamageBonus(enh)).ToString("0.00") + (enh > 0 ? $"  (+{enh} 강화)" : ""); }
             else if (d.heal > 0) { dKeyLabel.text = "체력 회복"; dKey.text = "+" + d.heal; }
             else if (d.stamina > 0) { dKeyLabel.text = "스태미나 회복"; dKey.text = "+" + d.stamina; }
             else if (d.Equippable) { var f = EquipmentMath.Describe(d.stats); dKeyLabel.text = "대표 효과"; dKey.text = f.Count > 0 ? f[0].Split(' ')[f[0].Split(' ').Length - 1] : "—"; }

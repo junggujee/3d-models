@@ -82,6 +82,14 @@ namespace MoominAction.EditorTools
                 foreach (var c in mclips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Walk" or "Run" or "Guard" or "Talk"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
                 mdi.clipAnimations = mclips; mdi.SaveAndReimport();
             }
+            // 풍선고래 대장장이(루프 = Idle·Talk·Hammer)
+            if (AssetImporter.GetAtPath(Models + "BalloonWhale.fbx") is ModelImporter bwi)
+            {
+                bwi.animationType = ModelImporterAnimationType.Generic; bwi.importAnimation = true; bwi.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                var bclips = bwi.defaultClipAnimations;
+                foreach (var c in bclips) { c.name = c.name.Contains("|") ? c.name.Split('|').Last() : c.name; c.loopTime = c.name is "Idle" or "Talk" or "Hammer"; c.lockRootRotation = c.lockRootHeightY = c.lockRootPositionXZ = true; c.events = new AnimationEvent[0]; }
+                bwi.clipAnimations = bclips; bwi.SaveAndReimport();
+            }
             // NPC 조랭하프족(루프 = Idle·Walk·Talk)
             if (AssetImporter.GetAtPath(Models + "Joraeng.fbx") is ModelImporter ji)
             {
@@ -194,6 +202,9 @@ namespace MoominAction.EditorTools
                 if (AssetImporter.GetAtPath(Models + n + ".fbx") == null) { Debug.LogWarning($"Assets/Models/{n}.fbx 가 없습니다."); continue; }
                 MakeController(n + ".fbx", Anims + n + ".controller", new[] { "Windup", "Attack1", "Attack2", "Guard", "Dodge", "Hit", "Death" }, new[] { "Attack1", "Attack2", "Dodge", "Hit" });
             }
+            if (AssetImporter.GetAtPath(Models + "BalloonWhale.fbx") != null)   // 풍선고래 대장장이: 망치질 + 대화 몸짓
+                MakeController("BalloonWhale.fbx", Anims + "BalloonWhale.controller", new[] { "Hammer", "Talk", "Yes", "No", "Happy", "Think", "Fail", "Cheer" },
+                               new[] { "Yes", "No", "Happy", "Think", "Fail", "Cheer" });
             if (AssetImporter.GetAtPath(Models + "Mandu.fbx") != null)   // 성문 지기 맨두: 전투 + 대화 몸짓(경례·끄덕·도리도리·웃기)
                 MakeController("Mandu.fbx", Anims + "Mandu.controller",
                                new[] { "Windup", "TonCharge", "Attack1", "Attack2", "Attack3", "Bat1", "Bat2", "Bat3", "HomeRun", "Charge", "Chomp", "MillionTon", "Guard", "Dodge", "Hit", "Death", "Talk", "Yes", "No", "Salute", "Laugh" },
@@ -330,6 +341,20 @@ namespace MoominAction.EditorTools
             var green = BuildMonster("GreenBlock", "그린볼런", SkillAttribute.Green, 85f, 140f, 1.5f, 0.36f, 0.66f, 60, 18, 2, 2, playerMask,
                                      new[] { "BLOCK_GEAR", "BLOCK_RAM" });
             if (green != null) { ApplyMaterial(green, "Block_Green", PlasticMaterial("GreenBlock_Plastic", new Color(0.08f, 0.5f, 0.06f), 0.82f)); ApplyMaterial(green, "Block_Gear", PlasticMaterial("GreenBlock_Gear", new Color(0.12f, 0.58f, 0.09f), 0.85f)); Save(green, "GreenBlock"); }
+            // ── 풍선고래 대장장이(마을 대장간) — Resources/Npc 에 두어 Smithy 가 바로 불러 씀
+            var bwModel = AssetDatabase.LoadAssetAtPath<GameObject>(Models + "BalloonWhale.fbx");
+            if (bwModel != null)
+            {
+                var bg = (GameObject)PrefabUtility.InstantiatePrefab(bwModel); bg.name = "BalloonWhale";
+                var ba = bg.GetComponentInChildren<Animator>(); if (ba == null) ba = bg.AddComponent<Animator>();
+                ba.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "BalloonWhale.controller"); ba.applyRootMotion = false;
+                var bcol = bg.AddComponent<CapsuleCollider>(); bcol.center = new Vector3(0, 0.75f, 0); bcol.radius = 0.5f; bcol.height = 1.4f;
+                ApplyMaterial(bg, "Balloon_Skin", NormalMapped("BalloonWhale_Skin", new Color(0.97f, 0.63f, 0.5f), "Fur_Normal", 5f, 0.05f, 0.5f));
+                var bink = new Material(Shader.Find("Standard")) { name = "BalloonWhale_Ink", color = new Color(0.26f, 0.12f, 0.09f) }; bink.SetFloat("_Glossiness", 0.15f); ApplyMaterial(bg, "Balloon_Ink", SaveMat(bink, "BalloonWhale_Ink"));
+                var biron = new Material(Shader.Find("Standard")) { name = "BalloonWhale_Iron", color = new Color(0.2f, 0.2f, 0.23f) }; biron.SetFloat("_Metallic", 0.85f); biron.SetFloat("_Glossiness", 0.6f); ApplyMaterial(bg, "Balloon_Iron", SaveMat(biron, "BalloonWhale_Iron"));
+                System.IO.Directory.CreateDirectory("Assets/Resources/Npc");
+                PrefabUtility.SaveAsPrefabAsset(bg, "Assets/Resources/Npc/BalloonWhale.prefab"); Object.DestroyImmediate(bg);
+            }
             // ── 성문 지기 맨두(왕실근위대 엘리트 하프물범) — 웨이브·토벌엔 안 나옴(minWave 999). World/CastleGuard.cs 가 성문 앞에 세움
             var mandu = BuildMonster("Mandu", "맨두", SkillAttribute.Yellow, 900f, 320f, 3.8f, 0.62f, 1.3f, 320, 150, 999, 0, playerMask,
                                      new[] { "MANDU_BEAT", "MANDU_HOMERUN", "MANDU_CHARGE", "MANDU_CHOMP" });
@@ -527,6 +552,7 @@ namespace MoominAction.EditorTools
             var gmGo = new GameObject("GameManager"); var gm = gmGo.AddComponent<GameManager>(); gmGo.AddComponent<NavMeshBaker>(); gmGo.AddComponent<ClashManager>();
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
             gm.peanutPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "PeanutBread.prefab"); gm.sealPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Seal.prefab");   // 자연: 땅콩빵 · 야생 하프물범
+            gm.balloonSmithPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Npc/BalloonWhale.prefab");   // 마을 대장간의 풍선고래
             gm.npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Joraeng.prefab");   // 마을: 조랭이(퀘스트) · 몽글이 · 포실이
             foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock", "Mandu" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");

@@ -17,6 +17,8 @@ namespace MoominAction
         {
             public int gold; public List<Slot> slots = new(); public string[] quick = new string[4]; public string weapon;
             public string[] armor = new string[ArmorCount], artifacts = new string[ArtifactCount]; public int preset; public List<Loadout> presets = new();
+            /// <summary>대장간 강화 단계("아이디=단계"). 무기·장비는 하나씩만 가지므로 아이디로 기억하면 충분.</summary>
+            public string[] enhance;
         }
         /// <summary>장비 묶음 하나(프리셋 1~3).</summary>
         [Serializable] public class Loadout
@@ -29,6 +31,19 @@ namespace MoominAction
 
         public const int Capacity = 30, QuickCount = 4;
         public Slot[] slots = new Slot[Capacity]; public string[] quick = new string[QuickCount]; public string equippedWeapon = "sword_spark"; public int gold;
+        /// <summary>대장간 강화 단계(아이디 → +N, 0 은 넣지 않음).</summary>
+        readonly Dictionary<string, int> enhance = new();
+        /// <summary>아이템의 강화 단계(+0 ~ +5).</summary>
+        public int Enhance(string id) => !string.IsNullOrEmpty(id) && enhance.TryGetValue(id, out var v) ? ForgeMath.Clamp(v) : 0;
+        /// <summary>강화 단계를 바꾸고 능력치를 다시 적용(대장간에서만 호출).</summary>
+        public void SetEnhance(string id, int level)
+        {
+            if (string.IsNullOrEmpty(id)) return; level = ForgeMath.Clamp(level);
+            if (level <= 0) enhance.Remove(id); else enhance[id] = level;
+            ApplyWeapon(); ApplyEquipment(); Changed?.Invoke();
+        }
+        /// <summary>화면에 보일 이름("+3 레이저 블레이더").</summary>
+        public string DisplayName(string id) { var d = ItemDatabase.Get(id); return d == null ? "" : ForgeMath.Prefix(Enhance(id)) + d.name; }
         public string[] armor = new string[ArmorCount], artifacts = new string[ArtifactCount]; public int preset; public Loadout[] presets = new Loadout[PresetCount];
         public event Action Changed; public event Action<ItemDef, int> Picked; public event Action<string> Message;
         const string PrefKey = "moomin.inventory";
@@ -102,7 +117,8 @@ namespace MoominAction
         {
             var d = ItemDatabase.Get(equippedWeapon); if (d == null) return;
             if (combat == null) combat = GetComponent<SkillExecutor>(); if (glow == null) glow = GetComponentInChildren<SwordGlow>();
-            if (combat != null) combat.weaponMultiplier = d.damageMultiplier; if (glow != null) glow.hueOverride = d.hue;
+            if (combat != null) combat.weaponMultiplier = d.damageMultiplier * ForgeMath.DamageBonus(Enhance(equippedWeapon));   // 강화 단계마다 공격 배율 +8%
+            if (glow != null) glow.hueOverride = d.hue;
             if (TryGetComponent<CombatManager>(out var cm)) cm.ApplyKit(WeaponKits.Get(string.IsNullOrEmpty(d.kit) ? WeaponKits.Spark : d.kit));   // 무기마다 스킬·방어·고유 효과
         }
 
@@ -169,7 +185,12 @@ namespace MoominAction
             get
             {
                 var t = default(EquipStats);
-                foreach (var id in EquippedIds()) { var d = ItemDatabase.Get(id); if (d != null) t += d.stats; }
+                foreach (var id in EquippedIds())
+                {
+                    var d = ItemDatabase.Get(id); if (d == null) continue; t += d.stats;
+                    int lv = Enhance(id); if (lv <= 0) continue;                       // 대장간 강화: 최종 위력 + · 받는 피해 -
+                    t.finalPower += ForgeMath.PowerBonus(lv); t.damageReduction += ForgeMath.GuardBonus(lv);
+                }
                 return t;
             }
         }
@@ -220,6 +241,8 @@ namespace MoominAction
             var sv = new State { gold = gold, quick = (string[])quick.Clone(), weapon = equippedWeapon, armor = (string[])armor.Clone(), artifacts = (string[])artifacts.Clone(), preset = preset };
             foreach (var s in slots) sv.slots.Add(new Slot { id = s.id, count = s.count });
             presets[preset] = Current(); foreach (var p in presets) sv.presets.Add(p != null ? p.Clone() : new Loadout());
+            var en = new List<string>(); foreach (var kv in enhance) if (kv.Value > 0) en.Add(kv.Key + "=" + kv.Value);
+            sv.enhance = en.ToArray();
             return sv;
         }
         public void Import(State sv)
@@ -236,6 +259,13 @@ namespace MoominAction
             for (int i = 0; i < ArmorCount; i++) armor[i] = sv.armor != null && i < sv.armor.Length && !string.IsNullOrEmpty(sv.armor[i]) ? sv.armor[i] : null;
             for (int i = 0; i < ArtifactCount; i++) artifacts[i] = sv.artifacts != null && i < sv.artifacts.Length && !string.IsNullOrEmpty(sv.artifacts[i]) ? sv.artifacts[i] : null;
             preset = Mathf.Clamp(sv.preset, 0, PresetCount - 1);
+            enhance.Clear();
+            if (sv.enhance != null)
+                foreach (var line in sv.enhance)
+                {
+                    if (string.IsNullOrEmpty(line)) continue; int eq = line.LastIndexOf('='); if (eq <= 0) continue;
+                    if (int.TryParse(line.Substring(eq + 1), out var lv) && lv > 0) enhance[line.Substring(0, eq)] = ForgeMath.Clamp(lv);
+                }
             for (int i = 0; i < PresetCount; i++) presets[i] = sv.presets != null && i < sv.presets.Count && sv.presets[i] != null && sv.presets[i].used ? sv.presets[i].Clone() : null;
             if (glow != null) { ApplyWeapon(); ApplyEquipment(); } Changed?.Invoke();   // 시작 전(Awake)이면 Start 에서 적용
         }

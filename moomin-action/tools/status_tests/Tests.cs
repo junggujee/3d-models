@@ -215,6 +215,22 @@ static class Tests
         Eq(WeaponKits.Get("shield").guardBase > WeaponKits.Get("spark").guardBase, true, "방패가 방어 위력 더 높음"); Eq(WeaponKits.Get("dual").passive, WeaponPassive.DuelHeat, "쌍검 = 결투 고조");
         Eq(WeaponKits.Get("없음").id, "spark", "모르는 무기 → 스파크 검"); Eq(WeaponKits.Get(null).id, "spark", "null → 스파크 검");
 
+        // ── 대장간: 강화(+0~+5) · 제작법
+        Eq(ForgeMath.SuccessChance(0), 0.95f, "+1 성공률 95%", 1e-5f); Eq(ForgeMath.SuccessChance(4), 0.25f, "+5 성공률 25%", 1e-5f);
+        Eq(ForgeMath.SuccessChance(5), 0f, "+5 에서는 더 못 올림", 1e-5f); Eq(ForgeMath.SuccessChance(-1), 0f, "범위 밖 0", 1e-5f);
+        Eq(ForgeMath.Cost(0, 680), 170, "레이저 +1 비용"); Eq(ForgeMath.Cost(4, 680), 2040, "레이저 +5 비용"); Eq(ForgeMath.Cost(0, 40), 40, "싼 무기도 최소 40");
+        Eq(ForgeMath.Cost(1, 680) > ForgeMath.Cost(0, 680), true, "올라갈수록 비쌈"); Eq(ForgeMath.Cost(5, 680), 0, "다 올린 무기는 비용 없음");
+        Eq(ForgeMath.OnFail(0), 0, "+1 실패는 그대로"); Eq(ForgeMath.OnFail(2), 2, "+3 도전 실패는 그대로"); Eq(ForgeMath.OnFail(3), 2, "+4 도전 실패는 한 단계 하락"); Eq(ForgeMath.OnFail(4), 3, "+5 도전 실패는 +3 으로");
+        Eq(ForgeMath.DamageBonus(0), 1f, "+0 배율 그대로", 1e-5f); Eq(ForgeMath.DamageBonus(5), 1.4f, "+5 배율 1.4", 1e-5f); Eq(ForgeMath.DamageBonus(9), 1.4f, "최대 단계로 제한", 1e-5f);
+        Eq(ForgeMath.PowerBonus(3), 1, "+3 최종 위력 +1"); Eq(ForgeMath.PowerBonus(4), 2, "+4 최종 위력 +2"); Eq(ForgeMath.Prefix(0), "", "+0 은 글자 없음"); Eq(ForgeMath.Prefix(3), "+3 ", "+3 글자");
+        Eq(ForgeMath.Clamp(-3), 0, "음수는 0"); Eq(ForgeMath.GuardBonus(4), 0.06f, "+4 피해 감소 6%", 1e-5f);
+        foreach (var rc in ForgeMath.Recipes)
+        {
+            Eq(string.IsNullOrEmpty(rc.result), false, rc.id + " 결과 있음"); Eq(rc.mats != null && rc.mats.Length > 0, true, rc.id + " 재료 있음");
+            Eq(rc.counts != null && rc.counts.Length == rc.mats.Length, true, rc.id + " 재료 개수 짝이 맞음"); Eq(rc.gold >= 0, true, rc.id + " 수고비");
+        }
+        Eq(ForgeMath.GetRecipe("craft_laser").result, "laser_blader", "레이저 제작법"); Eq(ForgeMath.GetRecipe("없음") == null, true, "모르는 제작법은 null");
+
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }

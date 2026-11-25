@@ -41,6 +41,13 @@ namespace MoominAction
             Add(new ItemDef { id = "dust_fire", name = "불꽃 가루", type = ItemType.Material, icon = IconKind.Dust, color = new Color(1f, 0.55f, 0.1f), value = 12, description = "스파크 검에서 튀어 나온 불꽃이 굳은 가루. 대장장이가 좋아한다." });
             Add(new ItemDef { id = "shard_star", name = "별조각", type = ItemType.Material, icon = IconKind.Shard, color = new Color(1f, 0.9f, 0.4f), value = 40, description = "밤하늘에서 떨어진 작은 조각. 검을 담금질하는 데 쓰인다." });
             Add(new ItemDef { id = "feather_silver", name = "은빛 깃털", type = ItemType.Material, icon = IconKind.Feather, color = new Color(0.78f, 0.84f, 0.92f), value = 55, description = "달빛 아래서만 보이는 희귀한 깃털." });
+            // ── 대장간(풍선고래)에서 만드는 장신구
+            Add(new ItemDef { id = "ring_pearl", name = "용궁 진주 반지", type = ItemType.Artifact, grade = "A", icon = IconKind.Artifact, color = new Color(0.86f, 0.92f, 0.98f), maxStack = 1, value = 300,
+                              stats = new EquipStats { finalPower = 1, health = 20f },
+                              description = "용궁의 진주를 박은 반지. 끼고 있으면 마음이 가라앉아 코인이 야무지게 떨어진다." });
+            Add(new ItemDef { id = "charm_tremor", name = "진동 부적", type = ItemType.Artifact, grade = "A", icon = IconKind.Artifact, color = new Color(0.98f, 0.72f, 0.25f), maxStack = 1, value = 280,
+                              stats = new EquipStats { attack = 2.5f, evadePower = 1 },
+                              description = "맨두의 진동 코어를 깎아 만든 부적. 쥐고 있으면 손끝이 찌릿찌릿, 때릴 때마다 울림이 더 멀리 간다." });
             // ── 레이저 블레이더 제작 재료(성문 지기 맨두를 쓰러뜨리면 나옴)
             Add(new ItemDef { id = "mandu_core", name = "맨두의 진동 코어", type = ItemType.Material, grade = "S", icon = IconKind.Artifact, color = new Color(0.95f, 0.8f, 0.2f), maxStack = 5, value = 500,
                 description = "맨두를 쓰러뜨리면 모자 속에서 데구루루 굴러 나오는 노란 결정. 쥐고 있으면 손이 찌릿찌릿 떨린다. 레이저 블레이더의 심장이 된다." });
