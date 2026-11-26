@@ -103,9 +103,9 @@ for i in range(STEP_N):
 b.box((DAIS0 + STEP_N * STEP_D + THRONE_X) / 2 + 0.5, 0, TOP + 0.02, THRONE_X - DAIS0 - STEP_N * STEP_D + 1.0, 2.6, 0.03, "Hall_Carpet")
 
 # ── 벽 · 끝 벽 · 정문 ──────────────────────────────────────────────
-for s in (1, -1): b.box(L / 2, s * (W + 0.5), 9.0, L, 1.0, 18.0, "Hall_Stone")
+for s in (1, -1): b.box(L / 2, s * (W + 0.5), 9.8, L, 1.0, 19.6, "Hall_Stone")   # 통로 볼트 꼭대기(18m + 두께)보다 높게 — 이음매 틈 방지
 for xe, nx in ((-0.5, 0), (L + 0.5, 0)):
-    b.box(xe, 0, 9.0, 1.0, W * 2 + 2, 18.0, "Hall_Stone")
+    b.box(xe, 0, 9.8, 1.0, W * 2 + 2, 19.6, "Hall_Stone")
     arch_plate("x", xe + (0.02 if xe > 0 else -0.02), 0.0, NW + 0.3, SPRING, SPRING, APEX - SPRING + 0.6, 0.96, "Hall_Stone", 32)   # 가운데 박공(뾰족 아치까지 막음, 벽 면보다 살짝 뒤 — 같은 면 겹침 방지)
 def lancet(cx_wall, axis, u, z0, wdt, hgt, pane=True, mats=None, depth=0.25):
     """뾰족 아치 창: 벽(axis='y' → 옆벽 x=u 자리, 'x' → 끝벽 y=u 자리), 아래 z0, 폭 wdt, 높이 hgt"""
@@ -186,8 +186,8 @@ def vault(y0, y1, z0, apex, mat_n="Hall_Vault", n=20):
     prof = arch_pts(w, z0, apex - z0, n)
     bm = bmesh.new(); th = 0.4
     inner = [(yc + py, pz) for py, pz in prof]; outer = [(yc + py * (1 + th / w), pz + th) for py, pz in prof]
-    vi = [[bm.verts.new(F.P(x, py, pz)) for (py, pz) in inner] for x in (0.0, L)]
-    vo = [[bm.verts.new(F.P(x, py, pz)) for (py, pz) in outer] for x in (0.0, L)]
+    vi = [[bm.verts.new(F.P(x, py, pz)) for (py, pz) in inner] for x in (-0.6, L + 0.6)]   # 끝 벽 속으로 파묻음(같은 면 겹침 → 검은 줄 방지)
+    vo = [[bm.verts.new(F.P(x, py, pz)) for (py, pz) in outer] for x in (-0.6, L + 0.6)]
     for i in range(len(prof) - 1):
         bm.faces.new((vi[0][i], vi[1][i], vi[1][i + 1], vi[0][i + 1])); bm.faces.new((vo[0][i + 1], vo[1][i + 1], vo[1][i], vo[0][i]))
         bm.faces.new((vi[0][i + 1], vo[0][i + 1], vo[0][i], vi[0][i])); bm.faces.new((vi[1][i], vo[1][i], vo[1][i + 1], vi[1][i + 1]))
