@@ -46,6 +46,8 @@ namespace MoominAction
                 description = "고래고래 임금님을 이기면 받는 진주. 빛을 비추면 일곱 빛깔로 일렁인다. 레이저 블레이더의 한가운데에 박힌다." });
             Add(new ItemDef { id = "bear_bone", name = "사골곰뼈", type = ItemType.Material, grade = "A", icon = IconKind.Artifact, color = new Color(0.96f, 0.92f, 0.82f), maxStack = 10, value = 150,
                 description = "곰곰이 보스가 아끼던 커다란 뼈. 오래 우려도 단단하다. 레이저 블레이더의 손잡이 심으로 쓴다." });
+            Add(new ItemDef { id = "bear_oil", name = "곰기름", type = ItemType.Material, grade = "B", icon = IconKind.Potion, color = new Color(0.95f, 0.72f, 0.3f), maxStack = 20, value = 80,
+                description = "곰곰이가 겨울잠을 위해 모아 둔 진한 기름. 노랗게 반짝이고 고소한 냄새가 난다. 누군가 꼭 필요로 할 것 같다(퀘스트 재료)." });
             // ── 대장간(풍선고래)에서 만드는 장신구
             Add(new ItemDef { id = "ring_pearl", name = "용궁 진주 반지", type = ItemType.Artifact, grade = "A", icon = IconKind.Artifact, color = new Color(0.86f, 0.92f, 0.98f), maxStack = 1, value = 300,
                               stats = new EquipStats { finalPower = 1, health = 20f },

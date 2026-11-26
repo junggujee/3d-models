@@ -19,6 +19,8 @@ namespace MoominAction
         public Vector3 Post { get; private set; }
         public Vector3 Aside { get; private set; }
         public Quaternion Facing { get; private set; }
+        /// <summary>성 중심에서 성문 지기 자리까지(m) — 아치 성문 바로 안쪽.</summary>
+        public const float GateDistance = 23.5f;
         GameObject prefab; float respawnAt = -1f; Transform postT;
 
         public static void Ensure(GameManager gm)
@@ -31,12 +33,15 @@ namespace MoominAction
         void Awake() { Instance = this; }
         void OnDestroy() { if (Instance == this) Instance = null; }
 
-        /// <summary>성(지도 장소 castle)에서 광장 쪽으로 19m — 성 둘레 단 위(높이 약 8.5m).</summary>
+        /// <summary>
+        /// 성(지도 장소 castle)에서 광장 쪽으로 23.5m = 성 언덕(높이 8.5m)으로 올라오는 비탈길 끝 아치 성문(약 25m) 바로 안쪽.
+        /// 비탈길을 내려다보고 섬 → 올라오는 플레이어와 성문에서 마주침. (19m 는 성문 뒤 안뜰이었음 — 2026-11 성 전체 확인 때 옮김)
+        /// </summary>
         void Place()
         {
             Vector3 castle = MapPlaces.TryWorldPosition("castle", out var cw) ? cw : Vector3.zero, plaza = MapPlaces.TryWorldPosition("plaza", out var pw) ? pw : castle + Vector3.back * 60f;
             Vector3 dir = plaza - castle; dir.y = 0; dir = dir.sqrMagnitude > 0.01f ? dir.normalized : Vector3.back;
-            Vector3 want = castle + dir * 19f;
+            Vector3 want = castle + dir * GateDistance;
             if (Physics.Raycast(want + Vector3.up * 200f, Vector3.down, out var hit, 400f, ~0, QueryTriggerInteraction.Ignore)) want = hit.point;
             if (NavMesh.SamplePosition(want, out var nh, 6f, NavMesh.AllAreas)) want = nh.position;
             Post = want; Facing = Quaternion.LookRotation(dir); Aside = want + Vector3.Cross(Vector3.up, dir) * 2.8f;

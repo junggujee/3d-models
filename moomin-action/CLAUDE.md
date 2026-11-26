@@ -154,6 +154,7 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - `Story/ManduStory.cs` 대사는 말끝마다 "~맨두". 꿀바른 땅콩빵(`honey_peanut_bread`)을 바치면 통과
 - 전투: 속성 노랑 · 타입 진동 · 파란 야구방망이(평소 옆구리, 전투 때 손에). 몽둥이 찜질/홈런!!/맨두맨두(합 방어 → 배치기 반격)/냠냠쫍쫍/맨두돌진 + 필살기 100만톤 맨두(체력 25%)
 - 쓰러뜨리면 레이저 블레이더 재료(`mandu_core`·`bat_alloy`) 드롭. 패배 모션 = 방망이를 놓치고 납작하게 뻗음
+- 자리: 성 언덕(8.5m) 비탈길 끝 아치 성문 바로 안쪽(`CastleGate.GateDistance` 23.5m) — 성 구조는 docs/MANDU.md
 
 ## 마을 대장간 · 풍선고래 대장장이 (상세: docs/SMITHY.md)
 - 건물 `blender/build_smithy.py`(→ Resources/World/Smithy.fbx). `--carve` 는 마을 동쪽 집 하나를 City_TownE·City_Collision 에서 실제로 지움(이미 적용됨 — 다시 돌리지 말 것)
@@ -162,3 +163,9 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 수치는 전부 `Crafting/ForgeMath.cs`(순수 C#, status_tests): 3 × 3 제작법 8개(`Match` = 모양 위치 이동·좌우 뒤집기 허용, shapeless) · 강화 +0~+5(성공률 95/80/60/40/25%, 비용 ×1/2/4/7/12, +4 부터 실패 시 한 단계 하락, 무기는 안 부서짐)
 - 작업대 UI `UI/CraftBench.cs`(SmithPage 제작 쪽, showcase 연출) ↔ 미리보기 `tools/craft_bench_mock.py`(배치 숫자 같이). 곰곰이 보스 = `EnemyCombatController.ConfigureBearBoss`(보스 웨이브 번갈아) → bear_bone · 임금님 → rainbow_pearl
 - 강화 단계는 `Inventory.enhance`(아이디 → +N)에 저장 — 무기·장비는 하나씩만 가지므로 아이디로 충분
+- 곰곰이 = **중간 보스**(체력 ×5 · 위력 ×1.25 · 보스 +3 레벨 없음 — 맨두·임금님보다 약함, 상세 docs/BEAR_BOSS.md) → 사골곰뼈 2 + 곰기름(`bear_oil`, 퀘스트용) 1~2
+
+## 아이템 아이콘(3D 일러스트)
+- `blender/render_item_icons.py`: 그림 없는 아이템마다 작은 3D 소품을 만들어 투명 256px 렌더(Standard 톤 — AgX 는 색이 바램) → `Resources/ItemIcons/<id>.png`. `--all` 다시 · `--only id,id`
+- `tools/icon_fit.py`: 모든 아이콘을 그림 부분에 맞게 잘라 칸의 86% 로 가운데 + 채도 ×1.15(장비 렌더가 작게 나온 것 보정). 새 아이콘을 만들면 다시 돌릴 것
+- 모음 `previews/item_icons_sheet.png`. 새 아이템을 추가하면 render_item_icons.py 에 소품 한 덩어리를 같이 넣을 것(없으면 ItemIcons 의 코드 그림으로 대체됨)

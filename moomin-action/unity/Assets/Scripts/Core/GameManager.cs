@@ -118,7 +118,11 @@ namespace MoominAction
                 GameObject bear = null; foreach (var e in enemyPrefabs) if (e != null && e.name == "SleepyBear") { bear = e; break; }
                 bool bearTurn = bear != null && (Wave / bossEvery) % 2 == 1;
                 Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(bearTurn ? bear : enemyPrefab, bp, Quaternion.identity);
-                if (b.TryGetComponent<EnemyCombatController>(out var becc)) { if (bearTurn) becc.ConfigureBearBoss(); else becc.ConfigureBoss(); becc.SetLevel(LevelMath.EnemyLevel(Wave, 0, becc.levelOffset, true)); }
+                if (b.TryGetComponent<EnemyCombatController>(out var becc))
+                {   // 곰곰이는 중간 보스: 보스 레벨 +3 없이(웨이브 + 곰 +1)
+                    if (bearTurn) { becc.ConfigureBearBoss(); becc.SetLevel(LevelMath.EnemyLevel(Wave, 0, becc.levelOffset, false)); Quests.AnnounceNow("중간 보스", "곰곰이 — 잠꾸러기 곰들의 대장"); }
+                    else { becc.ConfigureBoss(); becc.SetLevel(LevelMath.EnemyLevel(Wave, 0, becc.levelOffset, true)); }
+                }
                 alive.Add(b);
             }
             WaveStarted?.Invoke(Wave);

@@ -21,7 +21,9 @@
 - 기술(`SkillLibrary`): `MANDU_BUMP` 근위대 배치기 · `MANDU_SLAP` 지느러미 찰싹 연타(×3) · `MANDU_ROLL` 근위대 굴러가기 — 일러스트 주제 Seal
 - 보스바 문장 `BossEmblem_Mandu`(`tools/boss_bar_art.py`), 별칭 "왕실근위대 엘리트"
 - `World/CastleGuard.cs`
-  - `CastleGate.Ensure(gm)` — GameManager.Start 에서 NavMesh 구운 뒤. 성(MapPlaces "castle")에서 광장 쪽으로 19m, 성 둘레 단(약 8.5m) 위에 섬
+  - `CastleGate.Ensure(gm)` — GameManager.Start 에서 NavMesh 구운 뒤. 성(MapPlaces "castle")에서 광장 쪽으로 **23.5m**(`CastleGate.GateDistance`)
+  - 성 구조(성 전체 확인, `previews/castle_*.png`): 성은 마을 북쪽 언덕 위 **높이 8.5m 평평한 단**(가장자리 낮은 담) + 가운데 팔각형 성벽 안 본채.
+    올라가는 길은 남동쪽 **비탈길 하나**(땅 → 8.5m)이고, 그 끝(약 25m)에 아치 성문. 맨두는 성문 바로 안쪽에서 비탈길을 내려다봄(예전 19m 는 성문 뒤 안뜰이었음)
   - `ManduGuard` 근무 모드: 팀 Player(공격 안 받음) · 제자리 지킴 · 가까이 오면 바라보고 경례 · F 대화
   - 전투 모드("억지로 들어간다"): 팀 Enemy · 보스바 · aggro 18 · 성문에서 25m 끈(leash) · 플레이어가 32m 넘게 멀어지면 근무로 복귀
   - 쓰러지면 "졌다맨두…" — 그래도 통과 아님, 60초 뒤 다시 근무

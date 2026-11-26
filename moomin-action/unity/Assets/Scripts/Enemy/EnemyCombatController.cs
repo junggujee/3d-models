@@ -121,7 +121,11 @@ namespace MoominAction
             RunStats.Kills++; if (isBoss || showBossBar) RunStats.BossKills++;
             if (GameManager.Instance != null) GameManager.Instance.AddScore(score);
             if (Experience.Instance != null) Experience.Instance.Gain(LevelMath.ExpReward(expReward, stats.level, Experience.Instance.level)); EnemyLoot.Drop(transform.position + Vector3.up * 0.5f, isBoss);
-            if (bearBoss) { ItemPickup.Spawn("bear_bone", 2, transform.position + Vector3.up * 0.8f); Toast.Show("곰곰이: 쿨… 내 사골곰뼈… 가져가… 쿨쿨…"); }
+            if (bearBoss)
+            {
+                ItemPickup.Spawn("bear_bone", 2, transform.position + Vector3.up * 0.8f); ItemPickup.Spawn("bear_oil", Random.value < 0.35f ? 2 : 1, transform.position + Vector3.up * 0.8f, 1.2f);
+                Toast.Show("곰곰이: 쿨… 내 사골곰뼈… 곰기름까지… 가져가… 쿨쿨…");
+            }
             AnyKilled?.Invoke(this);
         }
 
@@ -217,17 +221,21 @@ namespace MoominAction
         }
 
         /// <summary>보스로 전환(웨이브 3마다): 체력 ×6, 크기 ×1.8, 위력 ×1.35, 보스 기술, 신중한 성격.</summary>
-        /// <summary>곰곰이 보스로 만들기(잠꾸러기 곰 프리팹에): 크게 · 체력 ×7 · 곰 기술 강화 + 방어 부수기. 쓰러지면 사골곰뼈 2개.</summary>
+        /// <summary>
+        /// 곰곰이(중간 보스 — 잠꾸러기 곰들의 대장). 잠꾸러기 곰 프리팹에: 크기 ×1.7 · 체력 ×5 · 곰 기술 위력 ×1.25 + 방어 부수기.
+        /// 레벨은 웨이브 + 1(보통 보스의 +3 없음) → 고래고래 임금님·맨두보다 확실히 약함. 쓰러지면 사골곰뼈 2 + 곰기름 1~2.
+        /// </summary>
         public void ConfigureBearBoss()
         {
             isBoss = true; bearBoss = true; score = 120; expReward *= 5; showBossBar = true; bossEmblem = "Bear"; kind = "Gomgomi";
-            stats.displayName = "곰곰이"; stats.epithet = "잠꾸러기 곰들의 대장"; stats.attribute = SkillAttribute.Yellow; stats.maxHealth *= 7f; stats.ResetStats(); stats.ChangeSanity(10, "보스");
-            transform.localScale *= 1.9f; moveSpeed *= 0.9f; if (agent) agent.speed = moveSpeed;
+            stats.displayName = "곰곰이"; stats.epithet = "잠꾸러기 곰들의 대장"; stats.attribute = SkillAttribute.Yellow; stats.maxHealth *= 5f; stats.ResetStats(); stats.ChangeSanity(6, "중간 보스");
+            expReward = Mathf.RoundToInt(expReward * 0.7f);   // 보스 ×5 의 70% = 중간 보스
+            transform.localScale *= 1.7f; moveSpeed *= 0.9f; if (agent) agent.speed = moveSpeed;
             skills = new List<SkillDefinition>();
             foreach (var id in new[] { "HUMAN_JAB", "HUMAN_SLAM", "HUMAN_RUSH", "BOSS_BREAK" })
             {
                 var src = SkillLibrary.Get(id); if (src == null) continue;
-                var c = Instantiate(src); c.basePower = Mathf.RoundToInt(c.basePower * 1.45f); c.range *= 1.6f; c.areaRadius *= 1.6f; skills.Add(c);
+                var c = Instantiate(src); c.basePower = Mathf.RoundToInt(c.basePower * 1.25f); c.range *= 1.5f; c.areaRadius *= 1.5f; skills.Add(c);
             }
             basicSkill = skills.Count > 0 ? skills[0] : null; var brain = GetComponent<EnemyBrain>(); if (brain) brain.personality = EnemyPersonality.Boss;
         }
