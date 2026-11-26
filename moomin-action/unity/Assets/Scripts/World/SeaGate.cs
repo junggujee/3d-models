@@ -11,6 +11,8 @@ namespace MoominAction
     public class SeaGate : MonoBehaviour
     {
         Vector3 front, dest, look; string prompt, label; bool toHarbor; Transform player, sign; CanvasGroup signGroup;
+        /// <summary>다른 곳(성 안 등)에 쓸 때: 도착 알림 · 지나갈 수 있는지 · 못 지나갈 때 알림 · 지난 뒤 할 일.</summary>
+        public string arriveText, blockedText; public System.Func<bool> canUse; public System.Action onArrive; public float signHeight = 4.4f;
 
         public void Configure(Vector3 frontPoint, Vector3 destination, Vector3 lookAt, string promptText, string labelText, bool goesToHarbor)
         {
@@ -33,7 +35,8 @@ namespace MoominAction
         void Use()
         {
             var gm = GameManager.Instance;
-            if (gm != null && gm.InWave) { Toast.Show("전투 중에는 바닷길을 지날 수 없어요"); return; }
+            if (gm != null && gm.InWave) { Toast.Show(arriveText != null ? "전투 중에는 지나갈 수 없어요" : "전투 중에는 바닷길을 지날 수 없어요"); return; }
+            if (canUse != null && !canUse()) { if (!string.IsNullOrEmpty(blockedText)) Toast.Show(blockedText); return; }
             if (player == null) return; var t = player;
             SceneFader.Cover(() =>
             {
@@ -43,14 +46,15 @@ namespace MoominAction
                 if (t.TryGetComponent<PlayerController>(out var pc)) pc.ResetFall();
                 var pet = PetSeal.Current; if (pet != null && pet.command == PetCommand.Follow) pet.WarpNear(t.position - t.forward * 1.5f);
                 var cam = Camera.main; if (cam != null && cam.TryGetComponent<ThirdPersonCamera>(out var tpc)) tpc.SnapBehind();
-                Toast.Show(toHarbor ? "남쪽 선착장 — 짭조름한 바닷바람이 분다" : "조랭하프 마을로 돌아왔다");
+                Toast.Show(arriveText != null ? arriveText : toHarbor ? "남쪽 선착장 — 짭조름한 바닷바람이 분다" : "조랭하프 마을로 돌아왔다");
+                onArrive?.Invoke();
             });
         }
 
         void BuildSign()
         {
             if (sign != null || string.IsNullOrEmpty(label)) return;
-            var go = new GameObject("GateSign", typeof(RectTransform)); go.transform.SetParent(transform, false); go.transform.position = front + Vector3.up * 4.4f;
+            var go = new GameObject("GateSign", typeof(RectTransform)); go.transform.SetParent(transform, false); go.transform.position = front + Vector3.up * signHeight;
             var cv = go.AddComponent<Canvas>(); cv.renderMode = RenderMode.WorldSpace; var rt = (RectTransform)go.transform; rt.sizeDelta = new Vector2(600, 120); rt.localScale = Vector3.one * 0.008f;
             signGroup = go.AddComponent<CanvasGroup>(); signGroup.alpha = 0f;
             var tgo = new GameObject("Text", typeof(RectTransform)); tgo.transform.SetParent(go.transform, false); ((RectTransform)tgo.transform).sizeDelta = new Vector2(600, 120);

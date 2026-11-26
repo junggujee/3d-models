@@ -86,6 +86,7 @@ namespace MoominAction
         /// <summary>가장 가까운 주요 장소 이름(저장 슬롯 표시용). 데이터가 없으면 "도시".</summary>
         public static string NearestName(Vector3 world)
         {
+            if (CastleInterior.Inside(world)) return "하프물범 여왕의 성 · 알현실";
             if (Palace.Near(world)) return "바다 밑 용궁";
             if (Seaside.InHarbor(world)) return "남쪽 선착장";
             var d = Data; if (d == null || d.landmarks == null || d.landmarks.Length == 0) return "도시";

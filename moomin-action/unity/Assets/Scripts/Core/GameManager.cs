@@ -46,6 +46,7 @@ namespace MoominAction
             Seaside.Ensure();   // 남쪽 바다·선착장(충돌·바다·선착장 NavMesh 자리) — NavMesh 굽기 전에
             Palace.Ensure();    // 바다 밑 용궁(공기방울 돔 · 결투장 · 고래고래 임금님)
             Smithy.Ensure();    // 마을 대장간(화덕 불빛 · 굴뚝 연기 · 풍선고래 대장장이)
+            CastleInterior.Ensure();   // 하프물범 여왕의 성 안(알현실) — 성 팔각 성벽 앞 문으로 오감
             if (player && !player.TryGetComponent<PlayerSwim>(out _)) player.gameObject.AddComponent<PlayerSwim>();   // 헤엄·잠수(예전 프리팹에도)
             var baker = GetComponent<NavMeshBaker>(); if (baker == null) baker = gameObject.AddComponent<NavMeshBaker>(); baker.Build();
             CastleGate.Ensure(this);   // 성문 지기 맨두(NavMesh 구운 뒤 — 성 둘레 단 위)
@@ -79,7 +80,7 @@ namespace MoominAction
             }
             if (!waveActive && Time.time >= nextWave && enemyPrefab && player)
             {
-                if (Seaside.InHarbor(player.transform.position)) nextWave = Time.time + 2f;   // 선착장에서는 쉬어 감(웨이브 멈춤)
+                if (Seaside.InHarbor(player.transform.position) || CastleInterior.Inside(player.transform.position)) nextWave = Time.time + 2f;   // 선착장에서는 쉬어 감(웨이브 멈춤)
                 else SpawnWave();
             }
         }

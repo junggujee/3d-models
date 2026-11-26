@@ -169,3 +169,7 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - `blender/render_item_icons.py`: 그림 없는 아이템마다 작은 3D 소품을 만들어 투명 256px 렌더(Standard 톤 — AgX 는 색이 바램) → `Resources/ItemIcons/<id>.png`. `--all` 다시 · `--only id,id`
 - `tools/icon_fit.py`: 모든 아이콘을 그림 부분에 맞게 잘라 칸의 86% 로 가운데 + 채도 ×1.15(장비 렌더가 작게 나온 것 보정). 새 아이콘을 만들면 다시 돌릴 것
 - 모음 `previews/item_icons_sheet.png`. 새 아이템을 추가하면 render_item_icons.py 에 소품 한 덩어리를 같이 넣을 것(없으면 ItemIcons 의 코드 그림으로 대체됨)
+
+## 하프물범 여왕의 성 · 성 안 (상세: docs/CASTLE.md)
+- 설계: 주인 하프물범 여왕 · 웅장한 왕궁풍(사용자 참고 그림) + 하프물범 얼굴·장식·조각상 · 여러 층 + 지하. **다른 방은 만들기 전에 사용자에게 확인**
+- 알현실 `blender/build_castle_hall.py` → Resources/World/CastleHall.fbx(성 위 하늘 z 260m 닫힌 실내 + 바깥 문 CastleDoor 는 성 팔각 성벽 앞) → `World/CastleInterior.cs`(문 = SeaGate 재사용, 맨두 통과해야 열림, 성 안 웨이브 멈춤)
