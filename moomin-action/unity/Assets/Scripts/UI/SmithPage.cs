@@ -6,7 +6,7 @@ namespace MoominAction.UI
 {
     /// <summary>
     /// 대장간 화면(풍선고래에게 F → 선택지). 두 쪽:
-    ///  ① 제작 — 재료 + 수고비로 무기·장신구를 만든다(ForgeMath.Recipes). 모자란 재료는 붉게.
+    ///  ① 제작 — 3 × 3 작업대(UI/CraftBench): 가방 재료를 모양에 맞게 놓으면 결과가 나옴(ForgeMath.Match).
     ///  ② 강화 — 가진 무기·장비를 돈으로 +5 까지. 성공률·비용·실패했을 때 어떻게 되는지 미리 보여 준다.
     ///     두들기는 연출(화덕이 번쩍 · 망치 소리에 맞춰 화면이 흔들림 · 불똥) 뒤에 성공/실패가 뜬다.
     /// 수치는 모두 ForgeMath(순수 C#)에 있고 여기서는 보여 주기만 한다.
@@ -14,7 +14,7 @@ namespace MoominAction.UI
     public class SmithPage : MenuPage
     {
         const float W = 1180f, H = 760f;
-        BalloonSmith smith; Inventory inv; int tab; string pickRecipe, pickItem;
+        BalloonSmith smith; Inventory inv; int tab; string pickItem; CraftBench bench;
         Image panel; Transform listRoot, infoRoot; Text goldText, tabCraft, tabEnh;
         readonly List<GameObject> rows = new();
         float anvilT = -1f; int anvilStep; bool anvilSuccess; string anvilItem; int anvilFrom;
@@ -44,6 +44,7 @@ namespace MoominAction.UI
             listRoot = UIFactory.NewRect("List", panel.transform); UIFactory.At((RectTransform)listRoot, new Vector2(0, 1), new Vector2(40, -200), new Vector2(470, H - 260));
             infoRoot = UIFactory.NewRect("Info", panel.transform); UIFactory.At((RectTransform)infoRoot, new Vector2(1, 1), new Vector2(-40, -200), new Vector2(600, H - 260));
             ((RectTransform)listRoot).pivot = new Vector2(0, 1); ((RectTransform)infoRoot).pivot = new Vector2(1, 1);
+            if (inv != null) { bench = new CraftBench(inv, smith, () => { if (goldText != null) goldText.text = "골드  " + inv.gold.ToString("N0"); }); bench.Build(panel.transform); }
             flash = UIFactory.Box(panel.transform, "Flash", new Color(1f, 0.8f, 0.4f, 0f)); UIFactory.Stretch(flash.rectTransform); flash.raycastTarget = false;
             var close = UIFactory.Txt(panel.transform, "Esc  닫기", 22, UITheme.Muted, TextAnchor.MiddleCenter);
             UIFactory.At(close.rectTransform, new Vector2(.5f, 0), new Vector2(0, 28), new Vector2(300, 32));
@@ -56,7 +57,7 @@ namespace MoominAction.UI
             UIFactory.At(im.rectTransform, new Vector2(.5f, 1), new Vector2(x + 90f, -158), new Vector2(180, 46));
             var t = UIFactory.StyleHeading(UIFactory.Txt(im.transform, label, 28, UITheme.Cream, TextAnchor.MiddleCenter));
             UIFactory.Stretch(t.rectTransform);
-            UIFactory.OnClick(im.gameObject, () => { if (anvilT >= 0f) return; tab = which; pickRecipe = pickItem = null; Refresh(); });
+            UIFactory.OnClick(im.gameObject, () => { if (anvilT >= 0f || (bench != null && bench.Busy)) return; tab = which; pickItem = null; Refresh(); });
             return t;
         }
 
@@ -68,28 +69,9 @@ namespace MoominAction.UI
             goldText.text = "골드  " + inv.gold.ToString("N0");
             tabCraft.color = tab == 0 ? UITheme.GoldBright : UITheme.Muted; tabEnh.color = tab == 1 ? UITheme.GoldBright : UITheme.Muted;
             Clear();
-            if (tab == 0) BuildCraftList(); else BuildEnhanceList();
-            BuildInfo();
-        }
-
-        // ── ① 제작
-        void BuildCraftList()
-        {
-            float y = 0;
-            foreach (var r in ForgeMath.Recipes)
-            {
-                var def = ItemDatabase.Get(r.result); if (def == null) continue;
-                bool have = inv.Contains(r.result) && !def.Stackable;
-                var row = Row(listRoot, y, def, have ? def.name + "  (가지고 있음)" : def.name, CanCraft(r) ? UITheme.Cream : UITheme.Muted, r.id == pickRecipe);
-                string id = r.id; UIFactory.OnClick(row, () => { pickRecipe = id; Refresh(); });
-                y -= 74f;
-            }
-        }
-        bool CanCraft(ForgeMath.Recipe r)
-        {
-            if (inv.gold < r.gold) return false;
-            for (int i = 0; i < r.mats.Length; i++) if (inv.Count(r.mats[i]) < r.Need(i)) return false;
-            var def = ItemDatabase.Get(r.result); return def != null && (def.Stackable || !inv.Contains(r.result));
+            if (bench != null) { bench.root.gameObject.SetActive(tab == 0); if (tab == 0) bench.Refresh(); }
+            ((RectTransform)listRoot).gameObject.SetActive(tab == 1); ((RectTransform)infoRoot).gameObject.SetActive(tab == 1);
+            if (tab == 1) { BuildEnhanceList(); BuildInfo(); }
         }
 
         // ── ② 강화
@@ -134,25 +116,6 @@ namespace MoominAction.UI
             float y = 0;
             void Line(string s, int size, Color c) { var t = UIFactory.Txt(infoRoot, s, size, c, TextAnchor.UpperLeft); UIFactory.At(t.rectTransform, new Vector2(1, 1), new Vector2(0, y), new Vector2(580, size + 16)); t.rectTransform.pivot = new Vector2(1, 1); t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow; rows.Add(t.gameObject); y -= size + 18; }
             if (anvilT >= 0f) { Line(anvilStep < 3 ? "두드리는 중…" : (anvilSuccess ? "성공!" : "실패…"), 40, anvilSuccess || anvilStep < 3 ? UITheme.GoldBright : UITheme.Red); return; }
-            if (tab == 0)
-            {
-                var r = ForgeMath.GetRecipe(pickRecipe);
-                if (r == null) { Line("왼쪽에서 만들 것을 고르세요.", 26, UITheme.Muted); return; }
-                var def = ItemDatabase.Get(r.result);
-                Line(def.name, 36, UITheme.GoldBright); Line(r.note, 24, UITheme.Cream); Line("", 10, UITheme.Cream);
-                Line("필요한 재료", 28, UITheme.Gold);
-                for (int i = 0; i < r.mats.Length; i++)
-                {
-                    var m = ItemDatabase.Get(r.mats[i]); if (m == null) continue;
-                    int have = inv.Count(r.mats[i]), need = r.Need(i);
-                    Line($"· {m.name}  {have} / {need}", 25, have >= need ? UITheme.Cream : UITheme.Red);
-                }
-                Line($"· 수고비  {inv.gold:N0} / {r.gold:N0} 골드", 25, inv.gold >= r.gold ? UITheme.Cream : UITheme.Red);
-                bool already = def != null && !def.Stackable && inv.Contains(r.result);
-                if (already) Line("이미 가지고 있어요.", 25, UITheme.Muted);
-                Button("만들기", CanCraft(r), () => Craft(r));
-            }
-            else
             {
                 if (string.IsNullOrEmpty(pickItem)) { Line("왼쪽에서 강화할 것을 고르세요.", 26, UITheme.Muted); return; }
                 var def = ItemDatabase.Get(pickItem); if (def == null) return;
@@ -180,19 +143,6 @@ namespace MoominAction.UI
             rows.Add(im.gameObject);
         }
 
-        void Craft(ForgeMath.Recipe r)
-        {
-            if (!CanCraft(r)) return;
-            for (int i = 0; i < r.mats.Length; i++) inv.Remove(r.mats[i], r.Need(i));
-            inv.gold -= r.gold; inv.Add(r.result, 1, silent: true);
-            var def = ItemDatabase.Get(r.result);
-            if (smith != null) smith.Play("Cheer");
-            ForgeFx.Burst(smith != null ? smith.transform.position + Vector3.up * 0.9f : Vector3.zero, true);
-            Toast.Show("풍선고래: 자, 다 됐어! " + PetSeal.Josa(def.name, "을", "를") + " 만들었어~");
-            Quests.AnnounceNow("제작 완료", def.name);
-            pickRecipe = null; Refresh();
-        }
-
         void Enhance(string id, int lv, int cost, float chance)
         {
             if (inv.gold < cost) return;
@@ -203,6 +153,7 @@ namespace MoominAction.UI
 
         public override void Tick()
         {
+            if (bench != null && tab == 0) bench.Tick(Time.unscaledDeltaTime);
             if (anvilT < 0f) return;
             anvilT += Time.unscaledDeltaTime;
             int step = anvilT < 0.55f ? 0 : anvilT < 1.1f ? 1 : anvilT < 1.65f ? 2 : 3;
@@ -231,7 +182,7 @@ namespace MoominAction.UI
             if (anvilT > 2.6f) { anvilT = -1f; Refresh(); }
         }
 
-        public override bool HandleCancel() => anvilT >= 0f;       // 두드리는 중엔 못 닫음
+        public override bool HandleCancel() => anvilT >= 0f || (bench != null && bench.Busy);       // 두드리는 중 · 특별 제작 중엔 못 닫음
         public override void Close() { base.Close(); if (root != null) Object.Destroy(root); }
     }
 }

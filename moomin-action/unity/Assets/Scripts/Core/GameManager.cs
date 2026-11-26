@@ -113,7 +113,14 @@ namespace MoominAction
                 var go = Instantiate(prefab, p, Quaternion.identity); alive.Add(go);
                 if (go.TryGetComponent<EnemyCombatController>(out var ec)) ec.SetLevel(LevelMath.EnemyLevel(Wave, UnityEngine.Random.Range(-1, 2), ec.levelOffset, false));
             }
-            if (boss) { Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(enemyPrefab, bp, Quaternion.identity); if (b.TryGetComponent<EnemyCombatController>(out var becc)) { becc.ConfigureBoss(); becc.SetLevel(LevelMath.EnemyLevel(Wave, 0, becc.levelOffset, true)); } alive.Add(b); }
+            if (boss)
+            {   // 보스 웨이브: 곰곰이(잠꾸러기 곰 대장 — 사골곰뼈) ↔ 거대한 그림자 번갈아(첫 보스는 곰곰이)
+                GameObject bear = null; foreach (var e in enemyPrefabs) if (e != null && e.name == "SleepyBear") { bear = e; break; }
+                bool bearTurn = bear != null && (Wave / bossEvery) % 2 == 1;
+                Vector3 bp = SpawnPoint(spawnRadius); var b = Instantiate(bearTurn ? bear : enemyPrefab, bp, Quaternion.identity);
+                if (b.TryGetComponent<EnemyCombatController>(out var becc)) { if (bearTurn) becc.ConfigureBearBoss(); else becc.ConfigureBoss(); becc.SetLevel(LevelMath.EnemyLevel(Wave, 0, becc.levelOffset, true)); }
+                alive.Add(b);
+            }
             WaveStarted?.Invoke(Wave);
         }
     }

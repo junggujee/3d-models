@@ -159,5 +159,6 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 - 건물 `blender/build_smithy.py`(→ Resources/World/Smithy.fbx). `--carve` 는 마을 동쪽 집 하나를 City_TownE·City_Collision 에서 실제로 지움(이미 적용됨 — 다시 돌리지 말 것)
 - 대장장이 `blender/build_balloon_whale.py` → Models/BalloonWhale.fbx(풍선이라 떠 있음). 프리팹은 Resources/Npc/BalloonWhale, GameManager.balloonSmithPrefab
 - 런타임 `World/Smithy.cs`(화덕 불빛·굴뚝 연기·NavMesh) · `World/BalloonSmith.cs`(F 대화) · `Story/SmithStory.cs` · `UI/SmithPage.cs` · `Effects/ForgeFx.cs`
-- 수치는 전부 `Crafting/ForgeMath.cs`(순수 C#, status_tests): 제작법 6개 · 강화 +0~+5(성공률 95/80/60/40/25%, 비용 ×1/2/4/7/12, +4 부터 실패 시 한 단계 하락, 무기는 안 부서짐)
+- 수치는 전부 `Crafting/ForgeMath.cs`(순수 C#, status_tests): 3 × 3 제작법 8개(`Match` = 모양 위치 이동·좌우 뒤집기 허용, shapeless) · 강화 +0~+5(성공률 95/80/60/40/25%, 비용 ×1/2/4/7/12, +4 부터 실패 시 한 단계 하락, 무기는 안 부서짐)
+- 작업대 UI `UI/CraftBench.cs`(SmithPage 제작 쪽, showcase 연출) ↔ 미리보기 `tools/craft_bench_mock.py`(배치 숫자 같이). 곰곰이 보스 = `EnemyCombatController.ConfigureBearBoss`(보스 웨이브 번갈아) → bear_bone · 임금님 → rainbow_pearl
 - 강화 단계는 `Inventory.enhance`(아이디 → +N)에 저장 — 무기·장비는 하나씩만 가지므로 아이디로 충분

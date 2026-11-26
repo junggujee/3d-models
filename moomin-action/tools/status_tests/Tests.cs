@@ -226,9 +226,25 @@ static class Tests
         Eq(ForgeMath.Clamp(-3), 0, "음수는 0"); Eq(ForgeMath.GuardBonus(4), 0.06f, "+4 피해 감소 6%", 1e-5f);
         foreach (var rc in ForgeMath.Recipes)
         {
-            Eq(string.IsNullOrEmpty(rc.result), false, rc.id + " 결과 있음"); Eq(rc.mats != null && rc.mats.Length > 0, true, rc.id + " 재료 있음");
-            Eq(rc.counts != null && rc.counts.Length == rc.mats.Length, true, rc.id + " 재료 개수 짝이 맞음"); Eq(rc.gold >= 0, true, rc.id + " 수고비");
+            Eq(string.IsNullOrEmpty(rc.result), false, rc.id + " 결과 있음"); Eq(rc.Needs().Count > 0, true, rc.id + " 재료 있음");
+            Eq(ForgeMath.Match(ForgeMath.Layout(rc)) == rc, true, rc.id + " 안내 배치가 그대로 맞음");
+            if (rc.pattern != null) foreach (var row in rc.pattern) { Eq(row.Length, rc.pattern[0].Length, rc.id + " 모양 폭 같음"); foreach (var kc in row) if (kc != '.') Eq(rc.Key(kc) != null, true, rc.id + " 글자 " + kc + " 재료 있음"); }
         }
+        string[] G(params string[] cells) { var g = new string[9]; for (int i = 0; i < cells.Length && i < 9; i++) g[i] = cells[i] == "-" ? null : cells[i]; return g; }
+        string P = "peanut_piece", BA = "bat_alloy", BB = "bear_bone", RP = "rainbow_pearl";
+        Eq(ForgeMath.Match(G(P, P, P, P, P, P, P, P, P))?.result, "peanut_bread", "땅콩빵 조각 9개 → 땅콩빵");
+        Eq(ForgeMath.Match(G(P, P, P, P, "-", P, P, P, P)) == null, true, "조각 8개는 안 됨");
+        Eq(ForgeMath.Match(G("-", "-", "-", "honey", "-", "-", "-", "-", "peanut_bread"))?.result, "honey_peanut_bread", "꿀 + 땅콩빵(아무 데나)");
+        Eq(ForgeMath.Match(G("honey", "peanut_bread", "honey")) == null, true, "꿀이 하나 더 있으면 안 됨");
+        Eq(ForgeMath.Match(G(BA, "-", BB, "-", RP, "-", BB, "-", BA))?.result, "laser_blader", "레이저 블레이더(X 모양)");
+        Eq(ForgeMath.Match(G(BB, "-", BA, "-", RP, "-", BA, "-", BB))?.result, "laser_blader", "좌우 뒤집어도 됨");
+        Eq(ForgeMath.Match(G(BA, BB, "-", "-", RP, "-", BB, "-", BA)) == null, true, "모양이 틀리면 안 됨");
+        Eq(ForgeMath.Match(G(BA, "-", BB, "-", RP, "-", BB, "-", "-")) == null, true, "방망이 조각이 하나 모자람");
+        Eq(ForgeMath.Match(G("-", "-", "-", "-", "-", "-", "shard_star", "feather_silver", "shard_star"))?.result, "headband_blue", "한 줄 모양은 아래 줄에 놓아도 됨");
+        Eq(ForgeMath.Match(G("dust_fire", "-", "-", "mandu_core", "-", "-", "dust_fire"))?.result, "charm_tremor", "세로 한 줄(왼쪽)");
+        Eq(ForgeMath.Match(G()) == null, true, "빈 작업대는 없음"); Eq(ForgeMath.Match(null) == null, true, "null 은 없음");
+        var needs = ForgeMath.GetRecipe("craft_laser").Needs(); Eq(needs["bat_alloy"], 2, "레이저: 방망이 조각 2"); Eq(needs["bear_bone"], 2, "레이저: 사골곰뼈 2"); Eq(needs["rainbow_pearl"], 1, "레이저: 무지개 진주 1");
+        Eq(ForgeMath.GetRecipe("craft_peanut").Needs()["peanut_piece"], 9, "땅콩빵: 조각 9");
         Eq(ForgeMath.GetRecipe("craft_laser").result, "laser_blader", "레이저 제작법"); Eq(ForgeMath.GetRecipe("없음") == null, true, "모르는 제작법은 null");
 
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");

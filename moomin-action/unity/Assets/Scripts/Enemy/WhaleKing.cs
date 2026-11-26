@@ -168,6 +168,7 @@ namespace MoominAction
         void OnDied()
         {
             defeated = true; if (palace != null) palace.KingDefeated(rematch || Quests.Log.IsDone(Quests.GrumpyKing));
+            ItemPickup.Spawn("rainbow_pearl", 1, transform.position + Vector3.up * 1.4f, 1.4f);   // 이길 때마다 무지개 진주(작업대 재료)
             if (rematch || Quests.Log.IsDone(Quests.GrumpyKing))
             {   // 재대결: 진주 없이, 잠시 뒤 다시 파티로
                 Toast.Show("고래고래 임금님: 끼룩… 또 졌다! 역시 내 친구야! 케이크 먹으러 가자!");

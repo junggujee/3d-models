@@ -105,6 +105,26 @@ def mandu(l, X, Y):
             d = np.where((X - x0) * sx > 0, np.abs(Y - y0 - (X - x0) * sx * (k - 1) * 0.12) - 1.2, 9); d = np.maximum(d, (X - x0) * sx - 44)
             l.put(cov(d), hexc('#6A6A74'))
 
+def bear(l, X, Y):
+    """곰곰이: 졸린 갈색 곰 얼굴(둥근 귀 · 감긴 눈 · 밝은 주둥이 · 코) + 머리 위 Zzz + 사골곰뼈."""
+    head = np.hypot((X - 128) / 64, (Y - 140) / 58) - 1
+    ears = np.minimum(np.hypot(X - 78, Y - 86) - 24, np.hypot(X - 178, Y - 86) - 24)
+    s = np.minimum(head * 40, ears)
+    l.put(cov(s + 2), hexc('#1E1008')); l.put(cov(s), hexc('#8A5A33'))
+    for ex in (78, 178): l.put(cov(np.hypot(X - ex, Y - 88) - 12), hexc('#D9A877'))
+    muzzle = np.hypot((X - 128) / 34, (Y - 166) / 24) - 1; l.put(cov(muzzle * 20), hexc('#E8C9A0'))
+    l.put(cov(np.hypot((X - 128) / 13, (Y - 154) / 9) - 1), hexc('#2A1608'))
+    for ex in (100, 156):                                                        # 감긴 눈(아래로 둥근 선)
+        d = np.abs(np.hypot(X - ex, Y - 122) - 13) - 2.4; l.put(cov(np.maximum(d, 122 - Y)), hexc('#2A1608'))
+    l.put(cov(np.maximum(np.abs(np.hypot(X - 128, Y - 168) - 14) - 2.2, 168 - Y)), hexc('#2A1608'))   # 입
+    bone = np.minimum(np.maximum(np.abs(Y - 214) - 6, np.abs(X - 128) - 44), np.minimum.reduce([np.hypot(X - xx, Y - yy) - 9 for xx in (84, 172) for yy in (206, 222)]))
+    l.put(cov(bone + 2), hexc('#3A2A18')); l.put(cov(bone), hexc('#F4EBD6'))
+    for (zx, zy, zs) in ((186, 52, 1.0), (206, 34, 0.75)):                      # Zzz
+        z = np.maximum.reduce([np.abs(X - zx) - 9 * zs, np.abs(Y - zy) - 9 * zs])
+        zi = np.maximum(np.abs((Y - zy) + (X - zx)) - 2.5, np.abs(X - zx) - 7 * zs)
+        zz = np.minimum.reduce([np.maximum(np.abs(Y - (zy - 8 * zs)) - 2.2, np.abs(X - zx) - 8 * zs), np.maximum(np.abs(Y - (zy + 8 * zs)) - 2.2, np.abs(X - zx) - 8 * zs), zi])
+        l.put(cov(np.maximum(zz, z)), hexc('#CFE3FF'))
+
 def default(l, X, Y):
     """일반 보스: 금빛 뿔 달린 가면."""
     mask = np.hypot((X - 128) / 46, (Y - 140) / 54) - 1
@@ -113,4 +133,4 @@ def default(l, X, Y):
     for ex in (108, 148): l.put(cov(np.hypot((X - ex) / 12, (Y - 132) / 7) - 1), hexc('#4A0E0E'))
 
 if __name__ == "__main__":
-    frame(); cap(); emblem("Whale", whale); emblem("WhaleKing", whale_king); emblem("Mandu", mandu); emblem("Default", default)
+    frame(); cap(); emblem("Whale", whale); emblem("WhaleKing", whale_king); emblem("Mandu", mandu); emblem("Bear", bear); emblem("Default", default)

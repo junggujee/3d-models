@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace MoominAction
 {
     /// <summary>
-    /// 대장간 계산(순수 C# — UnityEngine 없음, tools/status_tests 로 검증).
+    /// 대장간 계산(순수 C# — UnityEngine 없음, tools/status_tests 로 검증): 강화 수치 + 3 × 3 작업대 제작법 맞추기.
     ///
     /// ■ 강화: +0 ~ +5. 돈만 내면 누구나, 다만 올라갈수록 비싸지고 잘 실패한다.
     ///   성공률  +1 95% · +2 80% · +3 60% · +4 40% · +5 25%
@@ -40,29 +40,126 @@ namespace MoominAction
         /// <summary>이름 앞에 붙일 글자("+3 " · +0 이면 빈 글자).</summary>
         public static string Prefix(int level) => Clamp(level) > 0 ? "+" + Clamp(level) + " " : "";
 
-        /// <summary>제작법 한 줄: 결과 1개 = 재료들 + 수고비.</summary>
+        // ── 제작(3 × 3 작업대 — 마인크래프트처럼 재료를 모양에 맞게 놓으면 결과가 나옴) ─────────────
+        //    칸 하나 = 재료 1개. 모양은 작업대 어디에 놓아도 되고(위치 이동), 좌우를 뒤집어도 됨.
+        //    모양 없는 제작법(shapeless)은 칸 위치와 상관없이 재료 종류·개수만 맞으면 됨.
+
+        /// <summary>제작법 한 줄.</summary>
         public class Recipe
         {
-            public string id, result, note; public int gold; public string[] mats; public int[] counts;
-            /// <summary>재료 i 가 몇 개 필요한가.</summary>
-            public int Need(int i) => counts != null && i < counts.Length ? counts[i] : 1;
+            public string id, result, note; public int count = 1;
+            /// <summary>모양(위에서 아래로 행, '.' = 빈칸, 글자 = keys 의 재료). null 이면 모양 없는 제작법.</summary>
+            public string[] pattern;
+            /// <summary>글자 → 재료 아이디. 예: "A=bat_alloy B=bear_bone"</summary>
+            public string keys;
+            /// <summary>모양 없는 제작법의 재료(같은 재료를 여러 번 적으면 그만큼).</summary>
+            public string[] shapeless;
+            /// <summary>특별 제작 연출(레이저 블레이더처럼 큰 물건).</summary>
+            public bool showcase;
+
+            public string Key(char c)
+            {
+                if (string.IsNullOrEmpty(keys)) return null;
+                foreach (var part in keys.Split(' '))
+                    if (part.Length > 2 && part[0] == c && part[1] == '=') return part.Substring(2);
+                return null;
+            }
+            /// <summary>재료별 필요 개수.</summary>
+            public Dictionary<string, int> Needs()
+            {
+                var d = new Dictionary<string, int>();
+                void Add(string id) { if (string.IsNullOrEmpty(id)) return; d.TryGetValue(id, out var n); d[id] = n + 1; }
+                if (pattern != null) { foreach (var row in pattern) foreach (var c in row) if (c != '.') Add(Key(c)); }
+                else if (shapeless != null) foreach (var id in shapeless) Add(id);
+                return d;
+            }
         }
 
-        /// <summary>풍선고래가 만들 수 있는 것들(재료 + 수고비). 재료는 ItemDatabase 의 id.</summary>
+        public const int GridSize = 3, GridCells = 9;
+
+        /// <summary>작업대 9칸(행 우선, 빈칸 = null/"") 에 맞는 제작법. 없으면 null.</summary>
+        public static Recipe Match(IList<string> grid)
+        {
+            if (grid == null || grid.Count < GridCells) return null;
+            int r0 = GridSize, r1 = -1, c0 = GridSize, c1 = -1, filled = 0;
+            for (int i = 0; i < GridCells; i++)
+            {
+                if (string.IsNullOrEmpty(grid[i])) continue;
+                int r = i / GridSize, c = i % GridSize; filled++;
+                if (r < r0) r0 = r; if (r > r1) r1 = r; if (c < c0) c0 = c; if (c > c1) c1 = c;
+            }
+            if (filled == 0) return null;
+            int h = r1 - r0 + 1, w = c1 - c0 + 1;
+            foreach (var rc in Recipes)
+            {
+                if (rc.pattern == null)
+                {
+                    if (rc.shapeless == null || rc.shapeless.Length != filled) continue;
+                    var need = rc.Needs(); var have = new Dictionary<string, int>();
+                    for (int i = 0; i < GridCells; i++) if (!string.IsNullOrEmpty(grid[i])) { have.TryGetValue(grid[i], out var n); have[grid[i]] = n + 1; }
+                    if (SameCounts(need, have)) return rc;
+                    continue;
+                }
+                if (rc.pattern.Length != h || rc.pattern[0].Length != w) continue;
+                if (Fits(rc, grid, r0, c0, h, w, false) || Fits(rc, grid, r0, c0, h, w, true)) return rc;
+            }
+            return null;
+        }
+        static bool Fits(Recipe rc, IList<string> grid, int r0, int c0, int h, int w, bool mirror)
+        {
+            for (int r = 0; r < h; r++)
+                for (int c = 0; c < w; c++)
+                {
+                    char k = rc.pattern[r][mirror ? w - 1 - c : c];
+                    string want = k == '.' ? null : rc.Key(k), got = grid[(r0 + r) * GridSize + c0 + c];
+                    if (string.IsNullOrEmpty(want) != string.IsNullOrEmpty(got)) return false;
+                    if (!string.IsNullOrEmpty(want) && want != got) return false;
+                }
+            return true;
+        }
+        static bool SameCounts(Dictionary<string, int> a, Dictionary<string, int> b)
+        {
+            if (a.Count != b.Count) return false;
+            foreach (var kv in a) if (!b.TryGetValue(kv.Key, out var n) || n != kv.Value) return false;
+            return true;
+        }
+        /// <summary>제작법을 작업대에 놓는 자리(가운데 정렬) — 제작법 책에서 자동으로 채울 때·흐린 안내 그림.</summary>
+        public static string[] Layout(Recipe rc)
+        {
+            var g = new string[GridCells];
+            if (rc == null) return g;
+            if (rc.pattern != null)
+            {
+                int h = rc.pattern.Length, w = rc.pattern[0].Length, or = (GridSize - h) / 2, oc = (GridSize - w) / 2;
+                for (int r = 0; r < h; r++) for (int c = 0; c < w; c++) { char k = rc.pattern[r][c]; if (k != '.') g[(or + r) * GridSize + oc + c] = rc.Key(k); }
+            }
+            else if (rc.shapeless != null)
+            {
+                int[] order = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };   // 가운데부터
+                for (int i = 0; i < rc.shapeless.Length && i < GridCells; i++) g[order[i]] = rc.shapeless[i];
+            }
+            return g;
+        }
+
+        /// <summary>풍선고래 대장간 작업대의 제작법.</summary>
         public static readonly List<Recipe> Recipes = new()
         {
-            new Recipe { id = "craft_laser", result = "laser_blader", gold = 600, note = "맨두를 쓰러뜨려 얻은 진동 코어로 벼려 내는 푸른 광선검.",
-                         mats = new[] { "mandu_core", "bat_alloy", "shard_star", "dust_fire" }, counts = new[] { 1, 3, 6, 4 } },
-            new Recipe { id = "craft_spin", result = "spin_blades", gold = 320, note = "바람개비처럼 도는 쌍검. 별 조각을 날로 쓴다.",
-                         mats = new[] { "shard_star", "dust_fire", "feather_silver" }, counts = new[] { 8, 5, 1 } },
-            new Recipe { id = "craft_pillow", result = "pillow_shield", gold = 180, note = "푹신한 베개 방패. 은빛 깃털을 속에 넣는다.",
-                         mats = new[] { "feather_silver", "shard_star" }, counts = new[] { 2, 4 } },
-            new Recipe { id = "craft_headband", result = "headband_blue", gold = 90, note = "파란 머리띠. 코인 위력이 조금 오른다.",
-                         mats = new[] { "shard_star", "feather_silver" }, counts = new[] { 3, 1 } },
-            new Recipe { id = "craft_pearl_ring", result = "ring_pearl", gold = 260, note = "용궁의 진주를 박은 반지. 정신력이 단단해진다.",
-                         mats = new[] { "royal_pearl", "shard_star" }, counts = new[] { 1, 5 } },
-            new Recipe { id = "craft_core_charm", result = "charm_tremor", gold = 240, note = "맨두의 진동 코어를 깎아 만든 부적. 진동이 더 잘 쌓인다.",
-                         mats = new[] { "mandu_core", "dust_fire" }, counts = new[] { 1, 6 } },
+            new Recipe { id = "craft_laser", result = "laser_blader", showcase = true, note = "방망이 조각을 대각선으로, 반대 대각선엔 사골곰뼈, 한가운데 무지개 진주. 푸른 광선검이 깨어난다.",
+                         pattern = new[] { "A.B", ".C.", "B.A" }, keys = "A=bat_alloy B=bear_bone C=rainbow_pearl" },
+            new Recipe { id = "craft_peanut", result = "peanut_bread", note = "땅콩빵 조각 9개로 작업대를 꽉 채우면 동그란 땅콩빵이 된다.",
+                         pattern = new[] { "PPP", "PPP", "PPP" }, keys = "P=peanut_piece" },
+            new Recipe { id = "craft_honey", result = "honey_peanut_bread", note = "땅콩빵 + 꿀. 어디에 놓아도 된다. 성문 지기 맨두가 제일 좋아하는 빵.",
+                         shapeless = new[] { "peanut_bread", "honey" } },
+            new Recipe { id = "craft_spin", result = "spin_blades", note = "네 귀퉁이에 별 조각, 가운데 줄에 불씨 가루 · 은빛 깃털 · 불씨 가루.",
+                         pattern = new[] { "S.S", "DFD", "S.S" }, keys = "S=shard_star D=dust_fire F=feather_silver" },
+            new Recipe { id = "craft_pillow", result = "pillow_shield", note = "별 조각 사이에 은빛 깃털을 세로로 두 줄.",
+                         pattern = new[] { "SFS", "SFS" }, keys = "S=shard_star F=feather_silver" },
+            new Recipe { id = "craft_headband", result = "headband_blue", note = "별 조각 · 은빛 깃털 · 별 조각을 한 줄로.",
+                         pattern = new[] { "SFS" }, keys = "S=shard_star F=feather_silver" },
+            new Recipe { id = "craft_pearl_ring", result = "ring_pearl", note = "무지개 진주를 별 조각 네 개로 감싼다.",
+                         pattern = new[] { ".S.", "SPS", ".S." }, keys = "S=shard_star P=rainbow_pearl" },
+            new Recipe { id = "craft_core_charm", result = "charm_tremor", note = "맨두의 진동 코어 위아래로 불씨 가루.",
+                         pattern = new[] { "D", "M", "D" }, keys = "D=dust_fire M=mandu_core" },
         };
         public static Recipe GetRecipe(string id) { foreach (var r in Recipes) if (r.id == id) return r; return null; }
     }

@@ -41,6 +41,11 @@ namespace MoominAction
             Add(new ItemDef { id = "dust_fire", name = "불꽃 가루", type = ItemType.Material, icon = IconKind.Dust, color = new Color(1f, 0.55f, 0.1f), value = 12, description = "스파크 검에서 튀어 나온 불꽃이 굳은 가루. 대장장이가 좋아한다." });
             Add(new ItemDef { id = "shard_star", name = "별조각", type = ItemType.Material, icon = IconKind.Shard, color = new Color(1f, 0.9f, 0.4f), value = 40, description = "밤하늘에서 떨어진 작은 조각. 검을 담금질하는 데 쓰인다." });
             Add(new ItemDef { id = "feather_silver", name = "은빛 깃털", type = ItemType.Material, icon = IconKind.Feather, color = new Color(0.78f, 0.84f, 0.92f), value = 55, description = "달빛 아래서만 보이는 희귀한 깃털." });
+            // ── 레이저 블레이더 작업대 재료(3 × 3 — 방망이 조각 대각선 2 · 사골곰뼈 2 · 무지개 진주 1)
+            Add(new ItemDef { id = "rainbow_pearl", name = "무지개 진주", type = ItemType.Material, grade = "S", icon = IconKind.Shard, color = new Color(0.95f, 0.82f, 1f), maxStack = 5, value = 400,
+                description = "고래고래 임금님을 이기면 받는 진주. 빛을 비추면 일곱 빛깔로 일렁인다. 레이저 블레이더의 한가운데에 박힌다." });
+            Add(new ItemDef { id = "bear_bone", name = "사골곰뼈", type = ItemType.Material, grade = "A", icon = IconKind.Artifact, color = new Color(0.96f, 0.92f, 0.82f), maxStack = 10, value = 150,
+                description = "곰곰이 보스가 아끼던 커다란 뼈. 오래 우려도 단단하다. 레이저 블레이더의 손잡이 심으로 쓴다." });
             // ── 대장간(풍선고래)에서 만드는 장신구
             Add(new ItemDef { id = "ring_pearl", name = "용궁 진주 반지", type = ItemType.Artifact, grade = "A", icon = IconKind.Artifact, color = new Color(0.86f, 0.92f, 0.98f), maxStack = 1, value = 300,
                               stats = new EquipStats { finalPower = 1, health = 20f },
