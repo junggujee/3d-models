@@ -44,7 +44,8 @@ LEAF = M_("Hall_Leaf", (0.16, 0.38, 0.14), 0.9); POT = M_("Hall_Pot", (0.82, 0.8
 SEAL = M_("Hall_SealStone", (0.97, 0.97, 0.96), 0.35); INK = M_("Hall_Ink", (0.06, 0.06, 0.08), 0.3)
 NAVY = M_("Hall_Velvet", (0.08, 0.12, 0.32), 0.9); RVEL = M_("Hall_RedVelvet", (0.62, 0.05, 0.1), 0.9)
 WOOD = M_("Hall_Wood", (0.42, 0.24, 0.12), 0.7); PEARLM = M_("Hall_Pearl", (0.96, 0.94, 1.0), 0.1)
-MATS = [MARBLE, GOLD, STONE, LAT, LATR, CARPET, HEX, GROUT, VAULT, GB, GP, GR, GY, GW, LEAD, CANDLE, FLAME, LEAF, POT, SEAL, INK, NAVY, RVEL, WOOD, PEARLM]
+BATB = M_("Hall_BatBlue", (0.08, 0.45, 0.9), 0.35); BEAR = M_("Hall_BearBrown", (0.5, 0.31, 0.16), 0.8); BEARL = M_("Hall_BearLight", (0.86, 0.68, 0.48), 0.8)
+MATS = [MARBLE, GOLD, STONE, LAT, LATR, CARPET, HEX, GROUT, VAULT, GB, GP, GR, GY, GW, LEAD, CANDLE, FLAME, LEAF, POT, SEAL, INK, NAVY, RVEL, WOOD, PEARLM, BATB, BEAR, BEARL]
 
 O = Vector((CASTLE.x - 30.0, CASTLE.y, FLOOR))
 F = Frame(O, (1, 0, 0), (0, 1, 0))
@@ -274,6 +275,40 @@ for s in (-1, 1):                                                               
     b.box(L - 0.25, s * 8.8, 10.5, 0.1, 2.6, 9.0, "Hall_Velvet"); b.box(L - 0.22, s * 8.8, 15.1, 0.15, 3.0, 0.25, "Hall_Gold")
     for k in range(3): b.box(L - 0.22, s * 8.8 - 0.9 + 0.9 * k, 5.8, 0.12, 0.6, 0.6, "Hall_Velvet", rot=0.0, tilt=Matrix.Rotation(math.pi / 4, 3, "X"))
     seal_face(L - 0.35, s * 8.8, 12.0, 0.8, (-1, 0, 0))
+
+# ── 맨두 문장 · 곰곰이 문장(사용자 요청: 알현실 장식으로 하나씩) — 왕좌 계단 앞 양옆 벽의 큰 깃발 ──────
+def wall_banner(x, side, cloth):
+    """옆벽(y = side·W)에 걸린 깃발 — 금 막대 + 천 + 아래 술. 메달을 걸 자리(벽 앞 0.35m)를 돌려줌."""
+    yw = side * (W - 0.05)
+    b.box(x, yw, 10.2, 3.4, 0.12, 9.0, cloth); b.box(x, yw - side * 0.04, 14.8, 3.9, 0.2, 0.25, "Hall_Gold")
+    for k in range(3): b.box(x - 1.1 + 1.1 * k, yw, 5.5, 0.75, 0.1, 0.75, cloth, tilt=Matrix.Rotation(math.pi / 4, 3, "Y"))
+    for e in (-1, 1): b.sphere((x + e * 1.95, yw - side * 0.04, 14.8), (0.18, 0.18, 0.18), "Hall_Pearl", seg=10, rings=6)
+    return yw - side * 0.3
+def mandu_emblem(x, yw, side):
+    """맨두 문장: 하얀 물범 얼굴 + 빨간 근위대 모자(금띠·별) + 뒤로 엇갈린 파란 야구방망이 두 개"""
+    f = Vector((0, -side, 0)); up = Vector((0, 0, 1)); sd = f.cross(up).normalized(); c = Vector((x, yw, 10.4))
+    def P(a, bb, out=0.0): return c + sd * a + up * bb + f * out
+    for e in (-1, 1): b.tube([tuple(P(-e * 1.9, -1.9, -0.12)), tuple(P(e * 1.9, 1.9, -0.12))], 0.17, "Hall_BatBlue", sides=8)   # 엇갈린 방망이
+    seal_face(c.x, c.y, c.z, 1.3, tuple(f))
+    cap = P(0, 1.35, 0.12); b.cyl(tuple(cap - up * 0.35), tuple(cap + up * 0.45), 0.62, "Hall_Carpet", seg=16)   # 모자
+    b.torus(tuple(cap - up * 0.25), 0.63, 0.06, "Hall_Gold", seg=20, sides=6); b.torus(tuple(cap + up * 0.4), 0.63, 0.05, "Hall_Gold", seg=20, sides=6)
+    b.sphere(tuple(cap + f * 0.62), (0.16, 0.16, 0.16), "Hall_Gold", seg=10, rings=6)                                  # 금별(작은 금 방울)
+    b.sphere(tuple(cap + up * 0.75 + sd * 0.2), (0.12, 0.12, 0.3), "Hall_Pearl", seg=10, rings=6)                       # 흰 깃털
+def bear_emblem(x, yw, side):
+    """곰곰이 문장: 졸린 갈색 곰 얼굴(둥근 귀 · 감긴 눈 · 밝은 주둥이 · 코) + 아래 사골곰뼈"""
+    f = Vector((0, -side, 0)); up = Vector((0, 0, 1)); sd = f.cross(up).normalized(); c = Vector((x, yw, 10.4))
+    def P(a, bb, out=0.0): return c + sd * a + up * bb + f * out
+    b.cyl(tuple(P(0, 0, -0.05)), tuple(P(0, 0, 0.12)), 1.3, "Hall_BearBrown", seg=28); b.torus(tuple(P(0, 0, 0.1)), 1.3, 0.1, "Hall_Gold", axis=tuple(f), seg=28, sides=6)
+    for e in (-1, 1):
+        b.sphere(tuple(P(e * 1.0, 1.0, 0.0)), (0.45, 0.45, 0.2), "Hall_BearBrown", seg=14, rings=9); b.sphere(tuple(P(e * 1.0, 1.0, 0.12)), (0.25, 0.25, 0.1), "Hall_BearLight", seg=12, rings=8)
+        b.tube([tuple(P(e * 0.62 + k * 0.1 - 0.2, 0.28 - 0.08 * math.sin(math.pi * k / 4) * 1.0, 0.2)) for k in range(5)], 0.045, "Hall_Ink", sides=4)   # 감긴 눈
+    b.sphere(tuple(P(0, -0.35, 0.18)), (0.6, 0.45, 0.2), "Hall_BearLight", seg=16, rings=10); b.sphere(tuple(P(0, -0.2, 0.36)), (0.2, 0.14, 0.1), "Hall_Ink", seg=10, rings=6)
+    b.tube([tuple(P(-0.2, -0.55, 0.35)), tuple(P(0, -0.65, 0.36)), tuple(P(0.2, -0.55, 0.35))], 0.035, "Hall_Ink", sides=4)
+    b.tube([tuple(P(-1.0, -1.65, 0.1)), tuple(P(1.0, -1.65, 0.1))], 0.13, "Hall_SealStone", sides=8)                   # 사골곰뼈
+    for e in (-1, 1):
+        for g in (-1, 1): b.sphere(tuple(P(e * 1.1, -1.65 + g * 0.14, 0.1)), (0.18, 0.18, 0.18), "Hall_SealStone", seg=10, rings=6)
+mandu_emblem(43.0, wall_banner(43.0, 1, "Hall_Velvet"), 1)
+bear_emblem(43.0, wall_banner(43.0, -1, "Hall_RedVelvet"), -1)
 hall = b.done("CastleHall")
 
 # ── 충돌(보이지 않음) ──────────────────────────────────────────────
@@ -342,3 +377,4 @@ if "--preview" in sys.argv:
     shot("castle_hall_entrance.png", F.P(1.5, 0, 7.5), F.P(L, 0, 6.0), 22)
     shot("castle_hall_throne.png", F.P(38, -3.5, 4.0), F.P(THRONE_X, 0, 7.0), 28)
     shot("castle_hall_aisle.png", F.P(10, -11.5, 2.2), F.P(30, 2, 9.0), 20)
+    shot("castle_hall_emblems.png", F.P(36, 0, 5.0), F.P(43.0, 0, 9.5), 16)

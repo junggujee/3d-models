@@ -173,3 +173,4 @@ Blender(bpy 5.3, headless) → FBX/GLB → Unity(C#) 파이프라인. 민미로 
 ## 하프물범 여왕의 성 · 성 안 (상세: docs/CASTLE.md)
 - 설계: 주인 하프물범 여왕 · 웅장한 왕궁풍(사용자 참고 그림) + 하프물범 얼굴·장식·조각상 · 여러 층 + 지하. **다른 방은 만들기 전에 사용자에게 확인**
 - 알현실 `blender/build_castle_hall.py` → Resources/World/CastleHall.fbx(성 위 하늘 z 260m 닫힌 실내 + 바깥 문 CastleDoor 는 성 팔각 성벽 앞) → `World/CastleInterior.cs`(문 = SeaGate 재사용, 맨두 통과해야 열림, 성 안 웨이브 멈춤)
+- 알현실에 맨두 문장·곰곰이 문장 깃발 하나씩(사용자 요청). **다른 왕국 천상국**(구름 위 섬) 계획·참고 그림 = docs/SKY_KINGDOM.md(하프물범 성을 먼저 마무리한 뒤)

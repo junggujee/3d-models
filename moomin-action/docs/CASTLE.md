@@ -16,9 +16,10 @@
 - 창: 양옆 뾰족 아치 스테인드글라스 10폭(파랑 + 보라·빨강·금·흰 조각, 금 테두리) · 끝 벽 3폭 + **물범 얼굴 장미창**
 - 조각상: 정문 쪽 하프물범 한 쌍(진주를 안고 작은 왕관) · 왕좌 양옆 큰 한 쌍(1.55배)
 - **거대한 왕좌**(높이 약 15.5m): 금 받침·틀 · 남색 벨벳 등받이 · 붉은 방석 · 물범 머리 팔걸이 · 양옆 진주 기둥 · 꼭대기 물범 얼굴 문장 + 진주 왕관 · 양옆 물범 문장 깃발
+- **맨두 문장 · 곰곰이 문장**(사용자 요청 — 하나씩): 왕좌 계단 앞(x 43m) 양옆 벽의 큰 깃발. 왼쪽 남색 깃발 = 맨두(물범 얼굴 + 빨간 근위대 모자 + 엇갈린 파란 방망이) · 오른쪽 붉은 깃발 = 곰곰이(졸린 곰 얼굴 + 사골곰뼈)
 - 정문(안쪽 나무 문 + 물범 문고리) · 바깥 문 `CastleDoor`(맵 좌표 — 성 팔각 성벽 바깥면, 성 중심에서 11.75m, 물범 문장)
 - 충돌 `CastleHall_Collision`(바닥·벽·천장·기둥·계단·왕좌·조각상) · 표시 Mark_Arrive/ArriveLook/ExitDoor/Throne/ThroneSeat/HallCenter/Chandelier_1..3/Window/DoorFront/DoorLook
-- 미리보기 `--preview` → `previews/castle_hall_entrance/throne/aisle.png`
+- 미리보기 `--preview` → `previews/castle_hall_entrance/throne/aisle/emblems.png` · 사용자 참고 그림 `docs/refs/seal_castle_throne_ref.jpg`
 
 ## 런타임 — `World/CastleInterior.cs`
 - `GameManager.Start` 가 NavMesh 전에 `Ensure()`: 충돌 · Glow 재질 · 점광원(샹들리에 3 — 촛불 일렁임 · 창 · 왕좌) · 실내 NavMesh
