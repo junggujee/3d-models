@@ -57,6 +57,19 @@ def arch_z(y, w, z0, h):
     return z0 + math.sqrt(max(0.0, R * R - (y - (w - R)) ** 2))
 def arch_pts(w, z0, h, n=12):
     return [(w * (-1 + 2 * i / n), arch_z(w * (-1 + 2 * i / n), w, z0, h)) for i in range(n + 1)]
+def arch_plate(axis, at, uc, w, zb, z0, h, thick, mat_n, n=24):
+    """뾰족 아치 판 한 덩어리: 아래 zb 부터 아치 꼭대기까지. axis 'x' = 끝 벽(판이 y-z 면, 두께 x) · 'y' = 옆벽(x-z 면, 두께 y). uc = 가로 가운데."""
+    prof = [(uc + u, zb) for u in (-w,)] + [(uc + u, z) for (u, z) in arch_pts(w, z0, h, n)] + [(uc + w, zb)]
+    bm = bmesh.new(); vs = []
+    for d_ in (-thick / 2, thick / 2):
+        row = []
+        for (u, z) in prof: row.append(bm.verts.new(F.P(at + d_, u, z) if axis == "x" else F.P(u, at + d_, z)))
+        vs.append(row)
+    bm.faces.new(vs[0]); bm.faces.new(list(reversed(vs[1])))
+    for i in range(len(prof)):
+        j = (i + 1) % len(prof); bm.faces.new((vs[0][i], vs[0][j], vs[1][j], vs[1][i]))
+    for f_ in bm.faces: f_.material_index = b.M(mat_n)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:]); b.merge(bm)
 
 # ── 바닥: 가운데 대리석 + 금 상감 · 양옆 육각 타일 ─────────────────────
 b.box(L / 2, 0, -0.25, L, NW * 2 + 0.4, 0.5, "Hall_Marble")
@@ -93,8 +106,7 @@ b.box((DAIS0 + STEP_N * STEP_D + THRONE_X) / 2 + 0.5, 0, TOP + 0.02, THRONE_X - 
 for s in (1, -1): b.box(L / 2, s * (W + 0.5), 9.0, L, 1.0, 18.0, "Hall_Stone")
 for xe, nx in ((-0.5, 0), (L + 0.5, 0)):
     b.box(xe, 0, 9.0, 1.0, W * 2 + 2, 18.0, "Hall_Stone")
-    for (yy, zz) in arch_pts(NW, SPRING, APEX - SPRING, 16):                  # 가운데 박공(뾰족 아치까지 막음)
-        b.box(xe, yy, (18.0 + zz) / 2 + 0.3, 1.0, NW * 2 / 16 + 0.2, max(0.2, zz - 18.0 + 0.6), "Hall_Stone")
+    arch_plate("x", xe + (0.02 if xe > 0 else -0.02), 0.0, NW + 0.3, SPRING, SPRING, APEX - SPRING + 0.6, 0.96, "Hall_Stone", 32)   # 가운데 박공(뾰족 아치까지 막음, 벽 면보다 살짝 뒤 — 같은 면 겹침 방지)
 def lancet(cx_wall, axis, u, z0, wdt, hgt, pane=True, mats=None, depth=0.25):
     """뾰족 아치 창: 벽(axis='y' → 옆벽 x=u 자리, 'x' → 끝벽 y=u 자리), 아래 z0, 폭 wdt, 높이 hgt"""
     rows, cols = 10, 3; mats = mats or ["Hall_GlassGlow_Blue"] * 6 + ["Hall_GlassGlow_Purple", "Hall_GlassGlow_Red", "Hall_GlassGlow_Gold", "Hall_GlassGlow_White"]
@@ -118,11 +130,7 @@ def lancet(cx_wall, axis, u, z0, wdt, hgt, pane=True, mats=None, depth=0.25):
     for s in (-1, 1):
         if axis == "y": b.box(u + s * (wdt / 2 + 0.18), cx_wall, (z0 + spring) / 2, 0.22, depth + 0.1, spring - z0, "Hall_Gold")
         else: b.box(cx_wall, u + s * (wdt / 2 + 0.18), (z0 + spring) / 2, depth + 0.1, 0.22, spring - z0, "Hall_Gold")
-    if axis == "y": b.box(u, cx_wall, (z0 + spring) / 2, wdt, depth - 0.1, spring - z0, "Hall_Lead")
-    else: b.box(cx_wall, u, (z0 + spring) / 2, depth - 0.1, wdt, spring - z0, "Hall_Lead")
-    for (pu, pz) in arch_pts(wdt / 2, spring, top - spring, 10):              # 납 뒤판 — 아치 모양대로
-        if axis == "y": b.box(u + pu, cx_wall, (spring + pz) / 2, wdt / 10 + 0.02, depth - 0.1, max(0.05, pz - spring), "Hall_Lead")
-        else: b.box(cx_wall, u + pu, (spring + pz) / 2, depth - 0.1, wdt / 10 + 0.02, max(0.05, pz - spring), "Hall_Lead")
+    arch_plate(axis, cx_wall + (0.04 if cx_wall > 0 else -0.04), u, wdt / 2, z0, spring, top - spring, depth - 0.1, "Hall_Lead", 16)   # 납 뒤판(한 판)
 for s in (1, -1):
     for xw in (4.0, 12.0, 20.0, 28.0, 36.0):
         lancet(s * (W - 0.02), "y", xw, 3.0, 2.4, 10.5)
@@ -257,7 +265,7 @@ b.box(TX, 0, TZ + 1.35, 3.2, 4.6, 1.3, "Hall_Gold")                             
 b.box(TX - 0.1, 0, TZ + 2.12, 3.0, 4.2, 0.35, "Hall_RedVelvet")                    # 붉은 방석
 b.box(TX + 1.6, 0, TZ + 6.6, 0.9, 5.4, 10.0, "Hall_Gold")                           # 등받이
 b.box(TX + 1.12, 0, TZ + 6.8, 0.12, 4.2, 8.2, "Hall_Velvet")                        # 남색 벨벳
-for py, pz in arch_pts(2.7, TZ + 11.6, 3.4, 16): b.box(TX + 1.6, py, (TZ + 11.6 + pz) / 2, 0.9, 5.4 / 16 + 0.05, pz - TZ - 11.6 + 0.3, "Hall_Gold")
+arch_plate("x", TX + 1.6, 0.0, 2.7, TZ + 11.5, TZ + 11.6, 3.4, 0.9, "Hall_Gold", 24)
 for s in (-1, 1):
     b.box(TX + 0.2, s * 2.55, TZ + 2.6, 3.2, 0.5, 0.6, "Hall_Gold"); b.box(TX + 0.2, s * 2.55, TZ + 1.6, 2.6, 0.45, 1.4, "Hall_Gold")
     b.sphere((TX - 1.45, s * 2.55, TZ + 3.15), (0.45, 0.42, 0.4), "Hall_SealStone", seg=18, rings=12)   # 팔걸이 물범 머리
