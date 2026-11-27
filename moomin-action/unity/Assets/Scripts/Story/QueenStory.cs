@@ -4,7 +4,7 @@ using UnityEngine;
 namespace MoominAction
 {
     /// <summary>
-    /// 하프프 왕국의 하프물범 여왕 하프리나(백설궁 알현실, 초상화 queen_* — 금박 메달). 말투: 짐 · ~니라 · ~구나 · ~거라(고풍스럽고 다정하게).
+    /// 하프프 왕국의 하프물범 여왕 하프리나(구래성 알현실, 초상화 queen_* — 금박 메달). 말투: 짐 · ~니라 · ~구나 · ~거라(고풍스럽고 다정하게).
     /// 처음: 여왕 소개 → 민미 소개(선택지) → 왕국 소개 → 퀘스트 「여왕의 등불」(곰기름 2) 제시.
     /// 그 뒤: 선택지 ① 이 왕국에 대해 자세히 소개해줘 민미 ② 장비에 축복을 부탁해 민미(퀘스트 끝내기 전엔 잠김)
     ///             ③ 끼루룩 끼룩끼룩 민미민미 → "? 뭐야 하프 너 고래족이었나." → "어쩔 수 없군." → "넌 지하감옥으로 가라" → 지하감옥
@@ -14,7 +14,7 @@ namespace MoominAction
     {
         public static Dialogue Build(Npc npc)
         {
-            var d = new Dialogue { title = "백설궁 · 알현실", speaker = "하프물범 여왕", portrait = "queen", npc = npc };
+            var d = new Dialogue { title = "구래성 · 알현실", speaker = "하프물범 여왕", portrait = "queen", npc = npc };
             var q = Quests.Get(Quests.QueenLamps);
             if (!Quests.Log.IsDone(Quests.QueenMet)) First(d, q); else Menu(d, q);
             return d;
@@ -26,7 +26,7 @@ namespace MoominAction
         static void First(Dialogue d, QuestDef q)
         {
             d.Say("surprised", "Surprised", "오호… 맨두가 성문을 열어 주었다니. 꿀바른 땅콩빵을 들고 온 손님이 바로 그대로구나.").OnShow(MarkMet);
-            d.Say("normal", "Talk", "짐은 이 백설궁의 주인이자 눈처럼 흰 하프물범들의 여왕, 하프리나니라.");
+            d.Say("normal", "Talk", "짐은 이 구래성의 주인이자 눈처럼 흰 하프물범들의 여왕, 하프리나니라.");
             d.Say("normal", "Idle", "그대는 누구인가? 이름을 들려주겠느냐?")
              .Choose(new DialogueChoice { text = "민미라고 해요! 조랭하프 마을에서 왔어요 민미", next = "me", primary = true });
             d.Say("happy", "Laugh", "민미… 동글동글 귀여운 이름이로구나. 반갑다, 민미.").Label("me");
@@ -62,7 +62,7 @@ namespace MoominAction
 
             // ① 왕국 소개
             d.Say("normal", "Talk", "하프프 왕국은 아주 먼 옛날, 얼음 바다에서 올라온 하프물범들이 세운 나라란다.").Label("lore");
-            d.Say("happy", "Yes", "첫 여왕께서 진주 지팡이로 이 언덕을 콩 두드리시자, 눈처럼 하얀 성이 솟아올랐다고 전해지지. 그게 바로 백설궁이니라.");
+            d.Say("happy", "Yes", "첫 여왕께서 진주 지팡이로 이 언덕을 콩 두드리시자, 눈처럼 하얀 성이 솟아올랐다고 전해지지. 그게 바로 구래성이니라.");
             d.Say("normal", "Talk", "언덕 아래 조랭하프 마을은 짐의 백성들의 마을이고, 남쪽 바다 밑에는 고래족의 용궁이 있단다.");
             d.Say("troubled", "No", "고래족과는… 흠, 오래전 '끼룩 전쟁' 이후로 사이가 조금 서먹하구나. 요즘 고래고래 임금님이 생일 잔치를 연다니 다행이다만.");
             d.Say("normal", "Talk", "성문은 맨두가, 성 안은 근위대가 지킨다. 성 깊은 곳엔 짐도 함부로 열지 않는 보물고와…");
@@ -82,7 +82,7 @@ namespace MoominAction
             d.Say("happy", "QuestComplete", q != null ? $"오오… 이 진한 향! 등불이 다시 별처럼 빛나겠구나. 고맙다, 민미.\n<color=#8A5A1E>보상 — {q.RewardLine}</color>" : "고맙구나.").Label("turnin");
             d.Say("happy", "Yes", "약속대로 이제부터 짐의 축복을 청할 수 있느니라. '장비에 축복을 부탁해'라고 말하거라.").Then("menu");
             d.Say("happy", "Laugh", "고맙구나! 곰곰이는 보스 웨이브에 나타난다. 곰기름 두 병, 기다리마.").Label("accept").Then("menu");
-            d.Say("normal", "Yes", "그래, 조심히 가거라. 백설궁의 문은 언제나 열려 있단다.").Label("bye").End();
+            d.Say("normal", "Yes", "그래, 조심히 가거라. 구래성의 문은 언제나 열려 있단다.").Label("bye").End();
         }
 
         static List<string> lastBlessed = new();

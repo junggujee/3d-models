@@ -65,7 +65,24 @@ namespace MoominAction
             BuildDungeon();
         }
 
-        void Start() { SpawnQueen(); SpawnJailer(); }
+        void Start() { SpawnQueen(); SpawnJailer(); SpawnDolphins(); }
+
+        /// <summary>돌고래 죄수 20: 노역장에서 곡괭이질 7 · 분주히 통통 6 · 감방에 박혀 있음 7(Mark_Cell_*).</summary>
+        void SpawnDolphins()
+        {
+            var gm = GameManager.Instance; if (dungeon == null || gm == null || gm.dolphinPrefab == null) return;
+            var rocks = new List<Transform>(); var cells = new List<Transform>();
+            foreach (var t in dungeon.GetComponentsInChildren<Transform>(true)) { if (t.name == "MineRock") rocks.Add(t); else if (t.name.StartsWith("Mark_Cell_")) cells.Add(t); }
+            Vector3 dc = Mark("Mark_DungeonCenter", dungeon.transform.position); int no = 101;
+            void One(DolphinPrisoner.Mode m, Vector3 at, Transform rock)
+            {
+                var go = Instantiate(gm.dolphinPrefab, at, Quaternion.Euler(0, Random.Range(0f, 360f), 0), dungeon.transform); go.name = "Dolphin_" + no;
+                go.AddComponent<DolphinPrisoner>().Setup(m, no++, at, rock);
+            }
+            for (int i = 0; i < 7 && rocks.Count > 0; i++) { var rk = rocks[(i * 2 + 1) % rocks.Count]; One(DolphinPrisoner.Mode.Mine, rk.position + new Vector3(Mathf.Cos(i * 2.1f), 0, Mathf.Sin(i * 2.1f)) * 1.3f, rk); }
+            for (int i = 0; i < 6; i++) One(DolphinPrisoner.Mode.Busy, dc + new Vector3(Random.Range(-14f, 14f), 0.05f, Random.Range(-6f, 4f)), null);
+            for (int i = 0; i < 7 && i < cells.Count; i++) One(DolphinPrisoner.Mode.Caged, cells[i].position, null);
+        }
 
         // ── 하프물범 여왕: 조랭하프(GameManager.npcPrefab) × 1.8 + 왕관·망토·보석 지팡이(Resources/Npc/Queen*) · 왕좌 계단 위
         public const float QueenScale = 1.8f;
@@ -133,7 +150,13 @@ namespace MoominAction
             for (int i = 1; i <= 6; i++) AddLight(Mark("Mark_Torch_" + i, dc), new Color(1f, 0.6f, 0.3f), 8f, 1.5f, true);
             for (int i = 1; i <= 8; i++) AddLight(Mark("Mark_Lantern_" + i, dc), new Color(1f, 0.72f, 0.4f), 10f, 1.6f, true);
             AddLight(Mark("Mark_Chandelier", dc), new Color(1f, 0.65f, 0.35f), 18f, 2.2f, true);
-            AddLight(Mark("Mark_Moon", dc), new Color(0.65f, 0.68f, 1f), 16f, 1.4f, false);
+            for (int i = 1; i <= 3; i++)                                                                   // 노을빛: 천장 창살 틈에서 비스듬히 내리쬠
+            {
+                var sl = new GameObject("SunsetLight").AddComponent<Light>(); sl.transform.SetParent(dungeon.transform, true);
+                sl.transform.position = Mark("Mark_Sunset_" + i, dc + Vector3.up * 12f); sl.transform.rotation = Quaternion.Euler(70f, 25f, 0f);
+                sl.type = LightType.Spot; sl.spotAngle = 70f; sl.range = 26f; sl.intensity = 2.6f; sl.color = new Color(1f, 0.56f, 0.3f); sl.shadows = LightShadows.Soft;
+            }
+            BuildSunsetShafts(dc);
             var up = new GameObject("DungeonExit").AddComponent<SeaGate>(); up.transform.SetParent(dungeon.transform, true); up.signHeight = 6.5f;
             up.Configure(Mark("Mark_ExitGate", dc), Mark("Mark_Arrive", transform.position), Mark("Mark_ArriveLook", transform.position), "F   계단 올라가기", "출구", false);
             up.arriveText = "알현실로 돌아왔다…"; up.canUse = () => !Imprisoned; up.blockedText = $"쇠창살이 내려져 있다. 간수 하프에게 돌덩이 {MineMath.Quota}개를 내자";
@@ -148,6 +171,19 @@ namespace MoominAction
             npc.scarfColor = new Color(0.86f, 0.3f, 0.27f); npc.ApplyLook();
             NpcAccessory.Attach(go, "Npc/JailerHelmet", "head"); NpcAccessory.Attach(go, "Npc/JailerKeys", "body");
             jailer = npc;
+        }
+        /// <summary>노을 빛줄기: 창살 틈에서 비스듬히 내려오는 반투명 주황 판 6장(카메라 쪽으로 돌아섬).</summary>
+        readonly List<Transform> shafts = new();
+        void BuildSunsetShafts(Vector3 dc)
+        {
+            var m = new Material(Shader.Find("Sprites/Default")) { color = new Color(1f, 0.6f, 0.32f, 0.09f), renderQueue = 3050 };
+            for (int i = 0; i < 6; i++)
+            {
+                var q = GameObject.CreatePrimitive(PrimitiveType.Quad); Destroy(q.GetComponent<Collider>()); q.name = "SunsetShaft"; q.transform.SetParent(dungeon.transform, true);
+                Vector3 top = Mark("Mark_Sunset_" + (1 + i % 3), dc + Vector3.up * 12f) + new Vector3((i - 2.5f) * 1.6f, 0f, (i % 2 - 0.5f) * 3f);
+                q.transform.position = top + new Vector3(0.8f, -6f, 1.2f); q.transform.localScale = new Vector3(1.6f + i % 3 * 0.6f, 13f, 1f);
+                var r = q.GetComponent<Renderer>(); r.sharedMaterial = m; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; shafts.Add(q.transform);
+            }
         }
         /// <summary>지하감옥에 있는가.</summary>
         public static bool InDungeon(Vector3 p) { if (Instance == null || Instance.dungeon == null) return false; var d = p - Instance.Mark("Mark_DungeonCenter", p); return Mathf.Abs(d.y) < 14f && new Vector2(d.x, d.z).magnitude < 36f; }
@@ -165,7 +201,7 @@ namespace MoominAction
                 if (t.TryGetComponent<PlayerController>(out var pc)) pc.ResetFall();
                 var cam = Camera.main; if (cam != null && cam.TryGetComponent<ThirdPersonCamera>(out var tpc)) tpc.SnapBehind();
                 Quests.AnnounceNow("지하감옥", "고래 말을 했다가 끌려왔다…");
-                Toast.Show("철컹! 감방 철창 밖으로 광산 노역장이 보인다…");
+                Toast.Show("철컹! 철창 밖으로 노을이 드는 광산 노역장… 곡괭이를 든 돌고래들이 통통 뛰어다닌다");
                 openCellAt = Time.time + 3.5f;
             });
         }
@@ -183,6 +219,8 @@ namespace MoominAction
         {
             if (UIState.Paused) return;
             if (pendingDungeon) { pendingDungeon = false; SendToDungeon(); }
+            var cam = Camera.main;
+            if (cam != null) foreach (var sh in shafts) if (sh != null) { Vector3 f = sh.position - cam.transform.position; f.y = 0; if (f.sqrMagnitude > 0.01f) sh.rotation = Quaternion.LookRotation(f) * Quaternion.Euler(0, 0, 18f); }
             float t = Time.time;
             foreach (var (l, bi, ph) in flicker) if (l != null) l.intensity = bi * (0.9f + 0.1f * Mathf.PerlinNoise(t * 3f + ph, ph));   // 촛불·횃불 일렁임
             if (openCellAt > 0f && Time.time >= openCellAt)

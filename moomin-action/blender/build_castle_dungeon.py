@@ -1,4 +1,4 @@
-"""하프프 왕국 백설궁 — 지하감옥 + 광산 노역장(사용자 참고 그림 2장: 2층 석조 감옥 홀 · 나무 비계 광산).
+"""하프프 왕국 구래성 — 지하감옥 + 광산 노역장(사용자 참고 그림 2장: 2층 석조 감옥 홀 · 나무 비계 광산).
   · 감옥 동(뒤쪽 벽): 아치 감방 2층(아래 6칸 · 위 6칸) + 위층 발코니 통로 · 난간 · 돌계단 · 쇠사슬 · 왕관 문장 깃발 · 횃불
   · 감방 철창 밖 = 광산 노역장(동굴): 울퉁불퉁 바위벽 · 흙바닥 · 레일 + 광차 2(광석 가득) · 도르래 탑 + 쇠사슬 양동이
     · 나무 비계(5m 높이 통로 · 기둥 · 가새 · 계단) · 기둥 등불 · 광석 더미 · 나무 상자 · 곡괭이 문장(엇갈린 곡괭이) 깃발
@@ -24,7 +24,8 @@ def M_(n, c, rough=0.85, metal=0.0): m = mat(n, c, rough=rough, metal=metal); m.
 STONE = M_("Dun_Stone", (0.46, 0.43, 0.42)); STONED = M_("Dun_StoneDark", (0.3, 0.28, 0.28)); IRON = M_("Dun_Iron", (0.16, 0.15, 0.17), 0.45, 0.8)
 WOODM = M_("Dun_Wood", (0.42, 0.26, 0.13)); WOODD = M_("Dun_WoodDark", (0.28, 0.17, 0.09)); ROCK = M_("Dun_Rock", (0.56, 0.36, 0.24), 0.95); DIRT = M_("Dun_Dirt", (0.44, 0.3, 0.2), 1.0)
 FIRE = mat("Dun_FlameGlow", (1.0, 0.55, 0.18), emit=(1.0, 0.5, 0.15), emit_strength=8.0); LANT = mat("Dun_LanternGlow", (1.0, 0.78, 0.4), emit=(1.0, 0.72, 0.35), emit_strength=6.0)
-MOON = mat("Dun_MoonGlow", (0.65, 0.68, 0.95), emit=(0.65, 0.68, 0.95), emit_strength=3.0); BAN = M_("Dun_Banner", (0.5, 0.1, 0.12), 0.9); GOLD = M_("Dun_Gold", (0.9, 0.7, 0.32), 0.35, 0.9)
+MOON = mat("Dun_SunsetGlow", (1.0, 0.55, 0.32), emit=(1.0, 0.5, 0.28), emit_strength=5.0)   # 쇠창살 사이로 드는 노을빛
+BAN = M_("Dun_Banner", (0.5, 0.1, 0.12), 0.9); GOLD = M_("Dun_Gold", (0.9, 0.7, 0.32), 0.35, 0.9)
 ORE_CU = M_("Dun_OreCopper", (0.85, 0.45, 0.2), 0.4, 0.6); ORE_AG = M_("Dun_OreSilver", (0.85, 0.87, 0.92), 0.25, 0.9); ORE_AU = M_("Dun_OreGold", (1.0, 0.78, 0.25), 0.25, 1.0)
 SAPH = mat("Dun_SapphireGlow", (0.2, 0.45, 1.0), emit=(0.2, 0.45, 1.0), emit_strength=2.0); STRAW = M_("Dun_Straw", (0.86, 0.72, 0.36), 1.0)
 MATS = [STONE, STONED, IRON, WOODM, WOODD, ROCK, DIRT, FIRE, LANT, MOON, BAN, GOLD, ORE_CU, ORE_AG, ORE_AU, SAPH, STRAW]
@@ -85,13 +86,20 @@ for k in range(36):
 for k in range(14):
     yy = YF + (YB - YF) * k / 13
     rock((-1.5 + random.uniform(-0.5, 0.5), yy, 4.5), (2.2, 2.8, 7), seed=k + 50); rock((L + 1.5, yy, 4.5), (2.2, 2.8, 7), seed=k + 80)
-for k in range(30):
-    rock((random.uniform(0, L), random.uniform(YF, YB), H2 + 3.5 + random.uniform(0, 2)), (5, 5, 2.2), seed=k + 120)
-b.box(L / 2, (YF + YB) / 2, H2 + 6.0, L + 6, YB - YF + 6, 1.0, "Dun_StoneDark")
-SKY = (22.0, 0.0)                                                                                        # 둥근 채광창(창살)
-b.torus((SKY[0], SKY[1], H2 + 4.6), 2.6, 0.35, "Dun_Stone", seg=32, sides=8)
-for k in range(9): b.box(SKY[0] - 2.2 + k * 0.55, SKY[1], H2 + 4.8, 0.08, 5.0, 0.12, "Dun_Iron"); b.box(SKY[0], SKY[1] - 2.2 + k * 0.55, H2 + 4.8, 5.0, 0.08, 0.12, "Dun_Iron")
-b.cyl((SKY[0], SKY[1], H2 + 5.2), (SKY[0], SKY[1], H2 + 5.3), 2.5, "Dun_MoonGlow", seg=24)
+SKY = (23.0, -1.5); SKW, SKD = 26.0, 9.0
+for k in range(60):
+    rx_, ry_ = random.uniform(0, L), random.uniform(YF, YB)
+    if abs(rx_ - SKY[0]) < SKW / 2 + 3.5 and abs(ry_ - SKY[1]) < SKD / 2 + 3.5: continue                   # 노을 창살 틈 자리는 비움
+    rock((rx_, ry_, H2 + 3.5 + random.uniform(0, 2)), (5, 5, 2.2), seed=k + 120)
+b.box(L / 2, (YF + YB) / 2, H2 + 6.6, L + 6, YB - YF + 6, 1.0, "Dun_StoneDark")
+# 노역장 위 긴 창살 틈(노을빛) — SKY · SKW · SKD 는 천장 바위 앞에서 정함
+for s_ in (-1, 1):
+    b.box(SKY[0], SKY[1] + s_ * (SKD / 2 + 0.6), H2 + 4.6, SKW + 2.4, 1.2, 1.2, "Dun_Stone"); b.box(SKY[0] + s_ * (SKW / 2 + 0.6), SKY[1], H2 + 4.6, 1.2, SKD + 2.4, 1.2, "Dun_Stone")
+for k in range(int(SKW / 0.9) + 1): b.box(SKY[0] - SKW / 2 + k * 0.9, SKY[1], H2 + 4.5, 0.12, SKD, 0.16, "Dun_Iron")
+for k in range(int(SKD / 1.5) + 1): b.box(SKY[0], SKY[1] - SKD / 2 + k * 1.5, H2 + 4.45, SKW, 0.12, 0.16, "Dun_Iron")
+b.box(SKY[0], SKY[1], H2 + 6.0, SKW, SKD, 0.1, "Dun_SunsetGlow")
+for k in range(12):                                                                                         # 창살 틈 둘레 바위 턱
+    a_ = 2 * math.pi * k / 12; rock((SKY[0] + (SKW / 2 + 2.5) * math.cos(a_), SKY[1] + (SKD / 2 + 2.5) * math.sin(a_), H2 + 4.8), (3.2, 2.6, 1.4), seed=k + 300)
 # 가운데 쇠고리 샹들리에
 CH = (22.0, 2.0, 7.2)
 for k in range(4):
@@ -200,6 +208,12 @@ xm = CELLX[1] + CW / 2
 mark("Mark_CellArrive", F.P(xm, YB + 2.0, 0.06)); mark("Mark_CellLook", F.P(xm, YB - 6, 0.06)); mark("Mark_CellDoorFront", F.P(xm, YB - 1.2, 0.06))
 mark("Mark_Jailer", F.P(JX - 0.2, JY - 1.3, 0.06)); mark("Mark_JailerLook", F.P(JX - 8, JY - 1.3, 0.06))
 mark("Mark_ExitGate", F.P(EX - 1.6, 0, 0.06)); mark("Mark_ExitLook", F.P(EX + 4, 0, 0.06)); mark("Mark_DungeonCenter", F.P(L / 2, 0, 0.06)); mark("Mark_Moon", F.P(SKY[0], SKY[1], H2 + 3.0))
+for i, sx in enumerate((-8.0, 0.0, 8.0)): mark(f"Mark_Sunset_{i + 1}", F.P(SKY[0] + sx, SKY[1], H2 + 4.0))
+ci = 0
+for x0 in CELLX:
+    for zf in (0.0, H1 + 0.5):
+        if x0 == CELLX[1] and zf == 0.0: continue
+        ci += 1; mark(f"Mark_Cell_{ci}", F.P(x0 + CW / 2, YB + CD / 2, zf + 0.06))
 mark("Mark_Chandelier", F.P(CH[0], CH[1], CH[2] + 0.4))
 for i, x in enumerate(CELLX): mark(f"Mark_Torch_{i + 1}", F.P(x - 0.3, YB - 1.2, 3.0))
 for i, (lx, ly) in enumerate(LANTS): mark(f"Mark_Lantern_{i + 1}", F.P(lx + 0.6, ly, (6.8 if ly < SY + 2 else 3.0) - 0.6))
@@ -223,7 +237,10 @@ if "--preview" in sys.argv:
     for x in CELLX: pl(F.P(x - 0.3, YB - 1.2, 3.0), 260, (1, 0.6, 0.3))
     for (lx, ly) in LANTS: pl(F.P(lx + 0.6, ly - 0.4, (6.8 if ly < SY + 2 else 3.0) - 0.6), 380, (1, 0.72, 0.4))
     pl(F.P(CH[0], CH[1], CH[2] + 0.3), 900, (1, 0.65, 0.35), 1.0)
-    sp = bpy.data.objects.new("S", bpy.data.lights.new("S", "SPOT")); sp.data.energy = 9000; sp.data.color = (0.7, 0.72, 1.0); sp.data.spot_size = 0.6; sp.location = F.P(SKY[0], SKY[1], H2 + 5.0); sp.rotation_euler = (0, 0, 0); sc.collection.objects.link(sp)
+    for sx in (-8.0, 0.0, 8.0):
+        sp = bpy.data.objects.new("S", bpy.data.lights.new("S", "SPOT")); sp.data.energy = 14000; sp.data.color = (1.0, 0.55, 0.3); sp.data.spot_size = 0.9; sp.data.spot_blend = 0.6
+        sp.location = F.P(SKY[0] + sx, SKY[1], H2 + 5.2); sp.rotation_euler = (0.35, 0.0, 0.0); sc.collection.objects.link(sp)
+    sc.render.use_motion_blur = False
     cam = bpy.data.objects.new("C", bpy.data.cameras.new("C")); sc.collection.objects.link(cam); sc.camera = cam; cam.data.lens = 18
     def shot(n, loc, tgt): cam.location = loc; cam.rotation_euler = (tgt - loc).to_track_quat("-Z", "Y").to_euler(); sc.render.filepath = os.path.join(PRE, n); bpy.ops.render.render(write_still=True)
-    shot("dungeon_prison.png", F.P(22, -8, 2.8), F.P(20, YB, 4.5)); shot("dungeon_mine.png", F.P(2.0, 6.0, 3.2), F.P(30, -6, 2.5)); shot("dungeon_cell.png", F.P(xm, YB + 3.2, 2.0), F.P(xm, YB - 6, 1.6))
+    shot("dungeon_sunset.png", F.P(12, 2.5, 1.7), F.P(25, -2, H2 + 4.5)); shot("dungeon_prison.png", F.P(22, -8, 2.8), F.P(20, YB, 4.5)); shot("dungeon_mine.png", F.P(2.0, 6.0, 3.2), F.P(30, -6, 2.5)); shot("dungeon_cell.png", F.P(xm, YB + 3.2, 2.0), F.P(xm, YB - 6, 1.6))

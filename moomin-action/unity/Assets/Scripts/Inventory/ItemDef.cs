@@ -48,17 +48,16 @@ namespace MoominAction
                 description = "곰곰이 보스가 아끼던 커다란 뼈. 오래 우려도 단단하다. 레이저 블레이더의 손잡이 심으로 쓴다." });
             Add(new ItemDef { id = "bear_oil", name = "곰기름", type = ItemType.Material, grade = "B", icon = IconKind.Potion, color = new Color(0.95f, 0.72f, 0.3f), maxStack = 20, value = 80,
                 description = "곰곰이가 겨울잠을 위해 모아 둔 진한 기름. 노랗게 반짝이고 고소한 냄새가 난다. 누군가 꼭 필요로 할 것 같다(퀘스트 재료)." });
-            // ── 지하 광산 노역장(하프프 왕국 백설궁 지하감옥)
+            // ── 지하 광산 노역장(하프프 왕국 구래성 지하감옥)
             Add(new ItemDef { id = "prison_pickaxe", name = "노역용 곡괭이", type = ItemType.Key, icon = IconKind.Sword, color = new Color(0.55f, 0.5f, 0.45f), maxStack = 1, value = 0,
                 description = "간수 하프가 빌려준 낡은 곡괭이. 손잡이에 '노역장 비품 — 꼭 돌려줄 것'이라고 새겨져 있다." });
             Add(new ItemDef { id = "stone_rubble", name = "돌덩이", type = ItemType.Material, grade = "D", icon = IconKind.Shard, color = new Color(0.6f, 0.5f, 0.42f), maxStack = 99, value = 1,
                 description = "바위를 캐면 나오는 돌덩이. 노역 할당량은 이걸로 센다. 간수 하프에게 12개를 내면 풀려난다." });
             Add(new ItemDef { id = "ore_copper", name = "구리 광석", type = ItemType.Material, grade = "C", icon = IconKind.Shard, color = new Color(0.85f, 0.45f, 0.2f), maxStack = 99, value = 12, description = "붉은 구릿빛 광석. 노역장 바위에서 흔히 나온다." });
             Add(new ItemDef { id = "ore_iron", name = "철 광석", type = ItemType.Material, grade = "B", icon = IconKind.Shard, color = new Color(0.45f, 0.45f, 0.5f), maxStack = 99, value = 30, description = "묵직한 잿빛 광석. 대장장이들이 좋아한다." });
+            Add(new ItemDef { id = "dolphin_stone", name = "돌고래스톤", type = ItemType.Material, grade = "SS", icon = IconKind.Shard, color = new Color(0.35f, 0.7f, 1f), maxStack = 20, value = 600,
+                description = "돌고래 모양으로 굳은 푸른 보석. 구래성 노역장 깊은 곳에서 아주 드물게 나온다. 귀에 대면 끼룩끼룩 바닷소리가 난다는 소문." });
             Add(new ItemDef { id = "ore_silver", name = "은 광석", type = ItemType.Material, grade = "A", icon = IconKind.Shard, color = new Color(0.85f, 0.88f, 0.94f), maxStack = 99, value = 80, description = "달빛처럼 하얗게 빛나는 광석." });
-            Add(new ItemDef { id = "ore_gold", name = "금 광석", type = ItemType.Material, grade = "S", icon = IconKind.Shard, color = new Color(1f, 0.78f, 0.25f), maxStack = 99, value = 220, description = "노역장에서 금이 나오다니! 간수 하프 몰래 주머니에." });
-            Add(new ItemDef { id = "ore_sapphire", name = "하프 사파이어 원석", type = ItemType.Material, grade = "SS", icon = IconKind.Shard, color = new Color(0.2f, 0.45f, 1f), maxStack = 20, value = 600,
-                description = "여왕의 지팡이에 박힌 것과 같은 푸른 원석. 하프프 왕국 땅속 깊은 곳에서만 아주 드물게 나온다." });
             // ── 대장간(풍선고래)에서 만드는 장신구
             Add(new ItemDef { id = "ring_pearl", name = "용궁 진주 반지", type = ItemType.Artifact, grade = "A", icon = IconKind.Artifact, color = new Color(0.86f, 0.92f, 0.98f), maxStack = 1, value = 300,
                               stats = new EquipStats { finalPower = 1, health = 20f },
@@ -73,8 +72,8 @@ namespace MoominAction
                 description = "맨두의 파란 야구방망이에서 떨어져 나온 조각. 가볍고 단단해서 광선검의 자루로 쓰기 좋다. 레이저 블레이더 제작 재료." });
             Add(new ItemDef { id = "peanut_bread", name = "땅콩빵", type = ItemType.Material, icon = IconKind.Peanut, color = new Color(0.86f, 0.66f, 0.38f), maxStack = 10, value = 60,
                 description = "땅콩빵 조각 9개를 꾹꾹 뭉쳐 구운 동그란 땅콩빵. 고소한 냄새가 솔솔." });
-            Add(new ItemDef { id = "honey", name = "꿀", type = ItemType.Material, icon = IconKind.Potion, color = new Color(1f, 0.75f, 0.2f), maxStack = 10, value = 40,
-                description = "금빛으로 반짝이는 끈적한 꿀. 어디선가 퀘스트로 얻을 수 있다." });
+            Add(new ItemDef { id = "honey", name = "꿀", type = ItemType.Material, grade = "S", icon = IconKind.Potion, color = new Color(1f, 0.75f, 0.2f), maxStack = 10, value = 40,
+                description = "금빛으로 반짝이는 끈적한 꿀. 구래성 노역장 바위 틈에서 가끔 흘러나온다(6%). 땅콩빵과 합치면 꿀바른 땅콩빵." });
             Add(new ItemDef { id = "honey_peanut_bread", name = "꿀바른 땅콩빵", type = ItemType.Key, icon = IconKind.Peanut, color = new Color(1f, 0.78f, 0.3f), maxStack = 1, value = 0,
                 description = "땅콩빵에 꿀을 듬뿍 바른 특별한 빵. 성문 지기 맨두가 가장 좋아한다는 소문이 있다맨두." });
             Add(new ItemDef { id = "royal_pearl", name = "임금님의 무지개 진주", type = ItemType.Key, icon = IconKind.Shard, color = new Color(0.9f, 0.82f, 1f), maxStack = 1, value = 0,

@@ -1,6 +1,6 @@
-# 하프프 왕국 · 하프물범 여왕의 성(백설궁) — 성 안
+# 하프프 왕국 · 하프물범 여왕의 성(구래성) — 성 안
 
-- 왕국 이름: **하프프**(사용자 지정). 성 이름 백설궁 · 여왕 이름 하프리나는 Claude 가 지음(사용자가 바꿀 수 있음)
+- 왕국 이름: **하프프** · 성 이름: **구래성**(둘 다 사용자 지정). 여왕 이름 하프리나는 Claude 가 지음
 
 ## 설계(사용자와 정함)
 - 성의 주인: **하프물범 여왕** · 역할: 이야기·NPC 거점 + 보물·퍼즐 + 최종 보스 자리 · 분위기: **웅장한 왕궁풍**(사용자 참고 그림: 고딕 왕궁 홀) · 규모: 여러 층 + 지하
@@ -41,7 +41,7 @@
   - 놀람·곤란 표정은 지팡이가 얼굴을 가리지 않는 자세로(Surprised 3 · Sad 14)
 - 런타임: `CastleInterior.SpawnQueen`(GameManager.npcPrefab + `Npc` — story `QueenStory.Build` · questId 여왕의 등불 · 목도리 끔 · 움직이지 않음 · 대화 거리 4.2m) — 왕좌 계단 위 `Mark_Throne`
 - 대화 `Story/QueenStory.cs`(말투: 짐 · ~니라 · ~구나)
-  - 처음: 여왕 소개 → **민미 소개(선택지 "민미라고 해요! … 민미")** → 왕국 소개(하프 왕국 · 백설궁 · 맨두 · 조랭하프 마을) → 등불이 꺼져 감 → 퀘스트 제시(수락/나중에). 만남 기록 `Quests.QueenMet`
+  - 처음: 여왕 소개 → **민미 소개(선택지 "민미라고 해요! … 민미")** → 왕국 소개(하프 왕국 · 구래성 · 맨두 · 조랭하프 마을) → 등불이 꺼져 감 → 퀘스트 제시(수락/나중에). 만남 기록 `Quests.QueenMet`
   - 그 뒤 선택지: ① 이 왕국에 대해 자세히 소개해줘 민미(건국 전설 · 고래족 용궁 · 끼룩 전쟁 · 보물고와 지하감옥 복선) ② 장비에 축복을 부탁해 민미(**퀘스트 전엔 "(잠김)"** → 거절 대사) ③ 끼루룩 끼룩끼룩 민미민미 → "-? 뭐야 하프 너 고래족이었나." → "-어쩔 수 없군." → "-넌 지하감옥으로 가라" → 대화가 닫히면 지하감옥 · (곰기름을 다 모았으면) 바치기 · 물러나기
 - 퀘스트 `Quests.QueenLamps` 「여왕의 등불」: 곰기름(`bear_oil`, 곰곰이 드롭) 2병 → 경험치 1800 · 금화 800 · 붉은 약병 3 · 별조각 4 + **축복 열림**
 - 여왕의 축복 `Inventory.BlessEquipped()`: 지금 낀 장비 전부(장비마다 한 번, 무료) — 무기 공격 ×1.06 · 최종 위력 +1 / 방어구·아티팩트 받는 피해 -2% · 최대 체력 +10. 저장 `Inventory.State.blessed`
@@ -52,13 +52,20 @@
 - 노역장 동굴: 울퉁불퉁 바위벽·천장 · 흙바닥 · 레일 + 광차 2 · 도르래 탑 + 쇠사슬 양동이 · 나무 비계(5m 통로 · 계단) · 기둥 등불 8 · 광석 더미 · 상자 · 곡괭이 문장 깃발
 - 가운데 쇠고리 샹들리에 · 천장 둥근 창살 채광창(달빛) · 바닥 배수 창살 · 끝 바위 아치 + 내리닫이 쇠창살(DungeonExitGate) · 간수 초소 · 문 밖 계단
 - 캘 바위 `MineRock_Template` → Unity 가 `Mark_Rock_1..16` 자리마다 복제(`World/MineRock.cs`)
-- 미리보기 `--preview` → `previews/dungeon_prison.png` · `dungeon_mine.png` · `dungeon_cell.png`
+- **노을빛**: 노역장 위 천장에 긴 쇠창살 틈(26m × 9m, 그 자리 천장 바위는 비움) + 뒤에 주황 노을 발광판(Dun_SunsetGlow) · Unity 는 주황 스포트라이트 3(Mark_Sunset_*) + 비스듬한 반투명 빛줄기 6장(카메라 쪽으로 돎)
+- 미리보기 `--preview` → `previews/dungeon_prison.png` · `dungeon_mine.png` · `dungeon_cell.png` · `dungeon_sunset.png`
+
+### 돌고래 죄수(억울하게 잡혀 온 돌고래들) — 20마리
+- 모델: 고래고래 모델 그대로 × 0.4(길이 1.3m, 프리팹 Resources/Npc/DolphinPrisoner — MoominSetup, GameManager.dolphinPrefab) + `blender/build_dolphin_prisoner.py` 소품(곡괭이 flipper.R · 흑백 죄수 띠 + 번호표 body) + 초상화 dolphin_normal
+- `World/DolphinPrisoner.cs` — 헤엄치지 않고 **짧게 통통통**(포물선 0.32초 · 위로 늘어남 · 착지 찌부): 곡괭이질 7(바위 앞 Attack1 + 돌가루) · 분주히 돌아다님 6 · 감방에 박혀 있음 7(Mark_Cell_*, 제자리 콩콩)
+- F 대화 `Story/DolphinStory.cs`(말끝 "끼룩"): 억울파 5 · 광석파 5("광석 얻을 거야 끼룩!!!") · 감방파 3 무작위. 이름 "돌고래 죄수 101번…"
+- 미리보기 `blender/render_mine_dolphins.py` → `previews/mine_dolphins_yard/close/cells.png`
 
 ### 노역 흐름(`CastleInterior` · `World/MineRock.cs` · `Story/JailerStory.cs` · 규칙 `Crafting/MineMath.cs` 순수 C#)
 1. 여왕에게 "끼루룩 끼룩끼룩 민미민미" → 감방(2번째 칸) 안으로 → 3.5초 뒤 간수가 감방 문을 열어 줌
 2. 간수 하프(조랭하프 + 쇠 투구 + 가죽 띠·열쇠 꾸러미 — `build_joraeng.py --jailer`, 초상화 jailer_*)에게 말 걸면 **노역용 곡괭이**(`prison_pickaxe`)
 3. 바위 앞 F 곡괭이질 3번 → 부서짐(25초 뒤 다시 솟음): 돌덩이(`stone_rubble`) 1~2(30% 2개) + 광석 하나 확률
-   - 구리 광석 C 35% · 철 광석 B 18% · 은 광석 A 8% · 금 광석 S 3% · 하프 사파이어 원석 SS 1% · 없음 35% (S·SS 는 큰 알림)
+   - **바위마다 반드시 하나**(사용자 지정): 구리 광석 C 56% · 철 광석 B 20% · 은 광석 A 16% · **꿀** S 6%(금 대신 — 맨두의 꿀바른 땅콩빵 재료 `honey`) · **돌고래스톤** SS 2%(사파이어 대신, 희귀 재료 `dolphin_stone`) — S·SS 는 큰 알림
 4. 돌덩이 **12개**(할당량) → 간수에게 "할당량 채웠어요 민미!" → 돌덩이 12·곡괭이 회수, 광석은 가짐 → 출구 쇠창살이 올라감 → 계단(F)으로 알현실
 - 노역 중엔 출구가 막힘(`CastleInterior.Imprisoned`). 장소 이름 "하프물범 여왕의 성 · 지하감옥", 웨이브 멈춤
 - 아이템 아이콘 7개(돌덩이·광석 5·곡괭이) = `render_item_icons.py`

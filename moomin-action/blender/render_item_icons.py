@@ -188,8 +188,12 @@ start("stone_rubble"); gem((0, 0, 0.35), 0.38, M("Rubble", (0.26, 0.21, 0.17), r
 start("ore_copper"); ore(M("Copper", (0.85, 0.42, 0.18), rough=0.3, metal=0.8))
 start("ore_iron"); ore(M("IronOre", (0.42, 0.43, 0.48), rough=0.35, metal=0.8))
 start("ore_silver"); ore(M("SilverOre", (0.88, 0.9, 0.95), rough=0.2, metal=1.0))
-start("ore_gold"); ore(M("GoldOre", (1.0, 0.75, 0.2), rough=0.2, metal=1.0), 6)
-start("ore_sapphire"); ore(M("SapphOre", (0.12, 0.38, 1.0), rough=0.05, emit=0.6), 6, True)
+start("dolphin_stone")
+DSM = M("DolphinStone", (0.2, 0.55, 1.0), rough=0.05, emit=0.35)
+sph((0, 0, 0.5), (0.62, 0.3, 0.38), DSM, rot=(0, 0.15, 0)); sph((0.62, 0, 0.42), (0.28, 0.16, 0.12), DSM)                 # 몸 · 주둥이
+sph((-0.15, 0, 0.88), (0.18, 0.06, 0.2), DSM, rot=(0, -0.4, 0)); sph((-0.75, 0.0, 0.62), (0.12, 0.05, 0.26), DSM, rot=(0, 0.7, 0))   # 등지느러미 · 꼬리
+for sy in (-0.2, 0.2): sph((-0.82, sy, 0.8), (0.18, 0.06, 0.08), DSM, rot=(0, 0.3, 0))
+for sy in (-1, 1): sph((0.38, sy * 0.24, 0.58), (0.045, 0.03, 0.045), M("DSEye", (0.02, 0.02, 0.05), rough=0.2))
 start("prison_pickaxe")
 cyl((0, 0, -0.9), (0, 0, 0.75), 0.06, 0.06, WOOD); o = cyl((-0.75, 0, 0.72), (0.75, 0, 0.72), 0.07, 0.07, M("PickIron", (0.45, 0.45, 0.5), rough=0.35, metal=0.9))
 for v in o.data.vertices: v.co.z -= 0.25 * (abs(v.co.x) / 0.75) ** 2

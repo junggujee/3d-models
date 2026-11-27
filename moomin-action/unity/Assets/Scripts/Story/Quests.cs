@@ -54,7 +54,7 @@ namespace MoominAction
             Add(new QuestDef
             {
                 id = QueenLamps, title = "여왕의 등불", giver = "하프물범 여왕",
-                summary = "백설궁 알현실의 큰 샹들리에가 하나둘 꺼져 간다. 등불을 밝히는 데는 곰곰이가 겨울잠용으로 모아 둔 진한 곰기름이 제일이라고. 보스 웨이브의 곰곰이를 쓰러뜨려 곰기름 두 병을 여왕에게 바치자.",
+                summary = "구래성 알현실의 큰 샹들리에가 하나둘 꺼져 간다. 등불을 밝히는 데는 곰곰이가 겨울잠용으로 모아 둔 진한 곰기름이 제일이라고. 보스 웨이브의 곰곰이를 쓰러뜨려 곰기름 두 병을 여왕에게 바치자.",
                 itemId = "bear_oil", itemName = "곰기름", itemCount = 2, rewardExp = 1800, rewardGold = 800, rewardItems = new[] { ("potion_red", 3), ("shard_star", 4) },
             });
             Log.Changed += (_, __) => Updated?.Invoke();

@@ -23,6 +23,7 @@ namespace MoominAction
         [Header("자연")] [Tooltip("땅콩빵(자원) · 야생 하프물범(펫) — 비우면 생성 안 함")] public GameObject peanutPrefab, sealPrefab;
         [Header("마을")] [Tooltip("조랭하프족 NPC(조랭이·몽글이·포실이) — 비우면 생성 안 함")] public GameObject npcPrefab;
         [Tooltip("풍선고래 대장장이 — 비우면 Resources/Npc/BalloonWhale 에서 찾음")] public GameObject balloonSmithPrefab;
+        [Tooltip("구래성 노역장 돌고래 죄수(고래고래 모델 × 0.4) — MoominSetup")] public GameObject dolphinPrefab;
         readonly List<GameObject> alive = new(); float nextWave = 2f; bool waveActive;
 
         void Awake() { Instance = this; }

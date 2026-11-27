@@ -355,6 +355,17 @@ namespace MoominAction.EditorTools
                 System.IO.Directory.CreateDirectory("Assets/Resources/Npc");
                 PrefabUtility.SaveAsPrefabAsset(bg, "Assets/Resources/Npc/BalloonWhale.prefab"); Object.DestroyImmediate(bg);
             }
+            // ── 구래성 노역장 돌고래 죄수: 고래고래 모델 × 0.4(길이 약 1.3m) + 애니메이터만(전투 컴포넌트 없음) — World/DolphinPrisoner 가 붙음
+            var dolModel = AssetDatabase.LoadAssetAtPath<GameObject>(Models + "Goraegorae.fbx");
+            if (dolModel != null)
+            {
+                var dg = (GameObject)PrefabUtility.InstantiatePrefab(dolModel); dg.name = "DolphinPrisoner"; dg.transform.localScale = Vector3.one * 0.4f;
+                var da = dg.GetComponentInChildren<Animator>(); if (da == null) da = dg.AddComponent<Animator>();
+                da.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Anims + "Goraegorae.controller"); da.applyRootMotion = false;
+                var dcol = dg.AddComponent<CapsuleCollider>(); dcol.direction = 2; dcol.center = new Vector3(0, 0.5f, -0.08f); dcol.radius = 0.45f; dcol.height = 3.1f;
+                System.IO.Directory.CreateDirectory("Assets/Resources/Npc");
+                PrefabUtility.SaveAsPrefabAsset(dg, "Assets/Resources/Npc/DolphinPrisoner.prefab"); Object.DestroyImmediate(dg);
+            }
             // ── 성문 지기 맨두(왕실근위대 엘리트 하프물범) — 웨이브·토벌엔 안 나옴(minWave 999). World/CastleGuard.cs 가 성문 앞에 세움
             var mandu = BuildMonster("Mandu", "맨두", SkillAttribute.Yellow, 900f, 320f, 3.8f, 0.62f, 1.3f, 320, 150, 999, 0, playerMask,
                                      new[] { "MANDU_BEAT", "MANDU_HOMERUN", "MANDU_CHARGE", "MANDU_CHOMP" });
@@ -552,7 +563,8 @@ namespace MoominAction.EditorTools
             var gmGo = new GameObject("GameManager"); var gm = gmGo.AddComponent<GameManager>(); gmGo.AddComponent<NavMeshBaker>(); gmGo.AddComponent<ClashManager>();
             gm.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "ShadowBlob.prefab"); gm.player = player.GetComponent<CharacterStats>();
             gm.peanutPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "PeanutBread.prefab"); gm.sealPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Seal.prefab");   // 자연: 땅콩빵 · 야생 하프물범
-            gm.balloonSmithPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Npc/BalloonWhale.prefab");   // 마을 대장간의 풍선고래
+            gm.balloonSmithPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Npc/BalloonWhale.prefab");
+            gm.dolphinPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Npc/DolphinPrisoner.prefab");   // 구래성 노역장 돌고래 죄수   // 마을 대장간의 풍선고래
             gm.npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + "Joraeng.prefab");   // 마을: 조랭이(퀘스트) · 몽글이 · 포실이
             foreach (var n in new[] { "ShadowBlob", "SleepyBear", "Goraegorae", "PinkCube", "GreenBlock", "Mandu" }) { var e = AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs + n + ".prefab"); if (e != null) gm.enemyPrefabs.Add(e); }
             EditorSceneManager.SaveScene(scene, Scenes + "Main.unity");
