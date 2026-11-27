@@ -27,6 +27,27 @@
 - 바깥 문은 **맨두를 통과해야**(`CastleGate.Passed` = 꿀바른 땅콩빵) 열림
 - 성 안에서는 웨이브가 멈춤 · 장소 이름 "하프물범 여왕의 성 · 알현실"
 
+## 하프물범 여왕 하프리나
+- 모델: 조랭하프(`Joraeng.fbx`) × **1.8배** + 장신구 3개 — `blender/build_joraeng.py --queen [--preview]` → `Resources/Npc/QueenCrown.fbx`(head) · `QueenCape.fbx`(body) · `QueenScepter.fbx`(flip.R)
+  - 왕관: 금 띠 · 뾰족 장식 8(진주) · 앞 큰 사파이어 · 띠 위 사파이어/루비 · 빨간 벨벳 모자 · 금 방울
+  - 망토: 어깨(0.545m)에서 바닥까지 몸 뒤를 감싸며 퍼지고 뒤로 끌림 · 진홍 벨벳 + 금빛 안감 · 흰 담비털 깃·앞자락·단(검은 점) · 단 근처 금 수 두 줄 · 등 금 문장 + 사파이어 · 앞 금 걸쇠 + 루비
+  - 보석 지팡이: 금 막대 + 고리 · 세 방향 금 테두리 안 큰 사파이어(Glow) · 진주 6 · 꼭대기 금별
+- 초상화(다른 캐릭터보다 훨씬 고풍스럽게): `build_joraeng.py --queen` 원본 → **`tools/queen_portrait.py`** → `Resources/UI/Portraits/queen_<표정>.png`
+  - 셀 채색(portrait_art.cel) + 금박 타원 메달: 남색 벨벳 바탕 · 머리 뒤 금빛 후광 · 빛줄기 · 금 이중 테 + 진주 구슬 · 월계수 가지 · 꼭대기 왕관 문장(사파이어) · 아래 진홍 리본 · 반짝이
+  - 인물은 메달 안 흉상(0.8배), 왕관·지팡이 머리만 테 앞으로 튀어나옴 · 둘레 금빛 번짐 · 왼쪽 위 금빛 테두리 빛 · 그늘 밝게 · 캔버스 결. 모음 `previews/queen_portraits_sheet.png`
+  - 놀람·곤란 표정은 지팡이가 얼굴을 가리지 않는 자세로(Surprised 3 · Sad 14)
+- 런타임: `CastleInterior.SpawnQueen`(GameManager.npcPrefab + `Npc` — story `QueenStory.Build` · questId 여왕의 등불 · 목도리 끔 · 움직이지 않음 · 대화 거리 4.2m) — 왕좌 계단 위 `Mark_Throne`
+- 대화 `Story/QueenStory.cs`(말투: 짐 · ~니라 · ~구나)
+  - 처음: 여왕 소개 → **민미 소개(선택지 "민미라고 해요! … 민미")** → 왕국 소개(하프 왕국 · 백설궁 · 맨두 · 조랭하프 마을) → 등불이 꺼져 감 → 퀘스트 제시(수락/나중에). 만남 기록 `Quests.QueenMet`
+  - 그 뒤 선택지: ① 이 왕국에 대해 자세히 소개해줘 민미(건국 전설 · 고래족 용궁 · 끼룩 전쟁 · 보물고와 지하감옥 복선) ② 장비에 축복을 부탁해 민미(**퀘스트 전엔 "(잠김)"** → 거절 대사) ③ 끼루룩 끼룩끼룩 민미민미 → "-? 뭐야 하프 너 고래족이었나." → "-어쩔 수 없군." → "-넌 지하감옥으로 가라" → 대화가 닫히면 지하감옥 · (곰기름을 다 모았으면) 바치기 · 물러나기
+- 퀘스트 `Quests.QueenLamps` 「여왕의 등불」: 곰기름(`bear_oil`, 곰곰이 드롭) 2병 → 경험치 1800 · 금화 800 · 붉은 약병 3 · 별조각 4 + **축복 열림**
+- 여왕의 축복 `Inventory.BlessEquipped()`: 지금 낀 장비 전부(장비마다 한 번, 무료) — 무기 공격 ×1.06 · 최종 위력 +1 / 방어구·아티팩트 받는 피해 -2% · 최대 체력 +10. 저장 `Inventory.State.blessed`
+
+## 지하감옥 — `blender/build_castle_dungeon.py` → `Resources/World/CastleDungeon.fbx`
+- 성 위 하늘 z 230m(알현실과 떨어진 닫힌 실내). 돌 복도 26m · 낮은 둥근 천장 · 쇠창살 감방 3칸 · 횃불 5 · 이끼 · 열쇠 탁자 · 하프물범 얼굴 돌판 · 끝 계단 + 나무 문
+- 첫 감방(지푸라기 · 양동이 · 벽 사슬 · 달빛 창살 창)에 갇힘 → **철창 문(DungeonCellDoor, 경첩 회전)을 F 로 세 번 흔들면** 자물쇠가 떨어져 열림 → 복도 끝 계단(F) → 알현실 정문 앞
+- `CastleInterior.SendToDungeon()`(화면 어둡게 → 감방, 문 다시 잠김) · 장소 이름 "하프물범 여왕의 성 · 지하감옥" · 성 안처럼 웨이브 멈춤
+- 미리보기 `--preview` → `previews/dungeon_corridor.png` · `dungeon_cell.png`
+
 ## 다음
-- 하프물범 여왕(모델·초상화·대화) — 왕좌 자리 `Mark_ThroneSeat`
 - 대현관 · 연회장 · 도서관 · 침실 · 지하 · 전망대(각각 만들기 전에 사용자에게 확인)

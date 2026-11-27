@@ -217,10 +217,11 @@ if "--preview" in sys.argv:
         preview(os.path.join(PRE, f"joraeng_{nm.lower()}.png"), Vector((0.9, -2.5, 0.85)), c, arm_ob=arm, action=A[nm], frame=fr, size=480)
 
 FISHER = "--fisher" in sys.argv   # 항구 어부(노란 어부 모자) — 모자 FBX + fisher_<표정> 초상화만 만듦(Joraeng.fbx 는 그대로)
-if not FISHER:
+QUEEN = "--queen" in sys.argv     # 하프물범 여왕(왕관 · 망토 · 보석 지팡이) — 장신구 FBX 3개 + queen_<표정> 초상화 원본만 만듦
+if not FISHER and not QUEEN:
     glb, fbx = export_all("Joraeng", OUT, [arm, npc, scarf])
     os.makedirs(UNITY, exist_ok=True); shutil.copy(fbx, os.path.join(UNITY, "Joraeng.fbx"))
-else:
+elif FISHER:
     # 노란 어부 모자(사우스웨스터): 정수리를 덮는 둥근 머리 부분 + 뒤가 길게 처지는 챙 + 갈색 띠 + 앞에 흰 물고기 표시.
     # 모델 공간(기본 자세) 그대로 내보냄 → Unity NpcAccessory 가 head 뼈 bindpose 로 붙임(민미 장비와 같은 방식).
     HAT = M_("Fisher_HatYellow", (0.98, 0.76, 0.12), rough=0.55); BAND = M_("Fisher_HatBand", (0.36, 0.2, 0.09), rough=0.8); FISHM = M_("Fisher_HatFish", (0.97, 0.97, 0.95), rough=0.5)
@@ -249,7 +250,110 @@ else:
     bpy.ops.export_scene.fbx(filepath=os.path.join(NPCDIR, "FisherHat.fbx"), use_selection=True, object_types={"MESH"}, apply_scale_options="FBX_SCALE_ALL", axis_forward="-Z", axis_up="Y")
     print("EXPORTED hat", os.path.join(NPCDIR, "FisherHat.fbx"))
     hv = hat.vertex_groups.new(name="head"); hv.add(list(range(len(hat.data.vertices))), 1.0, "REPLACE"); bind(hat, arm)   # 초상화에서는 머리를 따라 움직이게
-if not FISHER: print("EXPORTED", fbx, "verts:", len(npc.data.vertices), len(scarf.data.vertices))
+if QUEEN:
+    # 하프물범 여왕의 장신구 — 모델 공간(기본 자세) 그대로 내보냄 → Unity NpcAccessory 가 뼈 bindpose 로 붙임.
+    # 왕관(head) · 망토(body: 어깨에서 등 뒤로 바닥까지 퍼지는 진홍 벨벳 + 흰 담비털 깃·단 + 금 수 + 보석 걸쇠) · 보석 지팡이(flip.R)
+    QG = M_("Queen_Gold", (1.0, 0.76, 0.28), rough=0.22, metal=1.0); QV = M_("Queen_Velvet", (0.46, 0.03, 0.1), rough=0.85, sheen=0.8)
+    QL = M_("Queen_Lining", (0.86, 0.66, 0.22), rough=0.5, metal=0.3); QE = M_("Queen_Ermine", (0.98, 0.97, 0.94), rough=1.0, sheen=1.0)
+    QD = M_("Queen_ErmineDot", (0.05, 0.05, 0.06), rough=0.8); QS = mat("Queen_SapphireGlow", (0.12, 0.35, 1.0), rough=0.05, emit=(0.15, 0.4, 1.0), emit_strength=1.5)
+    QR = M_("Queen_Ruby", (0.85, 0.05, 0.12), rough=0.08); QP = M_("Queen_Pearl", (0.97, 0.95, 1.0), rough=0.12)
+    QM = [QG, QV, QL, QE, QD, QS, QR, QP]; G_, V_, L_, E_, D_, S_, R_, P_ = range(8)
+    def put(bm_, other):
+        me_ = bpy.data.meshes.new("t"); other.to_mesh(me_); other.free(); bm_.from_mesh(me_); bpy.data.meshes.remove(me_)
+    def sph(c_, r3, mi, seg=16, rings=10):
+        b_ = bmesh.new(); bmesh.ops.create_uvsphere(b_, u_segments=seg, v_segments=rings, radius=1.0)
+        for v in b_.verts: v.co = Vector((c_[0] + v.co.x * r3[0], c_[1] + v.co.y * r3[1], c_[2] + v.co.z * r3[2]))
+        for f in b_.faces: f.smooth = True; f.material_index = mi
+        return b_
+    def ring_tube(z, rx, ry, rad, mi, n=48, wob=0.0):
+        pts = [Vector((rx * math.cos(2 * math.pi * k / n), ry * math.sin(2 * math.pi * k / n), z + wob * math.sin(6 * 2 * math.pi * k / n))) for k in range(n + 1)]
+        tb_, _ = tube(pts, lambda t: rad, sides=8, mat_idx=mi); return tb_
+    # ── 왕관: 금 띠 + 뾰족 장식 8개(진주) + 앞 큰 사파이어 + 빨간 벨벳 모자 + 띠 위 보석
+    cr = bmesh.new(); CZ0, CZ1 = 0.895, 0.965; RX, RY = 0.205, 0.205 * DEPTH + 0.01
+    for z_ in [CZ0 + (CZ1 - CZ0) * t for t in (0.0, 0.5, 1.0)]: put(cr, ring_tube(z_, RX, RY, 0.012, G_))
+    rows_ = []
+    for z_ in (CZ0, CZ1):
+        rows_.append([cr.verts.new(Vector((RX * math.cos(2 * math.pi * k / 48), RY * math.sin(2 * math.pi * k / 48), z_))) for k in range(48)])
+    for k in range(48):
+        j = (k + 1) % 48; f = cr.faces.new((rows_[0][k], rows_[0][j], rows_[1][j], rows_[1][k])); f.material_index = G_; f.smooth = True
+    for k in range(8):
+        a_ = -math.pi / 2 + 2 * math.pi * k / 8; tall = 0.115 if k == 0 else 0.08 if k % 2 == 0 else 0.06
+        base = Vector((RX * math.cos(a_), RY * math.sin(a_), CZ1)); tip = Vector((RX * 0.92 * math.cos(a_), RY * 0.92 * math.sin(a_), CZ1 + tall))
+        sp_ = bmesh.new(); bmesh.ops.create_cone(sp_, cap_ends=True, segments=4, radius1=0.035, radius2=0.004, depth=tall)
+        bmesh.ops.transform(sp_, matrix=Matrix.Translation((base + tip) / 2) @ Vector((0, 0, 1)).rotation_difference((tip - base).normalized()).to_matrix().to_4x4(), verts=sp_.verts[:])
+        for f in sp_.faces: f.material_index = G_
+        put(cr, sp_); put(cr, sph(tip + Vector((0, 0, 0.012)), (0.014, 0.014, 0.014), P_, 10, 6))
+        jm = S_ if k % 2 == 0 else R_; jp = Vector(((RX + 0.008) * math.cos(a_ + math.pi / 8), (RY + 0.008) * math.sin(a_ + math.pi / 8), (CZ0 + CZ1) / 2))
+        put(cr, sph(jp, (0.011, 0.011, 0.014), jm, 10, 6))
+    put(cr, sph(Vector((0, -RY - 0.012, (CZ0 + CZ1) / 2 + 0.01)), (0.026, 0.014, 0.03), S_, 14, 8))                 # 앞 큰 사파이어
+    put(cr, sph(Vector((0, 0.0, 0.955)), (RX * 0.95, RY * 0.95, 0.05), V_, 20, 10))                               # 벨벳 모자
+    put(cr, sph(Vector((0, 0.0, 1.03)), (0.022, 0.022, 0.022), G_, 10, 6))                                         # 꼭대기 금 방울
+    bmesh.ops.recalc_face_normals(cr, faces=cr.faces[:]); crown = to_object("QueenCrown", cr, QM)
+    # ── 망토: 어깨(0.58)에서 바닥까지, 몸 뒤 반 바퀴 + 옆을 감쌈(앞은 열림), 아래로 갈수록 퍼지고 뒤로 끌림
+    cp = bmesh.new(); NA_, NZ_ = 40, 26; A0, A1 = math.radians(-28), math.radians(208); Z0 = 0.545
+    def cape_pt(i, j, off):
+        a_ = A0 + (A1 - A0) * i / NA_; z_ = Z0 * (1 - j / NZ_) ** 1.0; drop = Z0 - z_
+        rr = r_at(min(z_, 0.6)) + 0.03 + 0.22 * drop ** 1.3 + off; back = max(0.0, math.sin(a_))
+        return Vector((rr * math.cos(a_), rr * DEPTH * math.sin(a_) + 0.18 * drop * back ** 2, max(0.006, z_ - 0.0)))
+    outer = [[cp.verts.new(cape_pt(i, j, 0.012)) for i in range(NA_ + 1)] for j in range(NZ_ + 1)]
+    inner = [[cp.verts.new(cape_pt(i, j, 0.0)) for i in range(NA_ + 1)] for j in range(NZ_ + 1)]
+    for j in range(NZ_):
+        for i in range(NA_):
+            f = cp.faces.new((outer[j][i], outer[j][i + 1], outer[j + 1][i + 1], outer[j + 1][i])); f.material_index = V_; f.smooth = True
+            f = cp.faces.new((inner[j + 1][i], inner[j + 1][i + 1], inner[j][i + 1], inner[j][i])); f.material_index = L_; f.smooth = True
+    for j in range(NZ_):
+        for i in (0, NA_):
+            f = cp.faces.new((outer[j][i], outer[j + 1][i], inner[j + 1][i], inner[j][i]) if i == 0 else (inner[j][i], inner[j + 1][i], outer[j + 1][i], outer[j][i])); f.material_index = V_
+    for i in range(NA_):
+        f = cp.faces.new((outer[NZ_][i], outer[NZ_][i + 1], inner[NZ_][i + 1], inner[NZ_][i])); f.material_index = V_
+    def ermine(pts, rad):
+        tb_, _ = tube(pts, lambda t: rad, sides=10, mat_idx=E_); put(cp, tb_)
+        for k in range(2, len(pts) - 1, 3):                                                    # 담비털 검은 점
+            put(cp, sph(pts[k] + (pts[k] - Vector((0, 0, pts[k].z))).normalized() * rad * 0.95 * 0 + Vector((0, 0, rad * 0.9)), (rad * 0.28, rad * 0.28, rad * 0.45), D_, 8, 5))
+    ermine([cape_pt(i, NZ_, 0.006) + Vector((0, 0, 0.02)) for i in range(NA_ + 1)], 0.028)                                   # 단(바닥)
+    for i in (0, NA_): ermine([cape_pt(i, j, 0.006) for j in range(NZ_ + 1)], 0.024)                                         # 앞 자락 두 줄
+    CR_ = [Vector(((r_at(0.53) + 0.035) * math.cos(2 * math.pi * k / 40), (r_at(0.53) + 0.035) * DEPTH * math.sin(2 * math.pi * k / 40), 0.535 + 0.014 * math.sin(2 * math.pi * k / 40))) for k in range(41)]
+    ermine(CR_, 0.038)                                                                                                        # 담비털 깃
+    bc_ = cape_pt(NA_ // 2 + 2, 9, 0.02); put(cp, sph(bc_, (0.075, 0.02, 0.085), G_, 20, 10)); put(cp, sph(bc_ + Vector((0, 0.012, 0)), (0.05, 0.015, 0.058), S_, 16, 8))   # 등 금 문장 + 사파이어
+    for j in (NZ_ - 4, NZ_ - 2):                                                                                             # 금 수(단 근처 두 줄)
+        put(cp, tube([cape_pt(i, j, 0.016) for i in range(2, NA_ - 1)], lambda t: 0.0055, sides=5, mat_idx=G_)[0])
+    cz_ = Vector((0, -(r_at(0.53) + 0.068) * DEPTH, 0.53))                                                                 # 앞 걸쇠(금 + 루비)
+    put(cp, sph(cz_, (0.04, 0.02, 0.04), G_, 14, 8)); put(cp, sph(cz_ + Vector((0, -0.018, 0)), (0.022, 0.012, 0.022), R_, 12, 7))
+    bmesh.ops.recalc_face_normals(cp, faces=cp.faces[:]); cape = to_object("QueenCape", cp, QM)
+    # ── 보석 지팡이: 오른 지느러미 끝에 세로로 — 금 막대 + 고리 · 위에 금 테두리 안 큰 사파이어 · 꼭대기 별
+    tipR = FLIPJ["R"][1]; gp = Vector((tipR.x - 0.04, tipR.y - 0.07, tipR.z + 0.02))
+    sc_ = bmesh.new(); z_lo, z_hi = 0.02, gp.z + 0.68
+    put(sc_, tube([Vector((gp.x, gp.y, z_lo)), Vector((gp.x, gp.y, z_hi))], lambda t: 0.015, sides=10, mat_idx=G_)[0])
+    for zz_ in (z_lo + 0.02, gp.z - 0.06, gp.z + 0.08, z_hi - 0.05):
+        rt_ = [Vector((gp.x + 0.024 * math.cos(2 * math.pi * k / 20), gp.y + 0.024 * math.sin(2 * math.pi * k / 20), zz_)) for k in range(21)]
+        put(sc_, tube(rt_, lambda t: 0.008, sides=6, mat_idx=G_)[0])
+    top_c = Vector((gp.x, gp.y, z_hi + 0.075))
+    put(sc_, sph(top_c, (0.055, 0.055, 0.065), S_, 20, 12))                                                                   # 큰 사파이어
+    for k in range(3):                                                                                                       # 금 테두리(세 방향 고리)
+        a_ = k * math.pi / 3; pts = [top_c + Matrix.Rotation(a_, 3, "Z") @ Vector((0.072 * math.cos(t), 0, 0.082 * math.sin(t))) for t in [2 * math.pi * q / 32 for q in range(33)]]
+        put(sc_, tube(pts, lambda t: 0.006, sides=6, mat_idx=G_)[0])
+    put(sc_, sph(top_c + Vector((0, 0, -0.085)), (0.03, 0.03, 0.02), G_, 12, 6))
+    star_c = top_c + Vector((0, 0, 0.11)); sb = bmesh.new(); ctr0 = sb.verts.new(star_c + Vector((0, -0.01, 0))); ctr1 = sb.verts.new(star_c + Vector((0, 0.01, 0))); ring_ = []
+    for k in range(10):
+        a_ = math.pi / 2 + k * math.pi / 5; rr_ = 0.04 if k % 2 == 0 else 0.017; ring_.append(sb.verts.new(star_c + Vector((math.cos(a_) * rr_, 0, math.sin(a_) * rr_))))
+    for k in range(10):
+        f = sb.faces.new((ctr0, ring_[k], ring_[(k + 1) % 10])); f.material_index = G_; f = sb.faces.new((ctr1, ring_[(k + 1) % 10], ring_[k])); f.material_index = G_
+    put(sc_, sb)
+    for k in range(6): a_ = k * math.pi / 3; put(sc_, sph(top_c + Vector((0.075 * math.cos(a_), 0.075 * math.sin(a_), -0.06)), (0.01, 0.01, 0.01), P_, 8, 5))
+    bmesh.ops.recalc_face_normals(sc_, faces=sc_.faces[:]); scepter = to_object("QueenScepter", sc_, QM)
+    NPCDIR = os.path.join(ROOT, "unity", "Assets", "Resources", "Npc"); os.makedirs(NPCDIR, exist_ok=True)
+    for ob_ in (crown, cape, scepter):
+        bpy.ops.object.select_all(action="DESELECT"); ob_.select_set(True)
+        bpy.ops.export_scene.fbx(filepath=os.path.join(NPCDIR, ob_.name + ".fbx"), use_selection=True, object_types={"MESH"}, apply_scale_options="FBX_SCALE_ALL", axis_forward="-Z", axis_up="Y")
+        print("EXPORTED", ob_.name)
+    for ob_, bn_ in ((crown, "head"), (cape, "body"), (scepter, "flip.R")):                                                # 초상화에서는 뼈를 따라 움직이게
+        vg_ = ob_.vertex_groups.new(name=bn_); vg_.add(list(range(len(ob_.data.vertices))), 1.0, "REPLACE"); bind(ob_, arm)
+    scarf.hide_render = True                                                                                                  # 여왕은 목도리 대신 담비털 깃
+    if "--preview" in sys.argv:
+        os.makedirs(PRE, exist_ok=True); c_ = Vector((0, 0, 0.6))
+        preview(os.path.join(PRE, "queen_front.png"), Vector((0.7, -2.9, 1.0)), c_, arm_ob=arm, action=A["Idle"], frame=1)
+        preview(os.path.join(PRE, "queen_back.png"), Vector((-1.6, 2.6, 1.2)), c_, arm_ob=arm, action=A["Idle"], frame=1)
+if not FISHER and not QUEEN: print("EXPORTED", fbx, "verts:", len(npc.data.vertices), len(scarf.data.vertices))
 
 # ── 대화창 초상화 원본: Workbench(평면 채색 + 외곽선 + 굴곡 음영) → tools/portrait_art.py 가 일러스트풍으로 마무리
 sc = bpy.context.scene
@@ -264,7 +368,8 @@ for s, side in ((1, "L"), (-1, "R")):
 p, n = surf(-0.15, 0.655, 0.012); deco("tear", p, (0.016, 0.01, 0.026), (0.35, 0.65, 1.0), "head", facing(n))
 p, n = surf(0.23, 0.86, 0.02); deco("sweat", p, (0.018, 0.01, 0.03), (0.5, 0.8, 1.0), "head", facing(n) @ Matrix.Rotation(-0.3, 3, "Y"))
 cam = bpy.data.objects.new("PCam", bpy.data.cameras.new("PCam")); sc.collection.objects.link(cam); sc.camera = cam
-tgt = Vector((0, 0, 0.6)); cam.location = tgt + Vector((0.55, -1.9, 0.2)); cam.data.lens = 50; cam.data.sensor_fit = "VERTICAL"; cam.data.sensor_height = 24
+tgt = Vector((0, 0, 0.6)); cam.location = tgt + Vector((0.55, -1.9, 0.2)); cam.data.lens = 50
+if QUEEN: tgt = Vector((-0.04, 0, 0.64)); cam.location = tgt + Vector((0.62, -2.35, 0.3)); cam.data.sensor_fit = "VERTICAL"; cam.data.sensor_height = 24
 cam.rotation_euler = (tgt - cam.location).to_track_quat("-Z", "Y").to_euler()
 key_l = bpy.data.objects.new("Key", bpy.data.lights.new("Key", "AREA")); key_l.data.energy = 110; key_l.data.size = 1.6; sc.collection.objects.link(key_l)
 key_l.location = Vector((-1.4, -1.8, 1.9)); key_l.rotation_euler = (Vector((0, 0, 0.6)) - key_l.location).to_track_quat("-Z", "Y").to_euler()
@@ -290,12 +395,14 @@ def mode(flat):
         b.inputs["Emission Color"].default_value = col; b.inputs["Emission Strength"].default_value = 1.0 if flat else 0.0
         if "Specular IOR Level" in b.inputs: b.inputs["Specular IOR Level"].default_value = 0.0 if flat else 0.5
         if "Sheen Weight" in b.inputs: b.inputs["Sheen Weight"].default_value = 0.0 if flat else SHEEN.get(m.name, 0.0)
+        b.inputs["Metallic"].default_value = 0.0                                              # 음영 패스는 금속도 무광(크롬처럼 까맣게 안 나오게)
     key_l.hide_render = rim.hide_render = flat; bg.inputs[1].default_value = 0.0 if flat else 0.22; sc.render.use_freestyle = flat
     sc.cycles.samples = 12 if flat else 28; sc.cycles.use_denoising = not flat
     sc.cycles.filter_width = 1.2
 os.makedirs(RAW, exist_ok=True)
 EXPR = {"normal": ("Idle", 1, []), "happy": ("Laugh", 20, ["blushL", "blushR"]), "sad": ("Sad", 30, ["tear"]),
         "surprised": ("Surprised", 10, ["sweat"]), "troubled": ("No", 10, ["sweat", "blushL", "blushR"])}
+if QUEEN: EXPR["surprised"] = ("Surprised", 3, ["sweat"]); EXPR["troubled"] = ("Sad", 14, ["sweat"])   # 여왕: 지팡이가 얼굴을 가리지 않는 자세
 arm.animation_data_create()
 only = [a_ for a_ in sys.argv if a_.startswith("--only=")]
 for key_, (act_name, fr, show) in EXPR.items():
@@ -303,5 +410,5 @@ for key_, (act_name, fr, show) in EXPR.items():
     arm.animation_data.action = A[act_name]; sc.frame_set(fr)
     for nm, o in extras.items(): o.hide_render = not ((nm.startswith("shine") and key_ != "happy") or nm in show)
     for flat, tag in ((True, "flat"), (False, "shade")):
-        mode(flat); sc.render.filepath = os.path.join(RAW, f"{'fisher' if FISHER else 'joraeng'}_{key_}_{tag}.png"); bpy.ops.render.render(write_still=True)
+        mode(flat); sc.render.filepath = os.path.join(RAW, f"{'fisher' if FISHER else 'queen' if QUEEN else 'joraeng'}_{key_}_{tag}.png"); bpy.ops.render.render(write_still=True)
     print("✔ portrait raw", key_)

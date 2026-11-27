@@ -27,6 +27,10 @@ namespace MoominAction
     {
         public const string PeanutCraving = "peanut_craving";
         public const string GrumpyKing = "grumpy_king";
+        /// <summary>하프물범 여왕의 첫 부탁 — 알현실 샹들리에 등불을 다시 밝힐 곰기름. 끝내면 「장비에 축복」이 열림.</summary>
+        public const string QueenLamps = "queen_lamps";
+        /// <summary>여왕과 처음 인사를 나눴는가(퀘스트와 별개 기록).</summary>
+        public const string QueenMet = "queen_met";
         public static readonly QuestLog Log = new QuestLog();
         static readonly Dictionary<string, QuestDef> defs = new Dictionary<string, QuestDef>();
         /// <summary>수락·완료·가방 변화로 추적 HUD 를 다시 그려야 할 때.</summary>
@@ -46,6 +50,12 @@ namespace MoominAction
                 id = GrumpyKing, title = "삐진 고래고래 임금님", giver = "철썩이",
                 summary = "바다 밑 용궁의 고래고래 임금님이 생일 케이크 딸기를 잃어버려 단단히 삐졌다. 용궁 결투장에서 임금님과 겨뤄 기분을 풀어 주고, 친구의 증표를 받아 오자.",
                 itemId = "royal_pearl", itemName = "임금님의 무지개 진주", itemCount = 1, rewardExp = 1500, rewardGold = 600, rewardItems = new[] { ("potion_red", 3), ("potion_blue", 2) },
+            });
+            Add(new QuestDef
+            {
+                id = QueenLamps, title = "여왕의 등불", giver = "하프물범 여왕",
+                summary = "백설궁 알현실의 큰 샹들리에가 하나둘 꺼져 간다. 등불을 밝히는 데는 곰곰이가 겨울잠용으로 모아 둔 진한 곰기름이 제일이라고. 보스 웨이브의 곰곰이를 쓰러뜨려 곰기름 두 병을 여왕에게 바치자.",
+                itemId = "bear_oil", itemName = "곰기름", itemCount = 2, rewardExp = 1800, rewardGold = 800, rewardItems = new[] { ("potion_red", 3), ("shard_star", 4) },
             });
             Log.Changed += (_, __) => Updated?.Invoke();
         }

@@ -19,6 +19,8 @@ namespace MoominAction
             public string[] armor = new string[ArmorCount], artifacts = new string[ArtifactCount]; public int preset; public List<Loadout> presets = new();
             /// <summary>대장간 강화 단계("아이디=단계"). 무기·장비는 하나씩만 가지므로 아이디로 기억하면 충분.</summary>
             public string[] enhance;
+            /// <summary>하프물범 여왕의 축복을 받은 장비 아이디.</summary>
+            public string[] blessed;
         }
         /// <summary>장비 묶음 하나(프리셋 1~3).</summary>
         [Serializable] public class Loadout
@@ -41,6 +43,17 @@ namespace MoominAction
             if (string.IsNullOrEmpty(id)) return; level = ForgeMath.Clamp(level);
             if (level <= 0) enhance.Remove(id); else enhance[id] = level;
             ApplyWeapon(); ApplyEquipment(); Changed?.Invoke();
+        }
+        readonly HashSet<string> blessed = new();
+        /// <summary>여왕의 축복을 받았는가(무기: 공격 배율 ×1.06 · 최종 위력 +1 / 방어구·아티팩트: 받는 피해 -2% · 최대 체력 +10).</summary>
+        public bool Blessed(string id) => !string.IsNullOrEmpty(id) && blessed.Contains(id);
+        /// <summary>지금 낀 장비 전부에 축복(이미 받은 건 건너뜀). 새로 받은 장비 이름들을 돌려줌.</summary>
+        public List<string> BlessEquipped()
+        {
+            var got = new List<string>();
+            foreach (var id in EquippedIds()) { var d = ItemDatabase.Get(id); if (d == null || !d.Equippable || blessed.Contains(id)) continue; blessed.Add(id); got.Add(d.name); }
+            if (got.Count > 0) { ApplyWeapon(); ApplyEquipment(); Changed?.Invoke(); }
+            return got;
         }
         /// <summary>화면에 보일 이름("+3 레이저 블레이더").</summary>
         public string DisplayName(string id) { var d = ItemDatabase.Get(id); return d == null ? "" : ForgeMath.Prefix(Enhance(id)) + d.name; }
@@ -117,7 +130,7 @@ namespace MoominAction
         {
             var d = ItemDatabase.Get(equippedWeapon); if (d == null) return;
             if (combat == null) combat = GetComponent<SkillExecutor>(); if (glow == null) glow = GetComponentInChildren<SwordGlow>();
-            if (combat != null) combat.weaponMultiplier = d.damageMultiplier * ForgeMath.DamageBonus(Enhance(equippedWeapon));   // 강화 단계마다 공격 배율 +8%
+            if (combat != null) combat.weaponMultiplier = d.damageMultiplier * ForgeMath.DamageBonus(Enhance(equippedWeapon)) * (Blessed(equippedWeapon) ? 1.06f : 1f);   // 강화 단계마다 +8% · 여왕의 축복 ×1.06
             if (glow != null) glow.hueOverride = d.hue;
             if (TryGetComponent<CombatManager>(out var cm)) cm.ApplyKit(WeaponKits.Get(string.IsNullOrEmpty(d.kit) ? WeaponKits.Spark : d.kit));   // 무기마다 스킬·방어·고유 효과
         }
@@ -188,6 +201,10 @@ namespace MoominAction
                 foreach (var id in EquippedIds())
                 {
                     var d = ItemDatabase.Get(id); if (d == null) continue; t += d.stats;
+                    if (blessed.Contains(id))
+                    {   // 여왕의 축복
+                        if (d.type == ItemType.Weapon) t.finalPower += 1; else { t.damageReduction += 0.02f; t.health += 10f; }
+                    }
                     int lv = Enhance(id); if (lv <= 0) continue;                       // 대장간 강화: 최종 위력 + · 받는 피해 -
                     t.finalPower += ForgeMath.PowerBonus(lv); t.damageReduction += ForgeMath.GuardBonus(lv);
                 }
@@ -242,7 +259,7 @@ namespace MoominAction
             foreach (var s in slots) sv.slots.Add(new Slot { id = s.id, count = s.count });
             presets[preset] = Current(); foreach (var p in presets) sv.presets.Add(p != null ? p.Clone() : new Loadout());
             var en = new List<string>(); foreach (var kv in enhance) if (kv.Value > 0) en.Add(kv.Key + "=" + kv.Value);
-            sv.enhance = en.ToArray();
+            sv.enhance = en.ToArray(); sv.blessed = new List<string>(blessed).ToArray();
             return sv;
         }
         public void Import(State sv)
@@ -259,7 +276,8 @@ namespace MoominAction
             for (int i = 0; i < ArmorCount; i++) armor[i] = sv.armor != null && i < sv.armor.Length && !string.IsNullOrEmpty(sv.armor[i]) ? sv.armor[i] : null;
             for (int i = 0; i < ArtifactCount; i++) artifacts[i] = sv.artifacts != null && i < sv.artifacts.Length && !string.IsNullOrEmpty(sv.artifacts[i]) ? sv.artifacts[i] : null;
             preset = Mathf.Clamp(sv.preset, 0, PresetCount - 1);
-            enhance.Clear();
+            enhance.Clear(); blessed.Clear();
+            if (sv.blessed != null) foreach (var b in sv.blessed) if (!string.IsNullOrEmpty(b)) blessed.Add(b);
             if (sv.enhance != null)
                 foreach (var line in sv.enhance)
                 {
