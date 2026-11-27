@@ -1,4 +1,6 @@
-# 하프물범 여왕의 성 — 성 안
+# 하프프 왕국 · 하프물범 여왕의 성(백설궁) — 성 안
+
+- 왕국 이름: **하프프**(사용자 지정). 성 이름 백설궁 · 여왕 이름 하프리나는 Claude 가 지음(사용자가 바꿀 수 있음)
 
 ## 설계(사용자와 정함)
 - 성의 주인: **하프물범 여왕** · 역할: 이야기·NPC 거점 + 보물·퍼즐 + 최종 보스 자리 · 분위기: **웅장한 왕궁풍**(사용자 참고 그림: 고딕 왕궁 홀) · 규모: 여러 층 + 지하
@@ -30,6 +32,7 @@
 ## 하프물범 여왕 하프리나
 - 모델: 조랭하프(`Joraeng.fbx`) × **1.8배** + 장신구 3개 — `blender/build_joraeng.py --queen [--preview]` → `Resources/Npc/QueenCrown.fbx`(head) · `QueenCape.fbx`(body) · `QueenScepter.fbx`(flip.R)
   - 왕관: 금 띠 · 뾰족 장식 8(진주) · 앞 큰 사파이어 · 띠 위 사파이어/루비 · 빨간 벨벳 모자 · 금 방울
+  - 망토 무늬: **여왕이 좋아하는 무늬 = 사용자 사진(장미빛 바탕 + 흰 다마스크·격자·꽃)** → `tools/queen_pattern.py`(밝기 평탄화 + 두 색) → `Resources/Npc/QueenPattern.png` · Blender 는 Queen_Velvet 에 이미지 텍스처, Unity 는 SpawnQueen 이 Queen_Velvet 재질에 넣음 · 원본 `docs/refs/queen_pattern_photo.jpg`
   - 망토: 어깨(0.545m)에서 바닥까지 몸 뒤를 감싸며 퍼지고 뒤로 끌림 · 진홍 벨벳 + 금빛 안감 · 흰 담비털 깃·앞자락·단(검은 점) · 단 근처 금 수 두 줄 · 등 금 문장 + 사파이어 · 앞 금 걸쇠 + 루비
   - 보석 지팡이: 금 막대 + 고리 · 세 방향 금 테두리 안 큰 사파이어(Glow) · 진주 6 · 꼭대기 금별
 - 초상화(다른 캐릭터보다 훨씬 고풍스럽게): `build_joraeng.py --queen` 원본 → **`tools/queen_portrait.py`** → `Resources/UI/Portraits/queen_<표정>.png`
@@ -43,11 +46,22 @@
 - 퀘스트 `Quests.QueenLamps` 「여왕의 등불」: 곰기름(`bear_oil`, 곰곰이 드롭) 2병 → 경험치 1800 · 금화 800 · 붉은 약병 3 · 별조각 4 + **축복 열림**
 - 여왕의 축복 `Inventory.BlessEquipped()`: 지금 낀 장비 전부(장비마다 한 번, 무료) — 무기 공격 ×1.06 · 최종 위력 +1 / 방어구·아티팩트 받는 피해 -2% · 최대 체력 +10. 저장 `Inventory.State.blessed`
 
-## 지하감옥 — `blender/build_castle_dungeon.py` → `Resources/World/CastleDungeon.fbx`
-- 성 위 하늘 z 230m(알현실과 떨어진 닫힌 실내). 돌 복도 26m · 낮은 둥근 천장 · 쇠창살 감방 3칸 · 횃불 5 · 이끼 · 열쇠 탁자 · 하프물범 얼굴 돌판 · 끝 계단 + 나무 문
-- 첫 감방(지푸라기 · 양동이 · 벽 사슬 · 달빛 창살 창)에 갇힘 → **철창 문(DungeonCellDoor, 경첩 회전)을 F 로 세 번 흔들면** 자물쇠가 떨어져 열림 → 복도 끝 계단(F) → 알현실 정문 앞
-- `CastleInterior.SendToDungeon()`(화면 어둡게 → 감방, 문 다시 잠김) · 장소 이름 "하프물범 여왕의 성 · 지하감옥" · 성 안처럼 웨이브 멈춤
-- 미리보기 `--preview` → `previews/dungeon_corridor.png` · `dungeon_cell.png`
+## 지하감옥 + 광산 노역장 — `blender/build_castle_dungeon.py` → `Resources/World/CastleDungeon.fbx`
+- 사용자 참고 그림 2장(`docs/refs/dungeon_prison_ref.png` · `dungeon_mine_ref.png`): **감방 철창 밖 = 광산 노역장**
+- 성 위 하늘 z 230m 닫힌 실내 46m × 30m. 감옥 동(뒤쪽): 아치 감방 2층(6+6) · 위층 발코니 + 난간 + 돌계단 · 왕관 문장 깃발 · 횃불 · 쇠사슬
+- 노역장 동굴: 울퉁불퉁 바위벽·천장 · 흙바닥 · 레일 + 광차 2 · 도르래 탑 + 쇠사슬 양동이 · 나무 비계(5m 통로 · 계단) · 기둥 등불 8 · 광석 더미 · 상자 · 곡괭이 문장 깃발
+- 가운데 쇠고리 샹들리에 · 천장 둥근 창살 채광창(달빛) · 바닥 배수 창살 · 끝 바위 아치 + 내리닫이 쇠창살(DungeonExitGate) · 간수 초소 · 문 밖 계단
+- 캘 바위 `MineRock_Template` → Unity 가 `Mark_Rock_1..16` 자리마다 복제(`World/MineRock.cs`)
+- 미리보기 `--preview` → `previews/dungeon_prison.png` · `dungeon_mine.png` · `dungeon_cell.png`
+
+### 노역 흐름(`CastleInterior` · `World/MineRock.cs` · `Story/JailerStory.cs` · 규칙 `Crafting/MineMath.cs` 순수 C#)
+1. 여왕에게 "끼루룩 끼룩끼룩 민미민미" → 감방(2번째 칸) 안으로 → 3.5초 뒤 간수가 감방 문을 열어 줌
+2. 간수 하프(조랭하프 + 쇠 투구 + 가죽 띠·열쇠 꾸러미 — `build_joraeng.py --jailer`, 초상화 jailer_*)에게 말 걸면 **노역용 곡괭이**(`prison_pickaxe`)
+3. 바위 앞 F 곡괭이질 3번 → 부서짐(25초 뒤 다시 솟음): 돌덩이(`stone_rubble`) 1~2(30% 2개) + 광석 하나 확률
+   - 구리 광석 C 35% · 철 광석 B 18% · 은 광석 A 8% · 금 광석 S 3% · 하프 사파이어 원석 SS 1% · 없음 35% (S·SS 는 큰 알림)
+4. 돌덩이 **12개**(할당량) → 간수에게 "할당량 채웠어요 민미!" → 돌덩이 12·곡괭이 회수, 광석은 가짐 → 출구 쇠창살이 올라감 → 계단(F)으로 알현실
+- 노역 중엔 출구가 막힘(`CastleInterior.Imprisoned`). 장소 이름 "하프물범 여왕의 성 · 지하감옥", 웨이브 멈춤
+- 아이템 아이콘 7개(돌덩이·광석 5·곡괭이) = `render_item_icons.py`
 
 ## 다음
 - 대현관 · 연회장 · 도서관 · 침실 · 지하 · 전망대(각각 만들기 전에 사용자에게 확인)

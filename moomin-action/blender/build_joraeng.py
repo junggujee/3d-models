@@ -218,7 +218,8 @@ if "--preview" in sys.argv:
 
 FISHER = "--fisher" in sys.argv   # 항구 어부(노란 어부 모자) — 모자 FBX + fisher_<표정> 초상화만 만듦(Joraeng.fbx 는 그대로)
 QUEEN = "--queen" in sys.argv     # 하프물범 여왕(왕관 · 망토 · 보석 지팡이) — 장신구 FBX 3개 + queen_<표정> 초상화 원본만 만듦
-if not FISHER and not QUEEN:
+JAILER = "--jailer" in sys.argv   # 지하 노역장 간수 하프(쇠 투구 · 열쇠 꾸러미 · 가죽 띠) — JailerHelmet/JailerKeys FBX + jailer_<표정> 초상화 원본
+if not FISHER and not QUEEN and not JAILER:
     glb, fbx = export_all("Joraeng", OUT, [arm, npc, scarf])
     os.makedirs(UNITY, exist_ok=True); shutil.copy(fbx, os.path.join(UNITY, "Joraeng.fbx"))
 elif FISHER:
@@ -258,6 +259,10 @@ if QUEEN:
     QD = M_("Queen_ErmineDot", (0.05, 0.05, 0.06), rough=0.8); QS = mat("Queen_SapphireGlow", (0.12, 0.35, 1.0), rough=0.05, emit=(0.15, 0.4, 1.0), emit_strength=1.5)
     QR = M_("Queen_Ruby", (0.85, 0.05, 0.12), rough=0.08); QP = M_("Queen_Pearl", (0.97, 0.95, 1.0), rough=0.12)
     QM = [QG, QV, QL, QE, QD, QS, QR, QP]; G_, V_, L_, E_, D_, S_, R_, P_ = range(8)
+    PAT = os.path.join(ROOT, "unity", "Assets", "Resources", "Npc", "QueenPattern.png")   # 여왕이 좋아하는 무늬(사용자 사진 → tools/queen_pattern.py)
+    if os.path.exists(PAT):
+        nt_ = QV.node_tree; bsdf_ = nt_.nodes["Principled BSDF"]; tex_ = nt_.nodes.new("ShaderNodeTexImage"); tex_.name = "QueenTex"; tex_.image = bpy.data.images.load(PAT)
+        nt_.links.new(tex_.outputs["Color"], bsdf_.inputs["Base Color"])
     def put(bm_, other):
         me_ = bpy.data.meshes.new("t"); other.to_mesh(me_); other.free(); bm_.from_mesh(me_); bpy.data.meshes.remove(me_)
     def sph(c_, r3, mi, seg=16, rings=10):
@@ -290,7 +295,7 @@ if QUEEN:
     put(cr, sph(Vector((0, 0.0, 1.03)), (0.022, 0.022, 0.022), G_, 10, 6))                                         # 꼭대기 금 방울
     bmesh.ops.recalc_face_normals(cr, faces=cr.faces[:]); crown = to_object("QueenCrown", cr, QM)
     # ── 망토: 어깨(0.58)에서 바닥까지, 몸 뒤 반 바퀴 + 옆을 감쌈(앞은 열림), 아래로 갈수록 퍼지고 뒤로 끌림
-    cp = bmesh.new(); NA_, NZ_ = 40, 26; A0, A1 = math.radians(-28), math.radians(208); Z0 = 0.545
+    cp = bmesh.new(); cuv = cp.loops.layers.uv.new("UVMap"); NA_, NZ_ = 40, 26; A0, A1 = math.radians(-28), math.radians(208); Z0 = 0.545
     def cape_pt(i, j, off):
         a_ = A0 + (A1 - A0) * i / NA_; z_ = Z0 * (1 - j / NZ_) ** 1.0; drop = Z0 - z_
         rr = r_at(min(z_, 0.6)) + 0.03 + 0.22 * drop ** 1.3 + off; back = max(0.0, math.sin(a_))
@@ -300,6 +305,7 @@ if QUEEN:
     for j in range(NZ_):
         for i in range(NA_):
             f = cp.faces.new((outer[j][i], outer[j][i + 1], outer[j + 1][i + 1], outer[j + 1][i])); f.material_index = V_; f.smooth = True
+            for lp_, (ii, jj) in zip(f.loops, ((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1))): lp_[cuv].uv = (ii / NA_ * 1.4, (1 - jj / NZ_) * 0.8)   # 무늬: 가로 1.4번 · 세로 0.8
             f = cp.faces.new((inner[j + 1][i], inner[j + 1][i + 1], inner[j][i + 1], inner[j][i])); f.material_index = L_; f.smooth = True
     for j in range(NZ_):
         for i in (0, NA_):
@@ -353,7 +359,46 @@ if QUEEN:
         os.makedirs(PRE, exist_ok=True); c_ = Vector((0, 0, 0.6))
         preview(os.path.join(PRE, "queen_front.png"), Vector((0.7, -2.9, 1.0)), c_, arm_ob=arm, action=A["Idle"], frame=1)
         preview(os.path.join(PRE, "queen_back.png"), Vector((-1.6, 2.6, 1.2)), c_, arm_ob=arm, action=A["Idle"], frame=1)
-if not FISHER and not QUEEN: print("EXPORTED", fbx, "verts:", len(npc.data.vertices), len(scarf.data.vertices))
+if JAILER:
+    JI = M_("Jailer_Iron", (0.36, 0.36, 0.4), rough=0.4, metal=0.85); JL = M_("Jailer_Leather", (0.34, 0.2, 0.1), rough=0.8); JB = M_("Jailer_Brass", (0.85, 0.62, 0.25), rough=0.3, metal=1.0)
+    JM = [JI, JL, JB]
+    def put(bm_, other):
+        me_ = bpy.data.meshes.new("t"); other.to_mesh(me_); other.free(); bm_.from_mesh(me_); bpy.data.meshes.remove(me_)
+    hb = bmesh.new(); bmesh.ops.create_uvsphere(hb, u_segments=32, v_segments=14, radius=1.0)       # 둥근 쇠 투구(케틀 햇)
+    for v in hb.verts: v.co = Vector((v.co.x * 0.3, v.co.y * 0.27, 0.86 + max(v.co.z, -0.2) * 0.17))
+    for f in hb.faces: f.smooth = True; f.material_index = 0
+    rows = []
+    for k in range(40):
+        a_ = 2 * math.pi * k / 40; cx, cy = math.cos(a_), math.sin(a_)
+        rows.append([hb.verts.new(Vector((0.285 * cx, 0.258 * cy, 0.845))), hb.verts.new(Vector((0.43 * cx, 0.4 * cy, 0.81))), hb.verts.new(Vector((0.43 * cx, 0.4 * cy, 0.795))), hb.verts.new(Vector((0.285 * cx, 0.258 * cy, 0.83)))])
+    for k in range(40):
+        r0, r1 = rows[k], rows[(k + 1) % 40]
+        for j in range(4): f = hb.faces.new((r0[j], r1[j], r1[(j + 1) % 4], r0[(j + 1) % 4])); f.material_index = 0; f.smooth = True
+    put(hb, tube([Vector((0.0, -0.275 + 0.0, 0.85 + 0.17 * t)) for t in []] or [Vector((0, -0.27, 0.86)), Vector((0, -0.2, 1.0)), Vector((0, 0.0, 1.035)), Vector((0, 0.2, 1.0)), Vector((0, 0.27, 0.86))], lambda t: 0.018, sides=6, mat_idx=0)[0])   # 가운데 능선
+    put(hb, tube([Vector((0.302 * math.cos(2 * math.pi * k / 40), 0.272 * math.sin(2 * math.pi * k / 40), 0.87)) for k in range(41)], lambda t: 0.012, sides=6, mat_idx=2)[0])   # 놋쇠 띠
+    bmesh.ops.recalc_face_normals(hb, faces=hb.faces[:]); helm = to_object("JailerHelmet", hb, JM)
+    kb = bmesh.new()                                                                                    # 가죽 띠(어깨에서 허리) + 열쇠 꾸러미
+    put(kb, tube([surf(0.22, 0.56, 0.012)[0], surf(0.05, 0.42, 0.014)[0], surf(-0.15, 0.3, 0.014)[0], surf(-0.27, 0.22, 0.012)[0]], lambda t: 0.022, sides=6, mat_idx=1)[0])
+    kc, kn = surf(-0.26, 0.24, 0.03)
+    put(kb, tube([kc + Vector((0.045 * math.cos(2 * math.pi * k / 20), 0, 0.045 * math.sin(2 * math.pi * k / 20))) for k in range(21)], lambda t: 0.007, sides=5, mat_idx=2)[0])
+    for k in range(3):
+        a_ = -1.2 + 0.6 * k; base = kc + Vector((0.045 * math.cos(a_), -0.01, 0.045 * math.sin(a_)))
+        tipk = base + Vector((0.02 * math.cos(a_), -0.01, -0.09))
+        put(kb, tube([base, tipk], lambda t: 0.006, sides=5, mat_idx=2)[0])
+        tb_ = bmesh.new(); bmesh.ops.create_cube(tb_, size=1.0); bmesh.ops.transform(tb_, matrix=Matrix.Translation(tipk) @ Matrix.Diagonal((0.018, 0.006, 0.012, 1)), verts=tb_.verts[:])
+        for f in tb_.faces: f.material_index = 2
+        put(kb, tb_)
+    bmesh.ops.recalc_face_normals(kb, faces=kb.faces[:]); keys = to_object("JailerKeys", kb, JM)
+    NPCDIR = os.path.join(ROOT, "unity", "Assets", "Resources", "Npc"); os.makedirs(NPCDIR, exist_ok=True)
+    for ob_ in (helm, keys):
+        bpy.ops.object.select_all(action="DESELECT"); ob_.select_set(True)
+        bpy.ops.export_scene.fbx(filepath=os.path.join(NPCDIR, ob_.name + ".fbx"), use_selection=True, object_types={"MESH"}, apply_scale_options="FBX_SCALE_ALL", axis_forward="-Z", axis_up="Y")
+        print("EXPORTED", ob_.name)
+    for ob_, bn_ in ((helm, "head"), (keys, "body")):
+        vg_ = ob_.vertex_groups.new(name=bn_); vg_.add(list(range(len(ob_.data.vertices))), 1.0, "REPLACE"); bind(ob_, arm)
+    if "--preview" in sys.argv:
+        os.makedirs(PRE, exist_ok=True); preview(os.path.join(PRE, "jailer_front.png"), Vector((0.6, -2.4, 0.9)), Vector((0, 0, 0.55)), arm_ob=arm, action=A["Idle"], frame=1, size=480)
+if not FISHER and not QUEEN and not JAILER: print("EXPORTED", fbx, "verts:", len(npc.data.vertices), len(scarf.data.vertices))
 
 # ── 대화창 초상화 원본: Workbench(평면 채색 + 외곽선 + 굴곡 음영) → tools/portrait_art.py 가 일러스트풍으로 마무리
 sc = bpy.context.scene
@@ -391,6 +436,11 @@ def mode(flat):
     for m in ALL:
         if not m.use_nodes: continue
         b = m.node_tree.nodes["Principled BSDF"]; col = BASE[m.name]
+        tx_ = m.node_tree.nodes.get("QueenTex")
+        if tx_ is not None:                                                                   # 무늬 천: 평면 패스 = 무늬를 발광으로 · 음영 패스 = 흰색
+            for lk in list(m.node_tree.links):
+                if lk.from_node == tx_: m.node_tree.links.remove(lk)
+            if flat: m.node_tree.links.new(tx_.outputs["Color"], b.inputs["Emission Color"])
         b.inputs["Base Color"].default_value = (0, 0, 0, 1) if flat else (0.8, 0.8, 0.8, 1)
         b.inputs["Emission Color"].default_value = col; b.inputs["Emission Strength"].default_value = 1.0 if flat else 0.0
         if "Specular IOR Level" in b.inputs: b.inputs["Specular IOR Level"].default_value = 0.0 if flat else 0.5
@@ -410,5 +460,5 @@ for key_, (act_name, fr, show) in EXPR.items():
     arm.animation_data.action = A[act_name]; sc.frame_set(fr)
     for nm, o in extras.items(): o.hide_render = not ((nm.startswith("shine") and key_ != "happy") or nm in show)
     for flat, tag in ((True, "flat"), (False, "shade")):
-        mode(flat); sc.render.filepath = os.path.join(RAW, f"{'fisher' if FISHER else 'queen' if QUEEN else 'joraeng'}_{key_}_{tag}.png"); bpy.ops.render.render(write_still=True)
+        mode(flat); sc.render.filepath = os.path.join(RAW, f"{'fisher' if FISHER else 'queen' if QUEEN else 'jailer' if JAILER else 'joraeng'}_{key_}_{tag}.png"); bpy.ops.render.render(write_still=True)
     print("✔ portrait raw", key_)

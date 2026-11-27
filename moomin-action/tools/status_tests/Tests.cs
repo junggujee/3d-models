@@ -247,6 +247,16 @@ static class Tests
         Eq(ForgeMath.GetRecipe("craft_peanut").Needs()["peanut_piece"], 9, "땅콩빵: 조각 9");
         Eq(ForgeMath.GetRecipe("craft_laser").result, "laser_blader", "레이저 제작법"); Eq(ForgeMath.GetRecipe("없음") == null, true, "모르는 제작법은 null");
 
+        // ── 지하 광산 노역장
+        Eq(MineMath.RollOre(0.0f), "ore_copper", "가장 낮은 난수 = 구리"); Eq(MineMath.RollOre(0.349f), "ore_copper", "구리 35% 끝");
+        Eq(MineMath.RollOre(0.36f), "ore_iron", "철"); Eq(MineMath.RollOre(0.55f), "ore_silver", "은"); Eq(MineMath.RollOre(0.62f), "ore_gold", "금");
+        Eq(MineMath.RollOre(0.645f), "ore_sapphire", "사파이어 1%"); Eq(MineMath.RollOre(0.66f) == null, true, "나머지 35% 는 광석 없음"); Eq(MineMath.RollOre(0.999f) == null, true, "끝도 없음");
+        float sumOre = 0; foreach (var o in MineMath.Ores) sumOre += o.chance; Eq(sumOre, 0.65f, "광석 확률 합 65%", 1e-4f);
+        for (int k = 1; k < MineMath.Ores.Length; k++) Eq(MineMath.Ores[k].chance < MineMath.Ores[k - 1].chance, true, "등급이 높을수록 드묾 " + k);
+        Eq(MineMath.RollRubble(0.1f), 2, "30% 돌덩이 2개"); Eq(MineMath.RollRubble(0.5f), 1, "70% 1개");
+        Eq(MineMath.QuotaMet(11), false, "11개는 모자람"); Eq(MineMath.QuotaMet(12), true, "12개면 할당량"); Eq(MineMath.Progress(20), "돌덩이 12 / 12", "넘쳐도 12 로 표시");
+        Eq(MineMath.Grade("ore_sapphire"), "SS", "사파이어 SS"); Eq(MineMath.Grade("ore_copper"), "C", "구리 C"); Eq(MineMath.Grade("x"), "", "모르는 건 빈 글자");
+
         Console.WriteLine(fail == 0 ? $"✔ 전투 로직 테스트 {pass}개 통과" : $"✘ {fail}개 실패 / {pass}개 통과");
         return fail == 0 ? 0 : 1;
     }

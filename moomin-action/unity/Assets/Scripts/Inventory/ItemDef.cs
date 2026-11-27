@@ -48,6 +48,17 @@ namespace MoominAction
                 description = "곰곰이 보스가 아끼던 커다란 뼈. 오래 우려도 단단하다. 레이저 블레이더의 손잡이 심으로 쓴다." });
             Add(new ItemDef { id = "bear_oil", name = "곰기름", type = ItemType.Material, grade = "B", icon = IconKind.Potion, color = new Color(0.95f, 0.72f, 0.3f), maxStack = 20, value = 80,
                 description = "곰곰이가 겨울잠을 위해 모아 둔 진한 기름. 노랗게 반짝이고 고소한 냄새가 난다. 누군가 꼭 필요로 할 것 같다(퀘스트 재료)." });
+            // ── 지하 광산 노역장(하프프 왕국 백설궁 지하감옥)
+            Add(new ItemDef { id = "prison_pickaxe", name = "노역용 곡괭이", type = ItemType.Key, icon = IconKind.Sword, color = new Color(0.55f, 0.5f, 0.45f), maxStack = 1, value = 0,
+                description = "간수 하프가 빌려준 낡은 곡괭이. 손잡이에 '노역장 비품 — 꼭 돌려줄 것'이라고 새겨져 있다." });
+            Add(new ItemDef { id = "stone_rubble", name = "돌덩이", type = ItemType.Material, grade = "D", icon = IconKind.Shard, color = new Color(0.6f, 0.5f, 0.42f), maxStack = 99, value = 1,
+                description = "바위를 캐면 나오는 돌덩이. 노역 할당량은 이걸로 센다. 간수 하프에게 12개를 내면 풀려난다." });
+            Add(new ItemDef { id = "ore_copper", name = "구리 광석", type = ItemType.Material, grade = "C", icon = IconKind.Shard, color = new Color(0.85f, 0.45f, 0.2f), maxStack = 99, value = 12, description = "붉은 구릿빛 광석. 노역장 바위에서 흔히 나온다." });
+            Add(new ItemDef { id = "ore_iron", name = "철 광석", type = ItemType.Material, grade = "B", icon = IconKind.Shard, color = new Color(0.45f, 0.45f, 0.5f), maxStack = 99, value = 30, description = "묵직한 잿빛 광석. 대장장이들이 좋아한다." });
+            Add(new ItemDef { id = "ore_silver", name = "은 광석", type = ItemType.Material, grade = "A", icon = IconKind.Shard, color = new Color(0.85f, 0.88f, 0.94f), maxStack = 99, value = 80, description = "달빛처럼 하얗게 빛나는 광석." });
+            Add(new ItemDef { id = "ore_gold", name = "금 광석", type = ItemType.Material, grade = "S", icon = IconKind.Shard, color = new Color(1f, 0.78f, 0.25f), maxStack = 99, value = 220, description = "노역장에서 금이 나오다니! 간수 하프 몰래 주머니에." });
+            Add(new ItemDef { id = "ore_sapphire", name = "하프 사파이어 원석", type = ItemType.Material, grade = "SS", icon = IconKind.Shard, color = new Color(0.2f, 0.45f, 1f), maxStack = 20, value = 600,
+                description = "여왕의 지팡이에 박힌 것과 같은 푸른 원석. 하프프 왕국 땅속 깊은 곳에서만 아주 드물게 나온다." });
             // ── 대장간(풍선고래)에서 만드는 장신구
             Add(new ItemDef { id = "ring_pearl", name = "용궁 진주 반지", type = ItemType.Artifact, grade = "A", icon = IconKind.Artifact, color = new Color(0.86f, 0.92f, 0.98f), maxStack = 1, value = 300,
                               stats = new EquipStats { finalPower = 1, health = 20f },

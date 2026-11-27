@@ -65,7 +65,7 @@ namespace MoominAction
             BuildDungeon();
         }
 
-        void Start() { SpawnQueen(); }
+        void Start() { SpawnQueen(); SpawnJailer(); }
 
         // ── 하프물범 여왕: 조랭하프(GameManager.npcPrefab) × 1.8 + 왕관·망토·보석 지팡이(Resources/Npc/Queen*) · 왕좌 계단 위
         public const float QueenScale = 1.8f;
@@ -83,47 +83,79 @@ namespace MoominAction
             npc.npcName = "하프물범 여왕"; npc.portrait = "queen"; npc.place = "하프물범 여왕의 성"; npc.story = QueenStory.Build; npc.questId = Quests.QueenLamps;
             npc.wanderRadius = 0f; npc.interactRange = 4.2f; npc.scarf = false; npc.ApplyLook();
             foreach (var part in new[] { ("Npc/QueenCrown", "head"), ("Npc/QueenCape", "body"), ("Npc/QueenScepter", "flip.R") }) NpcAccessory.Attach(go, part.Item1, part.Item2);
+            var pattern = Resources.Load<Texture2D>("Npc/QueenPattern");                                   // 여왕이 좋아하는 무늬(사용자 사진 → tools/queen_pattern.py)
+            if (pattern != null)
+                foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+                {
+                    var ms = r.materials; bool hit = false;
+                    for (int i = 0; i < ms.Length; i++) if (ms[i] != null && ms[i].name.StartsWith("Queen_Velvet")) { ms[i].mainTexture = pattern; ms[i].color = Color.white; hit = true; }
+                    if (hit) r.materials = ms;
+                }
             Seaside.GlowLamps(go);                                                                          // 지팡이 사파이어 빛
             Queen = npc;
         }
 
-        // ── 지하감옥: 여왕에게 고래 말을 하면 끌려감 → 철창 문을 세 번 흔들면 열림 → 복도 끝 계단으로 알현실에
-        GameObject dungeon; Transform cellDoor; float doorOpen, doorTarget; int shakes; float shakeT;
+        // ── 지하감옥 + 광산 노역장: 여왕에게 고래 말을 하면 끌려감 → 간수가 감방 문을 열고 곡괭이를 줌
+        //    → 바위를 캐서 돌덩이 MineMath.Quota 개 → 간수에게 내면 출구 쇠창살이 올라감 → 계단으로 알현실
+        Vector3 gateBase; GameObject dungeon; Transform cellDoor, exitGate; float doorOpen, doorTarget, gateOpen, gateTarget, openCellAt = -1f;
+        /// <summary>노역 중(할당량을 아직 안 냄).</summary>
+        public bool Imprisoned { get; private set; }
+        Npc jailer;
         void BuildDungeon()
         {
             var prefab = Resources.Load<GameObject>("World/CastleDungeon");
             if (prefab == null) { Debug.Log("[성 안] Resources/World/CastleDungeon.fbx 없음 — blender/build_castle_dungeon.py"); return; }
             dungeon = Instantiate(prefab, transform.parent); dungeon.name = "CastleDungeon";
+            Transform template = null; var rockMarks = new List<Transform>();
             foreach (var t in dungeon.GetComponentsInChildren<Transform>(true))
             {
                 if (t.name.StartsWith("Mark_") && !marks.ContainsKey(t.name)) marks[t.name] = t;
-                if (t.name == "DungeonCellDoor") cellDoor = t;
+                if (t.name.StartsWith("Mark_Rock_")) rockMarks.Add(t);
+                if (t.name == "DungeonCellDoor") cellDoor = t; else if (t.name == "DungeonExitGate") exitGate = t; else if (t.name == "MineRock_Template") template = t;
             }
             foreach (var mf in dungeon.GetComponentsInChildren<MeshFilter>(true))
             {
                 var r = mf.GetComponent<MeshRenderer>(); bool col = mf.name.Contains("_Collision");
-                if (col || mf.name == "DungeonCellDoor")
+                if (col || mf.name == "DungeonCellDoor" || mf.name == "DungeonExitGate" || mf.name == "MineRock_Template")
                 {
                     var mc = mf.gameObject.GetComponent<MeshCollider>(); if (mc == null) mc = mf.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = mf.sharedMesh;
                 }
                 if (col && r != null) r.enabled = false;
             }
-            Seaside.GlowLamps(dungeon);
+            Seaside.GlowLamps(dungeon); if (exitGate != null) gateBase = exitGate.localPosition;
+            if (template != null)
+            {
+                foreach (var m in rockMarks) { var rk = Instantiate(template.gameObject, m.position, Quaternion.Euler(0, Random.Range(0f, 360f), 0), dungeon.transform); rk.name = "MineRock"; rk.transform.localScale = Vector3.one * Random.Range(0.9f, 1.2f); rk.AddComponent<MineRock>(); }
+                template.gameObject.SetActive(false);
+            }
             Vector3 dc = Mark("Mark_DungeonCenter", dungeon.transform.position);
-            NavMeshBaker.Extra.Add(new Bounds(dc + Vector3.up * 2f, new Vector3(34f, 10f, 34f)));
-            for (int i = 1; i <= 5; i++) AddLight(Mark("Mark_Torch_" + i, dc), new Color(1f, 0.6f, 0.3f), 9f, 1.6f, true);
-            AddLight(Mark("Mark_Moon", dc), new Color(0.6f, 0.72f, 1f), 6f, 1.2f, false);
-            var up = new GameObject("DungeonStairs").AddComponent<SeaGate>(); up.transform.SetParent(dungeon.transform, true); up.signHeight = 3.6f;
-            up.Configure(Mark("Mark_ExitStairs", dc), Mark("Mark_Arrive", transform.position), Mark("Mark_ArriveLook", transform.position), "F   계단 올라가기", "알현실로", false);
-            up.arriveText = "알현실로 슬그머니 돌아왔다…";
+            NavMeshBaker.Extra.Add(new Bounds(dc + Vector3.up * 3f, new Vector3(56f, 14f, 40f)));
+            for (int i = 1; i <= 6; i++) AddLight(Mark("Mark_Torch_" + i, dc), new Color(1f, 0.6f, 0.3f), 8f, 1.5f, true);
+            for (int i = 1; i <= 8; i++) AddLight(Mark("Mark_Lantern_" + i, dc), new Color(1f, 0.72f, 0.4f), 10f, 1.6f, true);
+            AddLight(Mark("Mark_Chandelier", dc), new Color(1f, 0.65f, 0.35f), 18f, 2.2f, true);
+            AddLight(Mark("Mark_Moon", dc), new Color(0.65f, 0.68f, 1f), 16f, 1.4f, false);
+            var up = new GameObject("DungeonExit").AddComponent<SeaGate>(); up.transform.SetParent(dungeon.transform, true); up.signHeight = 6.5f;
+            up.Configure(Mark("Mark_ExitGate", dc), Mark("Mark_Arrive", transform.position), Mark("Mark_ArriveLook", transform.position), "F   계단 올라가기", "출구", false);
+            up.arriveText = "알현실로 돌아왔다…"; up.canUse = () => !Imprisoned; up.blockedText = $"쇠창살이 내려져 있다. 간수 하프에게 돌덩이 {MineMath.Quota}개를 내자";
+        }
+        void SpawnJailer()
+        {
+            var gm = GameManager.Instance; if (dungeon == null || gm == null || gm.npcPrefab == null || jailer != null) return;
+            Vector3 at = Mark("Mark_Jailer", dungeon.transform.position), look = Mark("Mark_JailerLook", at + Vector3.left) - at; look.y = 0;
+            var go = Instantiate(gm.npcPrefab, at, look.sqrMagnitude > 0.01f ? Quaternion.LookRotation(look) : Quaternion.identity); go.name = "NPC_간수하프";
+            if (!go.TryGetComponent<Npc>(out var npc)) npc = go.AddComponent<Npc>();
+            npc.npcName = "간수 하프"; npc.portrait = "jailer"; npc.place = "지하 광산 노역장"; npc.story = JailerStory.Build; npc.wanderRadius = 1.0f;
+            npc.scarfColor = new Color(0.86f, 0.3f, 0.27f); npc.ApplyLook();
+            NpcAccessory.Attach(go, "Npc/JailerHelmet", "head"); NpcAccessory.Attach(go, "Npc/JailerKeys", "body");
+            jailer = npc;
         }
         /// <summary>지하감옥에 있는가.</summary>
-        public static bool InDungeon(Vector3 p) { if (Instance == null || Instance.dungeon == null) return false; var d = p - Instance.Mark("Mark_DungeonCenter", p); return Mathf.Abs(d.y) < 12f && new Vector2(d.x, d.z).magnitude < 24f; }
-        /// <summary>여왕이 "지하감옥으로 가라" — 화면이 어두워졌다가 감방 안으로. 철창 문은 다시 잠김.</summary>
+        public static bool InDungeon(Vector3 p) { if (Instance == null || Instance.dungeon == null) return false; var d = p - Instance.Mark("Mark_DungeonCenter", p); return Mathf.Abs(d.y) < 14f && new Vector2(d.x, d.z).magnitude < 36f; }
+        /// <summary>여왕이 "지하감옥으로 가라" — 화면이 어두워졌다가 감방 안으로. 곧 간수가 문을 열어 노역장으로 내보냄.</summary>
         public void SendToDungeon()
         {
             if (dungeon == null) return; var p = GameObject.FindGameObjectWithTag("Player"); if (p == null) return; var t = p.transform;
-            shakes = 0; doorTarget = 0f;
+            Imprisoned = true; doorTarget = 0f; doorOpen = 0f; gateTarget = 0f; openCellAt = -1f;
             SceneFader.Cover(() =>
             {
                 var cc = t.GetComponent<CharacterController>(); if (cc != null) cc.enabled = false;
@@ -133,8 +165,18 @@ namespace MoominAction
                 if (t.TryGetComponent<PlayerController>(out var pc)) pc.ResetFall();
                 var cam = Camera.main; if (cam != null && cam.TryGetComponent<ThirdPersonCamera>(out var tpc)) tpc.SnapBehind();
                 Quests.AnnounceNow("지하감옥", "고래 말을 했다가 끌려왔다…");
-                Toast.Show("철컹! 감방에 갇혔다. 철창 문을 흔들어 보자 (F)");
+                Toast.Show("철컹! 감방 철창 밖으로 광산 노역장이 보인다…");
+                openCellAt = Time.time + 3.5f;
             });
+        }
+        /// <summary>간수에게 할당량을 냄 — 돌덩이·곡괭이 회수, 출구 쇠창살 올림.</summary>
+        public bool Release()
+        {
+            var gm = GameManager.Instance; if (gm == null || gm.player == null || !gm.player.TryGetComponent<Inventory>(out var inv)) return false;
+            if (!MineMath.QuotaMet(inv.Count(MineMath.Rubble))) return false;
+            inv.Remove(MineMath.Rubble, MineMath.Quota); int pk = inv.Count(MineMath.Pickaxe); if (pk > 0) inv.Remove(MineMath.Pickaxe, pk);
+            Imprisoned = false; gateTarget = 1f; ThirdPersonCamera.Shake(0.15f, 0.6f);
+            Quests.AnnounceNow("석방!", "출구 쇠창살이 올라간다 — 계단으로 알현실에"); return true;
         }
 
         void Update()
@@ -143,23 +185,17 @@ namespace MoominAction
             if (pendingDungeon) { pendingDungeon = false; SendToDungeon(); }
             float t = Time.time;
             foreach (var (l, bi, ph) in flicker) if (l != null) l.intensity = bi * (0.9f + 0.1f * Mathf.PerlinNoise(t * 3f + ph, ph));   // 촛불·횃불 일렁임
-            if (cellDoor == null) return;
-            doorOpen = Mathf.MoveTowards(doorOpen, doorTarget, Time.deltaTime * 1.6f);
-            float wob = shakeT > t ? Mathf.Sin(t * 60f) * 3f * (shakeT - t) : 0f;
-            cellDoor.localRotation = Quaternion.Euler(0f, -100f * doorOpen + wob, 0f) * Quaternion.identity;
-            if (doorTarget < 0.5f)
+            if (openCellAt > 0f && Time.time >= openCellAt)
             {
-                var p = GameObject.FindGameObjectWithTag("Player"); if (p == null) return;
-                Vector3 df = Mark("Mark_CellDoorFront", cellDoor.position); Vector3 d = p.transform.position - df; d.y = 0;
-                if (d.magnitude < 2.2f && Mathf.Abs(p.transform.position.y - df.y) < 2f) Interaction.Offer(this, d.magnitude, "F   철창 문 흔들기", ShakeDoor);
+                openCellAt = -1f; doorTarget = 1f; ThirdPersonCamera.Shake(0.1f, 0.4f);
+                Toast.Show("간수 하프: 일어나라, 신입! 노역 시간이다. 이리 와서 곡괭이를 받아라.");
             }
-        }
-        void ShakeDoor()
-        {
-            shakes++; shakeT = Time.time + 0.4f; ThirdPersonCamera.Shake(0.12f, 0.2f);
-            string[] say = { "덜컹! …꿈쩍도 안 한다.", "덜컹덜컹!! 경첩이 삐걱거린다…", "끼이익— 철컥! 낡은 자물쇠가 툭 떨어졌다!" };
-            Toast.Show(say[Mathf.Clamp(shakes - 1, 0, 2)]);
-            if (shakes >= 3) { doorTarget = 1f; Quests.AnnounceNow("탈출!", "복도 끝 계단으로 알현실에 돌아가자"); }
+            if (cellDoor != null) { doorOpen = Mathf.MoveTowards(doorOpen, doorTarget, Time.deltaTime * 1.2f); cellDoor.localRotation = Quaternion.Euler(0f, -100f * doorOpen, 0f); }
+            if (exitGate != null)
+            {
+                gateOpen = Mathf.MoveTowards(gateOpen, gateTarget, Time.deltaTime * 0.5f);
+                exitGate.localPosition = gateBase + Vector3.up * 5.2f * gateOpen;
+            }
         }
 
         void AddLight(Vector3 at, Color c, float range, float intensity, bool candle)
